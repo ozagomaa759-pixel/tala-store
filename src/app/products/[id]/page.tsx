@@ -2457,11 +2457,11 @@ function getTalaProductsByCategory(category: string): Product[] {
   return PRODUCTS.filter((product) => product.category.toLowerCase() === category.toLowerCase());
 }
 
-export function getTalaProductsByPrice(minimum: number, maximum: number): Product[] {
+function getTalaProductsByPrice(minimum: number, maximum: number): Product[] {
   return PRODUCTS.filter((product) => product.price >= minimum && product.price <= maximum);
 }
 
-export function searchTalaProducts(query: string): Product[] {
+function searchTalaProducts(query: string): Product[] {
   const normalized = query.trim().toLowerCase();
   if (!normalized) return [...PRODUCTS];
   return PRODUCTS.filter((product) => {
@@ -2477,7 +2477,7 @@ export function searchTalaProducts(query: string): Product[] {
   });
 }
 
-export function sortTalaProducts(
+function sortTalaProducts(
   products: Product[],
   sort: "featured" | "price-low" | "price-high" | "name"
 ): Product[] {
@@ -2488,14 +2488,14 @@ export function sortTalaProducts(
   return copy.sort((a, b) => a.id - b.id);
 }
 
-export function getTalaCategoryCounts(): Record<string, number> {
+function getTalaCategoryCounts(): Record<string, number> {
   return PRODUCTS.reduce<Record<string, number>>((counts, product) => {
     counts[product.category] = (counts[product.category] ?? 0) + 1;
     return counts;
   }, {});
 }
 
-export function getTalaPriceStatistics(): {
+function getTalaPriceStatistics(): {
   minimum: number;
   maximum: number;
   average: number;
@@ -2509,7 +2509,7 @@ export function getTalaPriceStatistics(): {
   };
 }
 
-export function validateTalaVariant(
+function validateTalaVariant(
   product: Product,
   size: string,
   color: string,
@@ -2525,11 +2525,11 @@ export function validateTalaVariant(
   return errors;
 }
 
-export function buildTalaProductShareText(product: Product): string {
+function buildTalaProductShareText(product: Product): string {
   return `${product.name} — ${formatPrice(product.price)}. Discover it at TALA.`;
 }
 
-export function getTalaProductStructuredData(product: Product) {
+function getTalaProductStructuredData(product: Product) {
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -2549,56 +2549,56 @@ export function getTalaProductStructuredData(product: Product) {
   };
 }
 
-export function getTalaProductRecommendations(product: Product, limit = 4): Product[] {
+function getTalaProductRecommendations(product: Product, limit = 4): Product[] {
   return getRelatedProducts(product, clamp(limit, 1, 12));
 }
 
-export function getTalaAvailableSizes(product: Product): string[] {
+function getTalaAvailableSizes(product: Product): string[] {
   return product.available ? [...product.sizes] : [];
 }
 
-export function getTalaAvailableColors(product: Product): ProductColor[] {
+function getTalaAvailableColors(product: Product): ProductColor[] {
   return product.available ? [...product.colors] : [];
 }
 
-export function getTalaProductCardLabel(product: Product): string {
+function getTalaProductCardLabel(product: Product): string {
   return `${product.name} — ${formatPrice(product.price)}`;
 }
 
-export function getTalaProductCanonicalPath(product: Product): string {
+function getTalaProductCanonicalPath(product: Product): string {
   return `/products/${product.id}`;
 }
 
-export function getTalaProductImageSet(product: Product): string[] {
+function getTalaProductImageSet(product: Product): string[] {
   return product.images.filter((image) => image.startsWith("https://"));
 }
 
-export function getTalaProductHasBadge(product: Product): boolean {
+function getTalaProductHasBadge(product: Product): boolean {
   return Boolean(product.badge && product.badge.trim().length > 0);
 }
 
-export function getTalaProductHasMultipleImages(product: Product): boolean {
+function getTalaProductHasMultipleImages(product: Product): boolean {
   return product.images.length > 1;
 }
 
-export function getTalaProductHasMultipleSizes(product: Product): boolean {
+function getTalaProductHasMultipleSizes(product: Product): boolean {
   return product.sizes.length > 1;
 }
 
-export function getTalaProductHasMultipleColors(product: Product): boolean {
+function getTalaProductHasMultipleColors(product: Product): boolean {
   return product.colors.length > 1;
 }
 
-export function getTalaProductDisplayPrice(product: Product): string {
+function getTalaProductDisplayPrice(product: Product): string {
   return formatPrice(product.price);
 }
 
-export function getTalaProductShortDescription(product: Product, maxLength = 110): string {
+function getTalaProductShortDescription(product: Product, maxLength = 110): string {
   if (product.description.length <= maxLength) return product.description;
   return `${product.description.slice(0, maxLength).trimEnd()}…`;
 }
 
-export function getTalaProductSearchIndex(): Array<{
+function getTalaProductSearchIndex(): Array<{
   id: number;
   sku: string;
   name: string;
