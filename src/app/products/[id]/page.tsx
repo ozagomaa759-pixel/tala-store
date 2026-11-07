@@ -595,7 +595,7 @@ const PRODUCTS: Product[] = [
     material: "Premium textured fabric",
     fit: "Tailored fit",
     colorFamily: "ivory",
-    badge: BESTSELLER,
+    badge: "BESTSELLER",
     images: [
       "https://images.unsplash.com/photo-1551163943-3f6a855d1153?w=1400",
       "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=1400",
