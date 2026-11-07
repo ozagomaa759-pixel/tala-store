@@ -1196,7 +1196,7 @@ function writeWishlist(productId: number, active: boolean): void {
   }
 }
 
-function getInitialQuantity(): number {
+function getDefaultQuantity(): number {
   return 1;
 }
 
