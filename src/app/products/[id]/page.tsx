@@ -2452,7 +2452,7 @@ function getTalaProductBySku(sku: string): Product | undefined {
   return PRODUCTS.find((product) => product.sku.toLowerCase() === sku.toLowerCase());
 }
 
-export function getTalaProductsByCategory(category: string): Product[] {
+function getTalaProductsByCategory(category: string): Product[] {
   if (category === "all") return [...PRODUCTS];
   return PRODUCTS.filter((product) => product.category.toLowerCase() === category.toLowerCase());
 }
