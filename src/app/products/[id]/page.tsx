@@ -2448,7 +2448,7 @@ export const TALA_EDITORIAL_MESSAGES = [
   "Find your next favourite piece with TALA.",
 ];
 
-export function getTalaProductBySku(sku: string): Product | undefined {
+function getTalaProductBySku(sku: string): Product | undefined {
   return PRODUCTS.find((product) => product.sku.toLowerCase() === sku.toLowerCase());
 }
 
