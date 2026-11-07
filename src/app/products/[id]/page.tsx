@@ -2159,7 +2159,7 @@ export default function ProductDetailsPage() {
 
   const [selectedSize, setSelectedSize] = useState(getInitialSelectedSize);
   const [selectedColor, setSelectedColor] = useState("");
-  const [quantity, setQuantity] = useState(getInitialQuantity);
+  const [quantity, setQuantity] = useState(() => getInitialQuantity(1));
   const [favorite, setFavorite] = useState(getInitialFavoriteState);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(getInitialSizeGuideState);
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
