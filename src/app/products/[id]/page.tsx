@@ -725,7 +725,7 @@ const PRODUCTS: Product[] = [
     material: "Lightweight fabric",
     fit: "Classic fit",
     colorFamily: "taupe",
-    badge: NEW ARRIVAL,
+    badge: "NEW ARRIVAL",
     images: [
       "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1400",
       "https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?w=1400",
