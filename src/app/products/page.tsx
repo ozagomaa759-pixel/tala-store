@@ -3497,7 +3497,23 @@ function ProductsPage() {
 
               /* PRODUCT GRID */
 
-              <>
+              {visibleProducts.map((product, index) => (
+  <motion.div
+    key={product.id}
+    variants={itemVariants}
+    custom={index}
+  >
+    <ProductCard
+      product={product}
+      index={index}
+      isFavorite={favorites.includes(product.id)}
+      onToggleFavorite={() => toggleFavorite(product.id)}
+      onQuickView={() => openQuickView(product)}
+      onAddToCart={() => addProductToCart(product)}
+      viewMode={viewMode}
+    />
+  </motion.div>
+))}
                 <motion.div
                   key={viewMode}
                   variants={pageVariants}
@@ -3506,36 +3522,7 @@ function ProductsPage() {
                   className={
                     viewMode === "grid"
                       ? "grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-10 xl:grid-cols-3"
-                      : "grid grid-cols-1 gap-5"
-                  }
-                >
-
-                  {visibleProducts.map(
-                    (product, index) => (
-                      <motion.div
-                        key={product.id}
-                        variants={itemVariants}
-                        custom={index}
-                      >
-                        <ProductCard
-                          product={product}
-                          isFavorite={favorites.includes(
-                            product.id
-                          )}
-                          onToggleFavorite={() =>
-                            toggleFavorite(product.id)
-                          }
-                          onQuickView={() =>
-                            openQuickView(product)
-                          }
-                          onAddToCart={() =>
-                            addProductToCart(product)
-                          }
-                          viewMode={viewMode}
-                        />
-                      </motion.div>
-                    )
-                  )}
+                      : "grid grid-cols-1 gap-
 
                 </motion.div>
 
