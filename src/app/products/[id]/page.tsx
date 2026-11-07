@@ -2403,7 +2403,7 @@ export default function ProductDetailsPage() {
 
 /* -------------------------- Catalogue presentation data ------------------- */
 
-export const TALA_CATALOGUE_METADATA = {
+const TALA_CATALOGUE_METADATA = {
   brand: "TALA",
   language: "en",
   currency: STORE_CURRENCY,
@@ -2417,7 +2417,7 @@ export const TALA_CATALOGUE_METADATA = {
   imageAspectRatio: "4:5",
 };
 
-export const TALA_PRODUCT_POLICIES = {
+const TALA_PRODUCT_POLICIES = {
   stock: "Stock information must be confirmed by the store.",
   delivery: "Delivery times are confirmed after order review.",
   returns: "Return eligibility is subject to the published store policy.",
@@ -2425,7 +2425,7 @@ export const TALA_PRODUCT_POLICIES = {
   privacy: "Customer information must be handled through a secure backend.",
 };
 
-export const TALA_SIZE_HELP = {
+const TALA_SIZE_HELP = {
   XS: "A close, compact fit. Compare garment measurements before selecting.",
   S: "A small size. Fit may vary by design and fabric.",
   M: "A medium size. Compare bust, waist and hip measurements.",
@@ -2433,14 +2433,14 @@ export const TALA_SIZE_HELP = {
   XL: "An extra-large size. Check the individual product size chart.",
 };
 
-export const TALA_COLOR_GUIDE = [
+const TALA_COLOR_GUIDE = [
   { name: "Classic Black", value: "#292521", description: "A deep neutral for versatile styling." },
   { name: "Soft Ivory", value: "#E8E0D5", description: "A warm light neutral." },
   { name: "Warm Taupe", value: "#A99A89", description: "A muted earth-inspired neutral." },
   { name: "Sand", value: "#B5A28C", description: "A soft beige shade." },
 ];
 
-export const TALA_EDITORIAL_MESSAGES = [
+const TALA_EDITORIAL_MESSAGES = [
   "Thoughtful details make a lasting impression.",
   "Build a wardrobe around pieces you love.",
   "Discover a considered approach to everyday style.",
@@ -2614,7 +2614,7 @@ function getTalaProductSearchIndex(): Array<{
   }));
 }
 
-export const TALA_PRODUCT_NOTE_01 = {
+const TALA_PRODUCT_NOTE_01 = {
   productId: 1,
   title: "The Signature Dress",
   category: "Dresses",
@@ -2626,7 +2626,7 @@ export const TALA_PRODUCT_NOTE_01 = {
   searchKeywords: ["the signature dress", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_02 = {
+const TALA_PRODUCT_NOTE_02 = {
   productId: 2,
   title: "Classic Elegance",
   category: "Dresses",
@@ -2638,7 +2638,7 @@ export const TALA_PRODUCT_NOTE_02 = {
   searchKeywords: ["classic elegance", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_03 = {
+const TALA_PRODUCT_NOTE_03 = {
   productId: 3,
   title: "Modern Essential",
   category: "Tops",
@@ -2650,7 +2650,7 @@ export const TALA_PRODUCT_NOTE_03 = {
   searchKeywords: ["modern essential", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_04 = {
+const TALA_PRODUCT_NOTE_04 = {
   productId: 4,
   title: "The Timeless Set",
   category: "Sets",
@@ -2662,7 +2662,7 @@ export const TALA_PRODUCT_NOTE_04 = {
   searchKeywords: ["the timeless set", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_05 = {
+const TALA_PRODUCT_NOTE_05 = {
   productId: 5,
   title: "Soft Structure",
   category: "Outerwear",
@@ -2674,7 +2674,7 @@ export const TALA_PRODUCT_NOTE_05 = {
   searchKeywords: ["soft structure", "outerwear", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_06 = {
+const TALA_PRODUCT_NOTE_06 = {
   productId: 6,
   title: "Everyday Grace",
   category: "Tops",
@@ -2686,7 +2686,7 @@ export const TALA_PRODUCT_NOTE_06 = {
   searchKeywords: ["everyday grace", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_07 = {
+const TALA_PRODUCT_NOTE_07 = {
   productId: 7,
   title: "Evening Muse",
   category: "Dresses",
@@ -2698,7 +2698,7 @@ export const TALA_PRODUCT_NOTE_07 = {
   searchKeywords: ["evening muse", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_08 = {
+const TALA_PRODUCT_NOTE_08 = {
   productId: 8,
   title: "Minimal Form",
   category: "Sets",
@@ -2710,7 +2710,7 @@ export const TALA_PRODUCT_NOTE_08 = {
   searchKeywords: ["minimal form", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_09 = {
+const TALA_PRODUCT_NOTE_09 = {
   productId: 9,
   title: "Sculpted Form 09",
   category: "Dresses",
@@ -2722,7 +2722,7 @@ export const TALA_PRODUCT_NOTE_09 = {
   searchKeywords: ["sculpted form 09", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_10 = {
+const TALA_PRODUCT_NOTE_10 = {
   productId: 10,
   title: "Essential Form 10",
   category: "Tops",
@@ -2734,7 +2734,7 @@ export const TALA_PRODUCT_NOTE_10 = {
   searchKeywords: ["essential form 10", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_11 = {
+const TALA_PRODUCT_NOTE_11 = {
   productId: 11,
   title: "Refined Look 11",
   category: "Sets",
@@ -2746,7 +2746,7 @@ export const TALA_PRODUCT_NOTE_11 = {
   searchKeywords: ["refined look 11", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_12 = {
+const TALA_PRODUCT_NOTE_12 = {
   productId: 12,
   title: "Modern Look 12",
   category: "Outerwear",
@@ -2758,7 +2758,7 @@ export const TALA_PRODUCT_NOTE_12 = {
   searchKeywords: ["modern look 12", "outerwear", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_13 = {
+const TALA_PRODUCT_NOTE_13 = {
   productId: 13,
   title: "Classic Piece 13",
   category: "Dresses",
@@ -2770,7 +2770,7 @@ export const TALA_PRODUCT_NOTE_13 = {
   searchKeywords: ["classic piece 13", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_14 = {
+const TALA_PRODUCT_NOTE_14 = {
   productId: 14,
   title: "Soft Piece 14",
   category: "Tops",
@@ -2782,7 +2782,7 @@ export const TALA_PRODUCT_NOTE_14 = {
   searchKeywords: ["soft piece 14", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_15 = {
+const TALA_PRODUCT_NOTE_15 = {
   productId: 15,
   title: "Everyday Set 15",
   category: "Sets",
@@ -2794,7 +2794,7 @@ export const TALA_PRODUCT_NOTE_15 = {
   searchKeywords: ["everyday set 15", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_16 = {
+const TALA_PRODUCT_NOTE_16 = {
   productId: 16,
   title: "Evening Set 16",
   category: "Outerwear",
@@ -2806,7 +2806,7 @@ export const TALA_PRODUCT_NOTE_16 = {
   searchKeywords: ["evening set 16", "outerwear", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_17 = {
+const TALA_PRODUCT_NOTE_17 = {
   productId: 17,
   title: "Sculpted Silhouette 17",
   category: "Dresses",
@@ -2818,7 +2818,7 @@ export const TALA_PRODUCT_NOTE_17 = {
   searchKeywords: ["sculpted silhouette 17", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_18 = {
+const TALA_PRODUCT_NOTE_18 = {
   productId: 18,
   title: "Essential Silhouette 18",
   category: "Tops",
@@ -2830,7 +2830,7 @@ export const TALA_PRODUCT_NOTE_18 = {
   searchKeywords: ["essential silhouette 18", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_19 = {
+const TALA_PRODUCT_NOTE_19 = {
   productId: 19,
   title: "Refined Layer 19",
   category: "Sets",
@@ -2842,7 +2842,7 @@ export const TALA_PRODUCT_NOTE_19 = {
   searchKeywords: ["refined layer 19", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_20 = {
+const TALA_PRODUCT_NOTE_20 = {
   productId: 20,
   title: "Modern Layer 20",
   category: "Outerwear",
@@ -2854,7 +2854,7 @@ export const TALA_PRODUCT_NOTE_20 = {
   searchKeywords: ["modern layer 20", "outerwear", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_21 = {
+const TALA_PRODUCT_NOTE_21 = {
   productId: 21,
   title: "Classic Statement 21",
   category: "Dresses",
@@ -2866,7 +2866,7 @@ export const TALA_PRODUCT_NOTE_21 = {
   searchKeywords: ["classic statement 21", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_22 = {
+const TALA_PRODUCT_NOTE_22 = {
   productId: 22,
   title: "Soft Statement 22",
   category: "Tops",
@@ -2878,7 +2878,7 @@ export const TALA_PRODUCT_NOTE_22 = {
   searchKeywords: ["soft statement 22", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_23 = {
+const TALA_PRODUCT_NOTE_23 = {
   productId: 23,
   title: "Everyday Edit 23",
   category: "Sets",
@@ -2890,7 +2890,7 @@ export const TALA_PRODUCT_NOTE_23 = {
   searchKeywords: ["everyday edit 23", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_24 = {
+const TALA_PRODUCT_NOTE_24 = {
   productId: 24,
   title: "Evening Edit 24",
   category: "Outerwear",
@@ -2902,7 +2902,7 @@ export const TALA_PRODUCT_NOTE_24 = {
   searchKeywords: ["evening edit 24", "outerwear", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_25 = {
+const TALA_PRODUCT_NOTE_25 = {
   productId: 25,
   title: "Sculpted Form 25",
   category: "Dresses",
@@ -2914,7 +2914,7 @@ export const TALA_PRODUCT_NOTE_25 = {
   searchKeywords: ["sculpted form 25", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_26 = {
+const TALA_PRODUCT_NOTE_26 = {
   productId: 26,
   title: "Essential Form 26",
   category: "Tops",
@@ -2926,7 +2926,7 @@ export const TALA_PRODUCT_NOTE_26 = {
   searchKeywords: ["essential form 26", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_27 = {
+const TALA_PRODUCT_NOTE_27 = {
   productId: 27,
   title: "Refined Look 27",
   category: "Sets",
@@ -2938,7 +2938,7 @@ export const TALA_PRODUCT_NOTE_27 = {
   searchKeywords: ["refined look 27", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_28 = {
+const TALA_PRODUCT_NOTE_28 = {
   productId: 28,
   title: "Modern Look 28",
   category: "Outerwear",
@@ -2950,7 +2950,7 @@ export const TALA_PRODUCT_NOTE_28 = {
   searchKeywords: ["modern look 28", "outerwear", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_29 = {
+const TALA_PRODUCT_NOTE_29 = {
   productId: 29,
   title: "Classic Piece 29",
   category: "Dresses",
@@ -2962,7 +2962,7 @@ export const TALA_PRODUCT_NOTE_29 = {
   searchKeywords: ["classic piece 29", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_30 = {
+const TALA_PRODUCT_NOTE_30 = {
   productId: 30,
   title: "Soft Piece 30",
   category: "Tops",
@@ -2974,7 +2974,7 @@ export const TALA_PRODUCT_NOTE_30 = {
   searchKeywords: ["soft piece 30", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_31 = {
+const TALA_PRODUCT_NOTE_31 = {
   productId: 31,
   title: "Everyday Set 31",
   category: "Sets",
@@ -2986,7 +2986,7 @@ export const TALA_PRODUCT_NOTE_31 = {
   searchKeywords: ["everyday set 31", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_32 = {
+const TALA_PRODUCT_NOTE_32 = {
   productId: 32,
   title: "Evening Set 32",
   category: "Outerwear",
@@ -2998,7 +2998,7 @@ export const TALA_PRODUCT_NOTE_32 = {
   searchKeywords: ["evening set 32", "outerwear", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_33 = {
+const TALA_PRODUCT_NOTE_33 = {
   productId: 33,
   title: "Sculpted Silhouette 33",
   category: "Dresses",
@@ -3010,7 +3010,7 @@ export const TALA_PRODUCT_NOTE_33 = {
   searchKeywords: ["sculpted silhouette 33", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_34 = {
+const TALA_PRODUCT_NOTE_34 = {
   productId: 34,
   title: "Essential Silhouette 34",
   category: "Tops",
@@ -3022,7 +3022,7 @@ export const TALA_PRODUCT_NOTE_34 = {
   searchKeywords: ["essential silhouette 34", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_35 = {
+const TALA_PRODUCT_NOTE_35 = {
   productId: 35,
   title: "Refined Layer 35",
   category: "Sets",
@@ -3034,7 +3034,7 @@ export const TALA_PRODUCT_NOTE_35 = {
   searchKeywords: ["refined layer 35", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_36 = {
+const TALA_PRODUCT_NOTE_36 = {
   productId: 36,
   title: "Modern Layer 36",
   category: "Outerwear",
@@ -3046,7 +3046,7 @@ export const TALA_PRODUCT_NOTE_36 = {
   searchKeywords: ["modern layer 36", "outerwear", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_37 = {
+const TALA_PRODUCT_NOTE_37 = {
   productId: 37,
   title: "Classic Statement 37",
   category: "Dresses",
@@ -3058,7 +3058,7 @@ export const TALA_PRODUCT_NOTE_37 = {
   searchKeywords: ["classic statement 37", "dresses", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_38 = {
+const TALA_PRODUCT_NOTE_38 = {
   productId: 38,
   title: "Soft Statement 38",
   category: "Tops",
@@ -3070,7 +3070,7 @@ export const TALA_PRODUCT_NOTE_38 = {
   searchKeywords: ["soft statement 38", "tops", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_39 = {
+const TALA_PRODUCT_NOTE_39 = {
   productId: 39,
   title: "Everyday Edit 39",
   category: "Sets",
@@ -3082,7 +3082,7 @@ export const TALA_PRODUCT_NOTE_39 = {
   searchKeywords: ["everyday edit 39", "sets", "tala", "fashion", "wardrobe"],
 };
 
-export const TALA_PRODUCT_NOTE_40 = {
+const TALA_PRODUCT_NOTE_40 = {
   productId: 40,
   title: "Evening Edit 40",
   category: "Outerwear",
