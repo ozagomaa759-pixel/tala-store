@@ -1200,7 +1200,7 @@ function getDefaultQuantity(): number {
   return 1;
 }
 
-function getInitialImageIndex(): number {
+function getDefaultImageIndex(): number {
   return 0;
 }
 
