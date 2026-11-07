@@ -881,7 +881,7 @@ const PRODUCTS: Product[] = [
     material: "Soft woven fabric",
     fit: "Relaxed fit",
     colorFamily: "black",
-    badge: BESTSELLER,
+    badge: "BESTSELLER",
     images: [
       "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=1400",
       "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=1400",
