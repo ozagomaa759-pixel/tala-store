@@ -1904,7 +1904,7 @@ type ProductFiltersProps = {
   bestSellersOnly: boolean;
   onBestSellersOnlyChange: (value: boolean) => void;
 
-  onClearFilters: () => void;
+  onClear: () => void;
 
   favoritesCount: number;
   productsCount: number;
