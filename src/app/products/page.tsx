@@ -3497,7 +3497,7 @@ function ProductsPage() {
 
               /* PRODUCT GRID */
 
-              {visibleProducts.map((product, index) => (
+visibleProducts.map((product, index) => (
   <motion.div
     key={product.id}
     variants={itemVariants}
@@ -3513,7 +3513,7 @@ function ProductsPage() {
       viewMode={viewMode}
     />
   </motion.div>
-))}
+))
                 <motion.div
                   key={viewMode}
                   variants={pageVariants}
