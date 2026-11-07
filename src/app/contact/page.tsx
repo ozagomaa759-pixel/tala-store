@@ -1026,6 +1026,211 @@ export default function ContactPage() {
           </div>
         </div>
       </footer>
+            {/* ADVANCED CONTACT EXPERIENCE */}
+
+      <section className="relative overflow-hidden border-t border-[#d8cec0] bg-[#eee8df] px-6 py-24 lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
+
+            <motion.div
+              initial={{ opacity: 0, x: -35 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+            >
+              <span className="text-[10px] uppercase tracking-[0.35em] text-[#a68b68]">
+                The TALA promise
+              </span>
+
+              <h2 className="mt-6 max-w-xl font-serif text-5xl font-light leading-tight sm:text-6xl">
+                Every detail deserves
+                <span className="italic text-[#a68b68]"> attention.</span>
+              </h2>
+
+              <p className="mt-7 max-w-lg text-sm leading-8 text-[#82796d]">
+                We believe that a great shopping experience goes beyond
+                beautiful products. It is built through thoughtful service,
+                clear communication, and attention to every detail.
+              </p>
+
+              <div className="mt-12 space-y-8">
+                {[
+                  {
+                    number: "01",
+                    title: "Personal attention",
+                    description:
+                      "Every inquiry deserves a thoughtful and helpful response.",
+                  },
+                  {
+                    number: "02",
+                    title: "Clear communication",
+                    description:
+                      "We believe in making information simple and accessible.",
+                  },
+                  {
+                    number: "03",
+                    title: "Considered experience",
+                    description:
+                      "From browsing to after-sales support, details matter.",
+                  },
+                ].map((item, index) => (
+                  <motion.div
+                    key={item.number}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.15 }}
+                    className="flex gap-6 border-b border-[#d4c9bb] pb-7"
+                  >
+                    <span className="font-serif text-xl italic text-[#a68b68]">
+                      {item.number}
+                    </span>
+
+                    <div>
+                      <h3 className="text-sm font-medium">
+                        {item.title}
+                      </h3>
+
+                      <p className="mt-2 max-w-md text-xs leading-7 text-[#82796d]">
+                        {item.description}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="relative"
+            >
+              <div className="absolute -inset-5 border border-[#cdbda8]" />
+
+              <div className="relative bg-[#29251f] p-8 text-[#f5f1eb] sm:p-12">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] uppercase tracking-[0.3em] text-[#c5a982]">
+                    TALA / Customer care
+                  </span>
+
+                  <MessageCircle size={20} className="text-[#c5a982]" />
+                </div>
+
+                <div className="mt-16">
+                  <p className="font-serif text-4xl font-light leading-tight">
+                    A better experience
+                    <br />
+                    starts with
+                    <span className="italic text-[#c5a982]"> listening.</span>
+                  </p>
+
+                  <div className="mt-12 border-t border-white/15 pt-8">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#c5a982]/15">
+                        <Headphones size={20} className="text-[#c5a982]" />
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium">
+                          Customer experience
+                        </p>
+
+                        <p className="mt-1 text-[10px] text-[#c5beb3]">
+                          Thoughtful support, always.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-16 flex items-center justify-between border-t border-white/15 pt-6">
+                  <span className="text-[9px] uppercase tracking-[0.25em] text-[#c5beb3]">
+                    Thoughtfully yours
+                  </span>
+
+                  <span className="font-serif text-2xl italic text-[#c5a982]">
+                    T.
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* CONTACT EXPERIENCE HIGHLIGHTS */}
+
+      <section className="bg-[#f5f1eb] px-6 py-20 lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-14 text-center">
+            <span className="text-[10px] uppercase tracking-[0.35em] text-[#a68b68]">
+              Beyond the ordinary
+            </span>
+
+            <h2 className="mt-5 font-serif text-4xl font-light sm:text-5xl">
+              The details make the difference.
+            </h2>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                icon: ShieldCheck,
+                title: "Privacy first",
+                description:
+                  "Share only the information needed to help with your inquiry.",
+              },
+              {
+                icon: MessageCircle,
+                title: "Easy communication",
+                description:
+                  "Find the contact method that works best for you.",
+              },
+              {
+                icon: Sparkles,
+                title: "Thoughtful service",
+                description:
+                  "A considered experience is at the heart of TALA.",
+              },
+              {
+                icon: Clock,
+                title: "Convenient access",
+                description:
+                  "Explore our help information whenever you need it.",
+              },
+            ].map((item, index) => {
+              const Icon = item.icon;
+
+              return (
+                <motion.div
+                  key={item.title}
+                  initial={{ opacity: 0, y: 25 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -7 }}
+                  className="border border-[#d8cec0] bg-[#f8f5f0] p-8 transition-shadow hover:shadow-xl"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#d8cec0]">
+                    <Icon size={19} className="text-[#a68b68]" />
+                  </div>
+
+                  <h3 className="mt-7 text-sm font-medium">
+                    {item.title}
+                  </h3>
+
+                  <p className="mt-3 text-xs leading-7 text-[#82796d]">
+                    {item.description}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
