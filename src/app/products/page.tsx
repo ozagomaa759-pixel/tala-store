@@ -77,28 +77,6 @@ type ProductCategory =
   | "Bottoms"
   | "Outerwear"
   | "Sets";
-
-
-  id: string;
-  name: string;
-  subtitle: string;
-  description: string;
-  price: number;
-  oldPrice?: number;
-  category: Exclude<ProductCategory, "All">;
-  image: string;
-  images: string[];
-  colors: ProductColor[];
-  sizes: string[];
-  rating: number;
-  reviews: number;
-  isNew: boolean;
-  isBestSeller: boolean;
-  isFeatured: boolean;
-  isAvailable: boolean;
-  tags: string[];
-};
-
 type SortOption =
   | "featured"
   | "newest"
