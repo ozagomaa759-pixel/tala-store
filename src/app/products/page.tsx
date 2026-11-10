@@ -47,10 +47,18 @@ import {
   XCircle,
 } from "lucide-react";
 
+
 import {
   addToCart,
   getCartCount,
 } from "@/lib/cart";
+
+import {
+  PRODUCTS,
+  type Product,
+  type ProductColor,
+} from "@/data/products";
+
 
 /* =========================================================
    TALA — PRODUCTS PAGE
