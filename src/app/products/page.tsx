@@ -78,12 +78,7 @@ type ProductCategory =
   | "Outerwear"
   | "Sets";
 
-type ProductColor = {
-  name: string;
-  value: string;
-};
 
-type Product = {
   id: string;
   name: string;
   subtitle: string;
