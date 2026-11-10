@@ -3478,79 +3478,69 @@ function ProductsPage() {
               </div>
             )}
 
-            {/* LOADING */}
+            {/* LOADING / EMPTY STATE / PRODUCT GRID */}
 
             {isLoading ? (
               <ProductSkeleton count={8} />
             ) : filteredProducts.length === 0 ? (
-
-              /* EMPTY STATE */
-
               <EmptyState
                 title="No pieces found"
                 description="Try adjusting your search or filters to discover more from TALA."
                 actionLabel="Clear filters"
                 onAction={clearFilters}
               />
-
             ) : (
-
-              /* PRODUCT GRID */
-
-visibleProducts.map((product, index) => (
-  <motion.div
-    key={product.id}
-    variants={itemVariants}
-    custom={index}
-  >
-    <ProductCard
-      product={product}
-      index={index}
-      isFavorite={favorites.includes(product.id)}
-      onToggleFavorite={() => toggleFavorite(product.id)}
-      onQuickView={() => openQuickView(product)}
-      onAddToCart={() => addProductToCart(product)}
-      viewMode={viewMode}
-    />
-  </motion.div>
-))
-                <motion.div
-                  key={viewMode}
-                  variants={pageVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className={
-                    viewMode === "grid"
-                      ? "grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-10 xl:grid-cols-3"
-                      : "grid grid-cols-1 gap-
-
-                </motion.div>
-
-                {/* LOAD MORE */}
-
-                {hasMoreProducts && (
-                  <div className="mt-14 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={loadMoreProducts}
-                      className="border border-[#A99A88] px-10 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#40372F] transition-all duration-300 hover:border-[#40372F] hover:bg-[#40372F] hover:text-white"
-                    >
-                      Load more
-                    </button>
-                  </div>
-                )}
-
-                {/* RESULTS FOOTER */}
-
-                <div className="mt-10 border-t border-[#E2D9CF] pt-6 text-center">
-                  <p className="text-xs tracking-wide text-[#8B7D70]">
-                    Showing {visibleProducts.length} of{" "}
-                    {filteredProducts.length} pieces
-                  </p>
-                </div>
-
-              </>
+              <motion.div
+                key={viewMode}
+                variants={pageVariants}
+                initial="hidden"
+                animate="visible"
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-10 xl:grid-cols-3"
+                    : "grid grid-cols-1 gap-6"
+                }
+              >
+                {visibleProducts.map((product, index) => (
+                  <motion.div
+                    key={product.id}
+                    variants={itemVariants}
+                    custom={index}
+                  >
+                    <ProductCard
+                      product={product}
+                      index={index}
+                      isFavorite={favorites.includes(product.id)}
+                      onToggleFavorite={() => toggleFavorite(product.id)}
+                      onQuickView={() => openQuickView(product)}
+                      onAddToCart={() => addProductToCart(product)}
+                      viewMode={viewMode}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
             )}
+
+            {/* LOAD MORE */}
+            {hasMoreProducts && (
+              <div className="mt-14 flex justify-center">
+                <button
+                  type="button"
+                  onClick={loadMoreProducts}
+                  className="border border-[#A99A88] px-10 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#40372F] transition-all duration-300 hover:border-[#40372F] hover:bg-[#40372F] hover:text-white"
+                >
+                  Load more
+                </button>
+              </div>
+            )}
+
+            {/* RESULTS FOOTER */}
+            <div className="mt-10 border-t border-[#E2D9CF] pt-6 text-center">
+              <p className="text-xs tracking-wide text-[#8B7D70]">
+                Showing {visibleProducts.length} of{" "}
+                {filteredProducts.length} pieces
+              </p>
+            </div>
 
           </div>
         </div>
