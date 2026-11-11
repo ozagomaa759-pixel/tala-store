@@ -1,6 +1,9 @@
+
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./tala-pages.css";
+import { TALAHeader } from "@/components/tala-shell";
+
 export const metadata: Metadata = {
   title: {
     default: "TALA | Luxury Fashion",
@@ -28,7 +31,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <TALAHeader />
+        {children}
+      </body>
     </html>
   );
 }
