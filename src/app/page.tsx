@@ -1,3 +1,4 @@
+
 "use client";
 
 import { motion } from "framer-motion";
@@ -9,6 +10,7 @@ import {
   Menu,
   ShoppingBag,
 } from "lucide-react";
+import { useCartCount } from "@/lib/tala-cart";
 
 const categories = [
   { name: "Dresses", subtitle: "Elegance in every detail", image: "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=900" },
@@ -24,6 +26,8 @@ const products = [
 ];
 
 export default function HomePage() {
+  const cartCount = useCartCount();
+
   return (
     <main className="min-h-screen bg-[#f4f0e9] text-[#292521]">
 
@@ -40,8 +44,19 @@ export default function HomePage() {
           TALA
         </Link>
 
-        <Link href="/cart" aria-label="Shopping bag">
+        <Link
+          href="/cart"
+          aria-label={`Shopping bag, ${cartCount} items`}
+          className="relative inline-flex items-center justify-center"
+        >
           <ShoppingBag size={22} strokeWidth={1.3} />
+
+          <span
+            className="absolute -right-3 -top-3 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-medium text-[#292521]"
+            aria-live="polite"
+          >
+            {cartCount}
+          </span>
         </Link>
       </header>
 
