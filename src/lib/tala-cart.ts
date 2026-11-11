@@ -148,3 +148,24 @@ export function getTalaCartTotal(): number {
     0
   );
 }
+export function useCartCount(): number {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      setCount(getTalaCartCount());
+    };
+
+    updateCount();
+
+    window.addEventListener("tala-cart-updated", updateCount);
+    window.addEventListener("storage", updateCount);
+
+    return () => {
+      window.removeEventListener("tala-cart-updated", updateCount);
+      window.removeEventListener("storage", updateCount);
+    };
+  }, []);
+
+  return count;
+}
