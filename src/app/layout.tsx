@@ -2,7 +2,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./tala-pages.css";
-import { TALAHeader } from "@/components/tala-shell";
 
 export const metadata: Metadata = {
   title: {
@@ -31,10 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <TALAHeader />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
