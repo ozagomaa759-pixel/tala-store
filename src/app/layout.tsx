@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-
+import "./tala-pages.css";
 export const metadata: Metadata = {
   title: {
     default: "TALA | Luxury Fashion",
