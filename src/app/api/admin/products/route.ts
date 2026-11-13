@@ -22,9 +22,11 @@ function makeSlug(value: string) {
 }
 
 function isValidPrice(value: unknown): value is number {
-  return typeof value === "number" &&
+  return (
+    typeof value === "number" &&
     Number.isFinite(value) &&
-    value >= 0;
+    value >= 0
+  );
 }
 
 function isValidStatus(
@@ -197,7 +199,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await db
       .from("products")
-      .insert(productData)
+      .insert([productData] as never[])
       .select("*")
       .single();
 
@@ -340,7 +342,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data, error } = await db
       .from("products")
-      .update(updates)
+      .update(updates as never)
       .eq("id", body.id)
       .select("*")
       .single();
