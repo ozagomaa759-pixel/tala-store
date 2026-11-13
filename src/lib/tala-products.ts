@@ -1,162 +1,216 @@
 
 import { createClient } from "@/lib/supabase/browser";
-import type { Product, ProductColor } from "@/data/products";
+import type { Product } from "@/data/products";
 
-type SupabaseProduct = {
+type ProductRow = {
   id: string;
   name: string;
-  slug: string;
-  description: string | null;
-  price: number;
-  compare_at_price: number | null;
-  main_image: string | null;
-  images: string[] | null;
-  status: string;
-  is_featured: boolean;
-  is_best_seller: boolean;
-  is_new_arrival: boolean;
-  sort_order: number;
-  categories:
-    | { name: string }
-    | { name: string }[]
-    | null;
+  subtitle?: string | null;
+  description?: string | null;
+  price: number | string;
+  compare_at_price?: number | string | null;
+  main_image?: string | null;
+  images?: string[] | null;
+  category_id?: string | null;
+  is_new?: boolean | null;
+  is_best_seller?: boolean | null;
+  is_featured?: boolean | null;
+  is_available?: boolean | null;
+  tags?: string[] | null;
+  sort_order?: number | null;
 };
 
-type SupabaseVariant = {
-  product_id: string;
-  size: string | null;
-  color: string | null;
-  color_code: string | null;
-  stock_quantity: number;
-  is_active: boolean;
+type CategoryRow = {
+  id: string;
+  name: string;
 };
+
+type VariantRow = {
+  product_id: string;
+  size?: string | null;
+  color?: string | null;
+  color_code?: string | null;
+  stock_quantity?: number | null;
+  is_active?: boolean | null;
+};
+
+const PLACEHOLDER_IMAGE =
+  "https://placehold.co/600x800/F5F0E8/332A23?text=TALA";
+
+const ALLOWED_CATEGORIES = [
+  "Dresses",
+  "Tops",
+  "Bottoms",
+  "Outerwear",
+  "Sets",
+  "Jackets",
+] as const;
+
+function normalizeCategory(
+  categoryName: string | undefined
+): Product["category"] {
+  const normalized = categoryName?.trim();
+
+  if (
+    normalized &&
+    ALLOWED_CATEGORIES.includes(
+      normalized as (typeof ALLOWED_CATEGORIES)[number]
+    )
+  ) {
+    return normalized as Product["category"];
+  }
+
+  return "Sets";
+}
+
+function normalizeImages(
+  mainImage: string | null | undefined,
+  images: string[] | null | undefined
+): string[] {
+  const allImages = [
+    mainImage,
+    ...(Array.isArray(images) ? images : []),
+  ].filter(
+    (image): image is string =>
+      typeof image === "string" && image.trim().length > 0
+  );
+
+  return [...new Set(allImages)];
+}
 
 export async function getTalaProducts(): Promise<Product[]> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from("products")
-    .select(`
-      id,
-      name,
-      slug,
-      description,
-      price,
-      compare_at_price,
-      main_image,
-      images,
-      status,
-      is_featured,
-      is_best_seller,
-      is_new_arrival,
-      sort_order,
-      categories (
-        name
-      )
-    `)
-    .eq("status", "published")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
+  const [
+    { data: productsData, error: productsError },
+    { data: categoriesData, error: categoriesError },
+  ] = await Promise.all([
+    supabase
+      .from("products")
+      .select("*")
+      .eq("status", "published")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
 
-  if (error) {
-    console.error("TALA products error:", error.message);
-    throw new Error("Could not load TALA products.");
+    supabase
+      .from("categories")
+      .select("id, name")
+      .eq("is_active", true),
+  ]);
+
+  if (productsError) {
+    console.error("TALA products loading error:", productsError);
+    throw new Error("Could not load products.");
   }
 
-  const products = (data ?? []) as unknown as SupabaseProduct[];
+  if (categoriesError) {
+    console.error("TALA categories loading error:", categoriesError);
+    throw new Error("Could not load product categories.");
+  }
 
-  if (products.length === 0) return [];
+  const products =
+    (productsData ?? []) as unknown as ProductRow[];
+
+  const categories =
+    (categoriesData ?? []) as unknown as CategoryRow[];
+
+  if (products.length === 0) {
+    return [];
+  }
+
+  const categoryMap = new Map(
+    categories.map((category) => [
+      category.id,
+      category.name,
+    ])
+  );
 
   const productIds = products.map((product) => product.id);
 
   const { data: variantsData, error: variantsError } =
     await supabase
       .from("product_variants")
-      .select(`
-        product_id,
-        size,
-        color,
-        color_code,
-        stock_quantity,
-        is_active
-      `)
+      .select(
+        "product_id, size, color, color_code, stock_quantity, is_active"
+      )
       .in("product_id", productIds)
       .eq("is_active", true)
       .gt("stock_quantity", 0);
 
   if (variantsError) {
-    console.error("TALA variants error:", variantsError.message);
+    console.error("TALA variants loading error:", variantsError);
     throw new Error("Could not load product variants.");
   }
 
-  const variants = (variantsData ?? []) as SupabaseVariant[];
+  const variants =
+    (variantsData ?? []) as unknown as VariantRow[];
 
-  return products.map((product) => {
-    const productVariants = variants.filter(
-      (variant) => variant.product_id === product.id
+  const variantsByProduct = new Map<string, VariantRow[]>();
+
+  for (const variant of variants) {
+    const current =
+      variantsByProduct.get(variant.product_id) ?? [];
+
+    current.push(variant);
+    variantsByProduct.set(variant.product_id, current);
+  }
+
+  return products.map((product): Product => {
+    const productVariants =
+      variantsByProduct.get(product.id) ?? [];
+
+    const images = normalizeImages(
+      product.main_image,
+      product.images
     );
 
-    const colorsMap = new Map<string, ProductColor>();
-    const sizesSet = new Set<string>();
+    const firstImage = images[0] ?? PLACEHOLDER_IMAGE;
 
-    productVariants.forEach((variant) => {
-      if (variant.color) {
-        colorsMap.set(variant.color, {
-          name: variant.color,
-          value: variant.color_code || "#A99A88",
-        });
-      }
+    const uniqueSizes = [
+      ...new Set(
+        productVariants
+          .map((variant) => variant.size?.trim())
+          .filter((size): size is string => Boolean(size))
+      ),
+    ];
 
-      if (variant.size) sizesSet.add(variant.size);
-    });
-
-    const categoryRelation = Array.isArray(product.categories)
-      ? product.categories[0]
-      : product.categories;
-
-    const allowedCategories = [
-      "Dresses",
-      "Tops",
-      "Bottoms",
-      "Outerwear",
-      "Sets",
-    ] as const;
-
-    const categoryName = categoryRelation?.name ?? "Dresses";
-
-    const category = allowedCategories.includes(
-      categoryName as (typeof allowedCategories)[number]
-    )
-      ? (categoryName as (typeof allowedCategories)[number])
-      : "Dresses";
-
-    const images = [
-      ...(product.main_image ? [product.main_image] : []),
-      ...(product.images ?? []),
-    ].filter((image, index, array) => array.indexOf(image) === index);
+    const uniqueColors = [
+      ...new Map(
+        productVariants
+          .filter((variant) => variant.color?.trim())
+          .map((variant) => [
+            variant.color!.trim(),
+            {
+              name: variant.color!.trim(),
+              value: variant.color_code || "#D8C8B8",
+            },
+          ])
+      ).values(),
+    ];
 
     return {
       id: product.id,
       name: product.name,
-      subtitle: "",
+      subtitle: product.subtitle ?? "",
       description: product.description ?? "",
-      price: Number(product.price),
-      oldPrice:
-        product.compare_at_price === null
-          ? undefined
-          : Number(product.compare_at_price),
-      category,
-      image: images[0] || "/images/product-placeholder.webp",
+      price: Number(product.price) || 0,
+      oldPrice: product.compare_at_price
+        ? Number(product.compare_at_price)
+        : undefined,
+      category: normalizeCategory(
+        categoryMap.get(product.category_id ?? "")
+      ),
+      image: firstImage,
       images,
-      colors: Array.from(colorsMap.values()),
-      sizes: Array.from(new Set([...sizesSet, "XXL"])),
-      rating: 0,
+      colors: uniqueColors,
+      sizes: uniqueSizes,
+      rating: 5,
       reviews: 0,
-      isNew: product.is_new_arrival,
-      isBestSeller: product.is_best_seller,
-      isFeatured: product.is_featured,
+      isNew: Boolean(product.is_new),
+      isBestSeller: Boolean(product.is_best_seller),
+      isFeatured: Boolean(product.is_featured),
       isAvailable: productVariants.length > 0,
-      tags: [],
+      tags: product.tags ?? [],
     };
   });
 }
