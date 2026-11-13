@@ -2586,7 +2586,7 @@ function ProductsPage() {
 
   const [isLoading, setIsLoading] =
     useState(true);
-
+const [products, setProducts] = useState<Product[]>([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] =
     useState(false);
 
