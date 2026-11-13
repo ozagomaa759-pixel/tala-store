@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("categories")
-      .insert([category] as any)
+      .insert([category] as never[])
       .select()
       .single();
 
@@ -159,7 +159,13 @@ export async function PATCH(request: NextRequest) {
         return errorResponse("Invalid category slug");
       }
 
-      updates.slug = makeSlug(body.slug);
+      const slug = makeSlug(body.slug);
+
+      if (!slug) {
+        return errorResponse("Invalid category slug");
+      }
+
+      updates.slug = slug;
     }
 
     if (body.description !== undefined) {
@@ -193,7 +199,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.sort_order !== undefined) {
-      if (!Number.isInteger(body.sort_order)) {
+      if (
+        typeof body.sort_order !== "number" ||
+        !Number.isInteger(body.sort_order)
+      ) {
         return errorResponse("Invalid sort order");
       }
 
@@ -204,13 +213,17 @@ export async function PATCH(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("categories")
-      .update(updates as any)
+      .update(updates as never)
       .eq("id", body.id)
       .select()
       .single();
 
     if (error) {
       return errorResponse(error.message, 400);
+    }
+
+    if (!data) {
+      return errorResponse("Category not found", 404);
     }
 
     return NextResponse.json({
@@ -235,7 +248,7 @@ export async function DELETE(request: NextRequest) {
 
     const id = request.nextUrl.searchParams.get("id");
 
-    if (!id) {
+    if (!id || !id.trim()) {
       return errorResponse("Category ID is required");
     }
 
