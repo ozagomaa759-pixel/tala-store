@@ -61,9 +61,7 @@ export async function getTalaProducts(): Promise<Product[]> {
 
   const products = (data ?? []) as unknown as SupabaseProduct[];
 
-  if (products.length === 0) {
-    return [];
-  }
+  if (products.length === 0) return [];
 
   const productIds = products.map((product) => product.id);
 
@@ -105,9 +103,7 @@ export async function getTalaProducts(): Promise<Product[]> {
         });
       }
 
-      if (variant.size) {
-        sizesSet.add(variant.size);
-      }
+      if (variant.size) sizesSet.add(variant.size);
     });
 
     const categoryRelation = Array.isArray(product.categories)
@@ -135,10 +131,6 @@ export async function getTalaProducts(): Promise<Product[]> {
       ...(product.images ?? []),
     ].filter((image, index, array) => array.indexOf(image) === index);
 
-    const image =
-      images[0] ||
-      "/images/product-placeholder.webp";
-
     return {
       id: product.id,
       name: product.name,
@@ -150,7 +142,7 @@ export async function getTalaProducts(): Promise<Product[]> {
           ? undefined
           : Number(product.compare_at_price),
       category,
-      image,
+      image: images[0] || "/images/product-placeholder.webp",
       images,
       colors: Array.from(colorsMap.values()),
       sizes: Array.from(sizesSet),
