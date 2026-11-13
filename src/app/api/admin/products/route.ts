@@ -1,15 +1,14 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 const ALLOWED_STATUSES = ["draft", "published", "archived"] as const;
 
 function errorResponse(error: string, status = 400) {
-  return NextResponse.json(
-    { success: false, error },
-    { status }
-  );
+  return NextResponse.json({ success: false, error }, { status });
 }
 
 function makeSlug(value: string) {
@@ -23,11 +22,9 @@ function makeSlug(value: string) {
 }
 
 function isValidPrice(value: unknown): value is number {
-  return (
-    typeof value === "number" &&
+  return typeof value === "number" &&
     Number.isFinite(value) &&
-    value >= 0
-  );
+    value >= 0;
 }
 
 function isValidStatus(
@@ -41,22 +38,31 @@ function isValidStatus(
   );
 }
 
-// GET: جلب المنتجات
+async function authorizeAdmin() {
+  const auth = await requireAdmin();
+
+  if (!auth.authorized) {
+    return null;
+  }
+
+  return createAdminClient();
+}
+
+// GET: Fetch products
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const db = await authorizeAdmin();
 
-    if (!auth.authorized || !auth.supabase) {
+    if (!db) {
       return errorResponse("Unauthorized", 401);
     }
 
     const { searchParams } = new URL(request.url);
-
     const search = searchParams.get("search");
     const categoryId = searchParams.get("category_id");
     const status = searchParams.get("status");
 
-    let query = auth.supabase
+    let query = db
       .from("products")
       .select("*")
       .order("sort_order", { ascending: true })
@@ -81,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("GET products error:", error);
-      return errorResponse("Failed to fetch products", 500);
+      return errorResponse(error.message, 500);
     }
 
     return NextResponse.json({
@@ -90,16 +96,20 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("GET products error:", error);
-    return errorResponse("Internal server error", 500);
+
+    return errorResponse(
+      error instanceof Error ? error.message : "Internal server error",
+      500
+    );
   }
 }
 
-// POST: إضافة منتج جديد
+// POST: Create product
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const db = await authorizeAdmin();
 
-    if (!auth.authorized || !auth.supabase) {
+    if (!db) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -112,7 +122,9 @@ export async function POST(request: NextRequest) {
       return errorResponse("Product name is required");
     }
 
-    if (!isValidPrice(Number(body.price))) {
+    const price = Number(body.price);
+
+    if (!isValidPrice(price) || price <= 0) {
       return errorResponse("A valid product price is required");
     }
 
@@ -134,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     if (
       compareAtPrice !== null &&
-      !isValidPrice(compareAtPrice)
+      (!isValidPrice(compareAtPrice) || compareAtPrice < price)
     ) {
       return errorResponse("Invalid compare-at price");
     }
@@ -146,6 +158,13 @@ export async function POST(request: NextRequest) {
       return errorResponse("Invalid product status");
     }
 
+    if (
+      typeof body.category_id !== "string" ||
+      !body.category_id.trim()
+    ) {
+      return errorResponse("A product category is required");
+    }
+
     const images = Array.isArray(body.images)
       ? body.images.filter(
           (image: unknown) => typeof image === "string"
@@ -155,11 +174,17 @@ export async function POST(request: NextRequest) {
     const productData = {
       name,
       slug,
-      category_id: body.category_id || null,
-      description: body.description || null,
-      price: Number(body.price),
+      category_id: body.category_id,
+      description:
+        typeof body.description === "string"
+          ? body.description.trim() || null
+          : null,
+      price,
       compare_at_price: compareAtPrice,
-      main_image: body.main_image || null,
+      main_image:
+        typeof body.main_image === "string" && body.main_image
+          ? body.main_image
+          : null,
       images,
       status,
       is_featured: body.is_featured === true,
@@ -170,7 +195,7 @@ export async function POST(request: NextRequest) {
         : 0,
     };
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await db
       .from("products")
       .insert(productData)
       .select("*")
@@ -178,7 +203,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("POST product error:", error);
-      return errorResponse("Failed to create product", 500);
+      return errorResponse(error.message, 500);
     }
 
     return NextResponse.json(
@@ -190,16 +215,20 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("POST product error:", error);
-    return errorResponse("Internal server error", 500);
+
+    return errorResponse(
+      error instanceof Error ? error.message : "Internal server error",
+      500
+    );
   }
 }
 
-// PATCH: تعديل منتج
+// PATCH: Update product
 export async function PATCH(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const db = await authorizeAdmin();
 
-    if (!auth.authorized || !auth.supabase) {
+    if (!db) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -225,7 +254,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.slug !== undefined) {
-      if (typeof body.slug !== "string" || !body.slug.trim()) {
+      if (
+        typeof body.slug !== "string" ||
+        !body.slug.trim()
+      ) {
         return errorResponse("Invalid product slug");
       }
 
@@ -235,7 +267,7 @@ export async function PATCH(request: NextRequest) {
     if (body.price !== undefined) {
       const price = Number(body.price);
 
-      if (!isValidPrice(price)) {
+      if (!isValidPrice(price) || price <= 0) {
         return errorResponse("Invalid product price");
       }
 
@@ -293,28 +325,20 @@ export async function PATCH(request: NextRequest) {
       updates.status = body.status;
     }
 
-    if (
-      body.is_featured !== undefined &&
-      typeof body.is_featured !== "boolean"
-    ) {
-      return errorResponse("Invalid featured value");
+    for (const field of [
+      "is_featured",
+      "is_best_seller",
+      "is_new_arrival",
+    ] as const) {
+      if (
+        body[field] !== undefined &&
+        typeof body[field] !== "boolean"
+      ) {
+        return errorResponse(`Invalid ${field} value`);
+      }
     }
 
-    if (
-      body.is_best_seller !== undefined &&
-      typeof body.is_best_seller !== "boolean"
-    ) {
-      return errorResponse("Invalid best seller value");
-    }
-
-    if (
-      body.is_new_arrival !== undefined &&
-      typeof body.is_new_arrival !== "boolean"
-    ) {
-      return errorResponse("Invalid new arrival value");
-    }
-
-    const { data, error } = await auth.supabase
+    const { data, error } = await db
       .from("products")
       .update(updates)
       .eq("id", body.id)
@@ -323,7 +347,7 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       console.error("PATCH product error:", error);
-      return errorResponse("Failed to update product", 500);
+      return errorResponse(error.message, 500);
     }
 
     return NextResponse.json({
@@ -332,16 +356,20 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error) {
     console.error("PATCH product error:", error);
-    return errorResponse("Internal server error", 500);
+
+    return errorResponse(
+      error instanceof Error ? error.message : "Internal server error",
+      500
+    );
   }
 }
 
-// DELETE: حذف منتج
+// DELETE: Delete product
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const db = await authorizeAdmin();
 
-    if (!auth.authorized || !auth.supabase) {
+    if (!db) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -352,14 +380,14 @@ export async function DELETE(request: NextRequest) {
       return errorResponse("Product ID is required");
     }
 
-    const { error } = await auth.supabase
+    const { error } = await db
       .from("products")
       .delete()
       .eq("id", id);
 
     if (error) {
       console.error("DELETE product error:", error);
-      return errorResponse("Failed to delete product", 500);
+      return errorResponse(error.message, 500);
     }
 
     return NextResponse.json({
@@ -368,6 +396,10 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     console.error("DELETE product error:", error);
-    return errorResponse("Internal server error", 500);
+
+    return errorResponse(
+      error instanceof Error ? error.message : "Internal server error",
+      500
+    );
   }
 }
