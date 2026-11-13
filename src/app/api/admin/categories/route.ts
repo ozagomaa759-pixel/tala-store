@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -21,16 +22,25 @@ function makeSlug(value: string) {
     .replace(/^-|-$/g, "");
 }
 
-// GET: عرض الأقسام
+async function getAdminDatabase() {
+  const auth = await requireAdmin();
+
+  if (!auth.authorized) {
+    return null;
+  }
+
+  return createAdminClient();
+}
+
 export async function GET() {
   try {
-    const auth = await requireAdmin();
+    const supabase = await getAdminDatabase();
 
-    if (!auth.authorized) {
+    if (!supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await supabase
       .from("categories")
       .select("*")
       .order("sort_order", { ascending: true })
@@ -44,17 +54,19 @@ export async function GET() {
       success: true,
       categories: data ?? [],
     });
-  } catch {
-    return errorResponse("Failed to fetch categories", 500);
+  } catch (error) {
+    return errorResponse(
+      error instanceof Error ? error.message : "Failed to fetch categories",
+      500
+    );
   }
 }
 
-// POST: إضافة قسم
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const supabase = await getAdminDatabase();
 
-    if (!auth.authorized) {
+    if (!supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -84,8 +96,8 @@ export async function POST(request: NextRequest) {
           ? body.description
           : "",
       image_url:
-        typeof body.image_url === "string"
-          ? body.image_url
+        typeof body.image_url === "string" && body.image_url.trim()
+          ? body.image_url.trim()
           : null,
       is_active: body.is_active !== false,
       sort_order: Number.isInteger(body.sort_order)
@@ -93,7 +105,7 @@ export async function POST(request: NextRequest) {
         : 0,
     };
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await supabase
       .from("categories")
       .insert(category)
       .select()
@@ -107,17 +119,19 @@ export async function POST(request: NextRequest) {
       { success: true, category: data },
       { status: 201 }
     );
-  } catch {
-    return errorResponse("Failed to create category", 500);
+  } catch (error) {
+    return errorResponse(
+      error instanceof Error ? error.message : "Failed to create category",
+      500
+    );
   }
 }
 
-// PATCH: تعديل قسم
 export async function PATCH(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const supabase = await getAdminDatabase();
 
-    if (!auth.authorized) {
+    if (!supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -188,7 +202,7 @@ export async function PATCH(request: NextRequest) {
 
     updates.updated_at = new Date().toISOString();
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await supabase
       .from("categories")
       .update(updates)
       .eq("id", body.id)
@@ -203,17 +217,19 @@ export async function PATCH(request: NextRequest) {
       success: true,
       category: data,
     });
-  } catch {
-    return errorResponse("Failed to update category", 500);
+  } catch (error) {
+    return errorResponse(
+      error instanceof Error ? error.message : "Failed to update category",
+      500
+    );
   }
 }
 
-// DELETE: حذف قسم
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const supabase = await getAdminDatabase();
 
-    if (!auth.authorized) {
+    if (!supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -223,7 +239,7 @@ export async function DELETE(request: NextRequest) {
       return errorResponse("Category ID is required");
     }
 
-    const { error } = await auth.supabase
+    const { error } = await supabase
       .from("categories")
       .delete()
       .eq("id", id);
@@ -236,7 +252,10 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: "Category deleted successfully",
     });
-  } catch {
-    return errorResponse("Failed to delete category", 500);
+  } catch (error) {
+    return errorResponse(
+      error instanceof Error ? error.message : "Failed to delete category",
+      500
+    );
   }
 }
