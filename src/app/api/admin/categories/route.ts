@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("categories")
-      .insert(category)
+      .insert([category] as any)
       .select()
       .single();
 
@@ -204,7 +204,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("categories")
-      .update(updates)
+      .update(updates as any)
       .eq("id", body.id)
       .select()
       .single();
