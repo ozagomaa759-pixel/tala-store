@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -77,9 +76,7 @@ export default function HomePage() {
     .slice(0, 4);
 
   const displayedProducts =
-    newArrivals.length > 0
-      ? newArrivals
-      : products.slice(0, 4);
+    newArrivals.length > 0 ? newArrivals : products.slice(0, 4);
 
   return (
     <main className="min-h-screen bg-[#f4f0e9] text-[#292521]">
