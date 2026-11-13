@@ -2861,7 +2861,7 @@ useEffect(() => {
     const normalizedSearch =
       normalizeSearch(search);
 
-    return PRODUCTS.filter((product) => {
+    return products.filter((product) => {
       const matchesCategory =
         selectedCategory === "All" ||
         product.category === selectedCategory;
