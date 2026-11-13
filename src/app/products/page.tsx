@@ -58,6 +58,8 @@ import {
   getCartCount,
 } from "@/lib/cart";
 
+import { getTalaProducts } from "@/lib/tala-products";
+
 /* =========================================================
    TALA — PRODUCTS PAGE
    Version: 1.0
