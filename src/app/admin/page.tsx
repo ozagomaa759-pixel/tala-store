@@ -9,6 +9,7 @@ import {
   Boxes,
   LayoutDashboard,
   LogOut,
+  Tags,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -16,9 +17,15 @@ import { useState } from "react";
 const sections = [
   {
     title: "Products",
-    description: "Manage your store products and collections.",
-    href: "/products",
+    description: "Create, edit and organize your TALA products.",
+    href: "/admin/products",
     icon: Package,
+  },
+  {
+    title: "Categories",
+    description: "Create and manage your store categories.",
+    href: "/admin/categories",
+    icon: Tags,
   },
   {
     title: "Orders",
@@ -61,9 +68,8 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F5F0] px-6 py-12 sm:py-20 text-[#332A23]">
+    <main className="min-h-screen bg-[#F8F5F0] px-6 py-12 text-[#332A23] sm:py-20">
       <div className="mx-auto max-w-7xl">
-
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs uppercase tracking-[0.4em] text-[#A28A72]">
             TALA Administration
@@ -82,7 +88,6 @@ export default function AdminPage() {
 
         <div className="mt-8 flex items-center gap-4">
           <LayoutDashboard size={38} strokeWidth={1} />
-
           <h1 className="text-5xl font-light sm:text-7xl">
             Dashboard
           </h1>
@@ -90,11 +95,11 @@ export default function AdminPage() {
 
         <p className="mt-6 max-w-xl text-sm leading-8 text-[#77695D]">
           Welcome to your TALA control center.
-          Manage products, orders, and inventory
+          Manage products, categories, orders, and inventory
           from one organized workspace.
         </p>
 
-        <div className="mt-16 grid gap-5 md:grid-cols-3">
+        <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {sections.map((section) => {
             const Icon = section.icon;
 
@@ -102,7 +107,7 @@ export default function AdminPage() {
               <Link
                 key={section.title}
                 href={section.href}
-                className="group border border-[#E5DACE] bg-white/60 p-8 transition duration-300 hover:-translate-y-1 hover:bg-white"
+                className="group border border-[#E5DACE] bg-white/60 p-7 transition duration-300 hover:-translate-y-1 hover:bg-white"
               >
                 <Icon size={30} strokeWidth={1} />
 
@@ -110,7 +115,7 @@ export default function AdminPage() {
                   {section.title}
                 </h2>
 
-                <p className="mt-3 min-h-12 text-sm leading-7 text-[#77695D]">
+                <p className="mt-3 min-h-14 text-sm leading-7 text-[#77695D]">
                   {section.description}
                 </p>
 
