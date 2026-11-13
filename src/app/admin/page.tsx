@@ -1,4 +1,6 @@
 
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -6,7 +8,10 @@ import {
   ShoppingBag,
   Boxes,
   LayoutDashboard,
+  LogOut,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 const sections = [
   {
@@ -30,15 +35,54 @@ const sections = [
 ];
 
 export default function AdminPage() {
-  return (
-    <main className="min-h-screen bg-[#F8F5F0] px-6 py-20 text-[#332A23]">
-      <div className="mx-auto max-w-7xl">
-        <p className="text-xs uppercase tracking-[0.4em] text-[#A28A72]">
-          TALA Administration
-        </p>
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
 
-        <div className="mt-6 flex items-center gap-4">
+  async function handleLogout() {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+
+    try {
+      const response = await fetch("/api/admin/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      router.replace("/admin/login");
+      router.refresh();
+    } catch {
+      setLoggingOut(false);
+      alert("Unable to log out. Please try again.");
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#F8F5F0] px-6 py-12 sm:py-20 text-[#332A23]">
+      <div className="mx-auto max-w-7xl">
+
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs uppercase tracking-[0.4em] text-[#A28A72]">
+            TALA Administration
+          </p>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="inline-flex items-center gap-2 border border-[#DCCFC1] px-4 py-3 text-xs uppercase tracking-widest text-[#77695D] transition hover:bg-white disabled:opacity-50"
+          >
+            <LogOut size={15} />
+            {loggingOut ? "Logging out..." : "Logout"}
+          </button>
+        </div>
+
+        <div className="mt-8 flex items-center gap-4">
           <LayoutDashboard size={38} strokeWidth={1} />
+
           <h1 className="text-5xl font-light sm:text-7xl">
             Dashboard
           </h1>
@@ -74,6 +118,7 @@ export default function AdminPage() {
                   <span className="text-xs uppercase tracking-widest">
                     Open Section
                   </span>
+
                   <ArrowRight
                     size={18}
                     className="transition group-hover:translate-x-2"
