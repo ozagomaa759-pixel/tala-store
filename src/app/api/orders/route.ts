@@ -1,175 +1,194 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/supabase/require-admin";
-
 export const dynamic = "force-dynamic";
-
+type CustomerInput = {
+  fullName: string;
+  phone: string;
+  email: string;
+  city: string;
+  address: string;
+};
+type OrderItemInput = {
+  productId: string;
+  size: string;
+  color: string;
+  quantity: number;
+};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
+}
+function cleanString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+function isValidUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
+function errorResponse(message: string, status: number) {
+  return NextResponse.json(
+    { success: false, message },
+    { status }
+  );
+}
 export async function GET() {
   try {
     const { authorized } = await requireAdmin();
-
     if (!authorized) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized." },
-        { status: 401 }
-      );
+      return errorResponse("Unauthorized.", 401);
     }
-
     const supabase = createAdminClient();
-
     const { data, error } = await supabase
       .from("orders")
       .select("*, order_items(*)")
       .order("created_at", { ascending: false });
-
     if (error) {
       console.error("Orders GET error:", error.message);
-
-      return NextResponse.json(
-        { success: false, message: "Could not load orders." },
-        { status: 500 }
-      );
+      return errorResponse("Could not load orders.", 500);
     }
-
     return NextResponse.json({
       success: true,
       orders: data ?? [],
     });
   } catch (error) {
     console.error("Orders GET error:", error);
-
-    return NextResponse.json(
-      { success: false, message: "Server error." },
-      { status: 500 }
-    );
+    return errorResponse("Server error.", 500);
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-
-    const customer = body?.customer;
-    const items = body?.items;
-
-    if (
-      !customer ||
-      typeof customer.fullName !== "string" ||
-      typeof customer.phone !== "string" ||
-      typeof customer.city !== "string" ||
-      typeof customer.address !== "string" ||
-      !Array.isArray(items) ||
-      items.length === 0 ||
-      items.length > 30
-    ) {
-      return NextResponse.json(
-        { success: false, message: "Invalid order information." },
-        { status: 400 }
-      );
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse("Invalid request body.", 400);
     }
-
-    const cleanCustomer = {
-      fullName: customer.fullName.trim(),
-      phone: customer.phone.trim(),
-      email:
-        typeof customer.email === "string"
-          ? customer.email.trim()
-          : "",
-      city: customer.city.trim(),
-      address: customer.address.trim(),
+    if (!isRecord(body)) {
+      return errorResponse("Invalid order information.", 400);
+    }
+    const rawCustomer = body.customer;
+    const rawItems = body.items;
+    if (
+      !isRecord(rawCustomer) ||
+      !Array.isArray(rawItems) ||
+      rawItems.length === 0 ||
+      rawItems.length > 30
+    ) {
+      return errorResponse("Invalid order information.", 400);
+    }
+    const customer: CustomerInput = {
+      fullName: cleanString(rawCustomer.fullName),
+      phone: cleanString(rawCustomer.phone),
+      email: cleanString(rawCustomer.email),
+      city: cleanString(rawCustomer.city),
+      address: cleanString(rawCustomer.address),
     };
-
     if (
-      !cleanCustomer.fullName ||
-      !cleanCustomer.phone ||
-      !cleanCustomer.city ||
-      !cleanCustomer.address
+      !customer.fullName ||
+      !customer.phone ||
+      !customer.city ||
+      !customer.address
     ) {
-      return NextResponse.json(
-        { success: false, message: "Please complete your delivery details." },
-        { status: 400 }
+      return errorResponse(
+        "Please complete your delivery details.",
+        400
       );
     }
-
-    const cleanItems = items.map((item: any) => ({
-      productId: String(item?.productId ?? ""),
-      size: String(item?.size ?? ""),
-      color: String(item?.color ?? ""),
-      quantity: Number(item?.quantity),
-    }));
-
     if (
-      cleanItems.some(
-        (item: {
-          productId: string;
-          size: string;
-          color: string;
-          quantity: number;
-        }) =>
-          !item.productId ||
-          !item.size ||
-          !item.color ||
-          !Number.isInteger(item.quantity) ||
-          item.quantity < 1 ||
-          item.quantity > 10
-      )
+      customer.fullName.length > 120 ||
+      customer.phone.length > 30 ||
+      customer.email.length > 254 ||
+      customer.city.length > 100 ||
+      customer.address.length > 500
     ) {
-      return NextResponse.json(
-        { success: false, message: "Invalid product or quantity." },
-        { status: 400 }
+      return errorResponse(
+        "Some customer information is too long.",
+        400
       );
     }
-
+    if (
+      customer.email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)
+    ) {
+      return errorResponse("Please enter a valid email address.", 400);
+    }
+    const cleanItems: OrderItemInput[] = [];
+    for (const rawItem of rawItems) {
+      if (!isRecord(rawItem)) {
+        return errorResponse("Invalid product information.", 400);
+      }
+      const productId = cleanString(rawItem.productId);
+      const size = cleanString(rawItem.size);
+      const color = cleanString(rawItem.color);
+      const quantity = Number(rawItem.quantity);
+      if (
+        !isValidUuid(productId) ||
+        !size ||
+        !color ||
+        size.length > 40 ||
+        color.length > 80 ||
+        !Number.isInteger(quantity) ||
+        quantity < 1 ||
+        quantity > 10
+      ) {
+        return errorResponse(
+          "Invalid product, size, color, or quantity.",
+          400
+        );
+      }
+      cleanItems.push({
+        productId,
+        size,
+        color,
+        quantity,
+      });
+    }
     const supabase = createAdminClient();
-
     const { data, error } = await supabase.rpc(
       "create_tala_order",
       {
-        p_customer: cleanCustomer,
+        p_customer: customer,
         p_items: cleanItems,
       }
     );
-
     if (error) {
       console.error("Order creation error:", error.message);
-
       const message = error.message ?? "";
-
       if (message.includes("INSUFFICIENT_STOCK")) {
-        return NextResponse.json(
-          { success: false, message: "Some items are no longer available in the requested quantity." },
-          { status: 409 }
+        return errorResponse(
+          "Some items are no longer available in the requested quantity.",
+          409
         );
       }
-
       if (
         message.includes("PRODUCT_UNAVAILABLE") ||
         message.includes("VARIANT_UNAVAILABLE")
       ) {
-        return NextResponse.json(
-          { success: false, message: "A selected product or size is unavailable." },
-          { status: 409 }
+        return errorResponse(
+          "A selected product or size is unavailable.",
+          409
         );
       }
-
       if (
         message.includes("CUSTOMER_DETAILS_REQUIRED") ||
         message.includes("EMPTY_ORDER") ||
         message.includes("INVALID_QUANTITY")
       ) {
-        return NextResponse.json(
-          { success: false, message: "Please check your order information." },
-          { status: 400 }
+        return errorResponse(
+          "Please check your order information.",
+          400
         );
       }
-
-      return NextResponse.json(
-        { success: false, message: "We could not process your order. Please try again." },
-        { status: 500 }
+      return errorResponse(
+        "We could not process your order. Please try again.",
+        500
       );
     }
-
     return NextResponse.json(
       {
         success: true,
@@ -180,10 +199,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Order POST error:", error);
-
-    return NextResponse.json(
-      { success: false, message: "Something went wrong. Please try again." },
-      { status: 500 }
+    return errorResponse(
+      "Something went wrong. Please try again.",
+      500
     );
   }
 }
