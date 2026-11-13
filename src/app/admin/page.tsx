@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -6,6 +7,7 @@ import {
   Boxes,
   LayoutDashboard,
 } from "lucide-react";
+import { requireAdmin } from "@/lib/supabase/require-admin";
 
 const sections = [
   {
@@ -28,7 +30,9 @@ const sections = [
   },
 ];
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  await requireAdmin();
+
   return (
     <main className="min-h-screen bg-[#F8F5F0] px-6 py-20 text-[#332A23]">
       <div className="mx-auto max-w-7xl">
