@@ -2,11 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft, ShoppingBag, Truck, ShieldCheck } from "lucide-react";
-import { getCart, type CartItem } from "@/lib/cart";
+import {
+  ArrowLeft,
+  LockKeyhole,
+  ShoppingBag,
+  Truck,
+} from "lucide-react";
+import { getCart, clearCart, type CartItem } from "@/lib/cart";
 
 const DELIVERY_FEE = 120;
+
+const inputClassName =
+  "mt-2 w-full border border-[#DED5CA] bg-white/70 px-4 py-3.5 text-sm text-[#332A23] outline-none transition placeholder:text-[#A69A8D] focus:border-[#A58B68] focus:ring-1 focus:ring-[#A58B68]/20";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -17,6 +24,12 @@ export default function CheckoutPage() {
     city: "",
     address: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [successOrder, setSuccessOrder] = useState<{
+    order_number: string;
+    total: number;
+  } | null>(null);
 
   useEffect(() => {
     setCart(getCart());
@@ -25,222 +38,313 @@ export default function CheckoutPage() {
   const subtotal = useMemo(
     () =>
       cart.reduce(
-        (total, item) => total + item.price * item.quantity,
+        (total, item) => total + Number(item.price) * item.quantity,
         0
       ),
     [cart]
   );
 
-  const total = subtotal + (cart.length > 0 ? DELIVERY_FEE : 0);
+  const deliveryFee = cart.length > 0 ? DELIVERY_FEE : 0;
+  const total = subtotal + deliveryFee;
 
-  const updateField = (
-    field: keyof typeof customer,
-    value: string
-  ) => {
-    setCustomer((current) => ({
-      ...current,
-      [field]: value,
-    }));
+  const updateField = (field: keyof typeof customer, value: string) => {
+    setCustomer((current) => ({ ...current, [field]: value }));
   };
 
-  return (
-    <main className="min-h-screen bg-[#F8F5F0] px-5 py-12 text-[#332A23] md:px-8 md:py-16">
-      <div className="mx-auto max-w-6xl">
-        <Link
-          href="/cart"
-          className="mb-10 inline-flex items-center gap-2 text-sm text-[#81766B] transition hover:text-black"
-        >
-          <ArrowLeft size={16} />
-          Back to Cart
-        </Link>
+  const handlePlaceOrder = async () => {
+    if (isSubmitting) return;
 
-        <div className="mb-10">
-          <p className="mb-3 text-xs uppercase tracking-[0.35em] text-[#A58B68]">
+    if (
+      !customer.fullName.trim() ||
+      !customer.phone.trim() ||
+      !customer.city.trim() ||
+      !customer.address.trim()
+    ) {
+      setOrderError("Please complete all required delivery details.");
+      return;
+    }
+
+    if (cart.length === 0) {
+      setOrderError("Your shopping bag is empty.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setOrderError("");
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer,
+          items: cart.map((item) => ({
+            productId: item.productId,
+            size: item.size,
+            color: item.color,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success || !result.order) {
+        throw new Error(result.message || "Unable to place your order.");
+      }
+
+      clearCart();
+      setCart([]);
+      setSuccessOrder({
+        order_number: result.order.order_number,
+        total: Number(result.order.total),
+      });
+    } catch (error) {
+      setOrderError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (successOrder) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#F8F5F0] px-6 text-center">
+        <section className="w-full max-w-3xl py-20">
+          <p className="mb-8 text-xs font-medium uppercase tracking-[0.55em] text-[#A58B68]">
+            TALA
+          </p>
+          <h1 className="text-4xl font-light leading-tight tracking-[-0.04em] text-[#332A23] sm:text-6xl md:text-7xl">
+            Thank you for choosing TALA
+          </h1>
+          <p className="mt-7 text-xl font-light leading-relaxed text-[#806F5E] sm:text-2xl md:text-3xl">
+            Your order means everything 😊
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#F8F5F0] text-[#332A23]">
+      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
+        <header className="flex items-center justify-between border-b border-[#E5DDD2] pb-6">
+          <Link
+            href="/cart"
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-[#76695D] transition hover:text-[#332A23]"
+          >
+            <ArrowLeft size={15} strokeWidth={1.6} />
+            Back to bag
+          </Link>
+          <Link
+            href="/"
+            className="text-2xl font-semibold tracking-[0.28em] text-[#332A23]"
+          >
+            TALA
+          </Link>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-[#8C7D6D]">
+            <LockKeyhole size={13} strokeWidth={1.5} />
+            Secure checkout
+          </div>
+        </header>
+
+        <div className="mb-10 mt-12 text-center sm:mb-14 sm:mt-16">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-[#A58B68]">
             TALA Boutique
           </p>
-          <h1 className="text-4xl font-light md:text-5xl">
+          <h1 className="mt-4 text-4xl font-light tracking-[-0.04em] sm:text-5xl">
             Checkout
           </h1>
-          <p className="mt-3 text-sm text-[#81766B]">
-            Complete your order details below.
+          <p className="mt-3 text-sm font-light text-[#8C7D6D]">
+            A few details and your order will be on its way.
           </p>
         </div>
 
         {cart.length === 0 ? (
-          <div className="border border-[#E5DDD2] bg-white p-10 text-center">
-            <ShoppingBag
-              size={34}
-              className="mx-auto mb-5 text-[#A58B68]"
-            />
-            <h2 className="text-xl font-light">
-              Your bag is empty
-            </h2>
+          <section className="mx-auto max-w-xl border border-[#E5DDD2] bg-white/60 px-6 py-16 text-center">
+            <ShoppingBag className="mx-auto text-[#A58B68]" size={30} strokeWidth={1.3} />
+            <h2 className="mt-6 text-2xl font-light">Your bag is empty</h2>
+            <p className="mt-2 text-sm text-[#8C7D6D]">
+              Add something you love before checking out.
+            </p>
             <Link
               href="/products"
-              className="mt-6 inline-flex bg-[#332A23] px-7 py-4 text-xs uppercase tracking-[0.2em] text-white"
+              className="mt-8 inline-flex bg-[#332A23] px-8 py-4 text-[10px] uppercase tracking-[0.22em] text-white transition hover:bg-[#59483A]"
             >
-              Explore Collection
+              Explore collection
             </Link>
-          </div>
+          </section>
         ) : (
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <section className="border border-[#E5DDD2] bg-white p-6 md:p-9">
-              <h2 className="mb-7 text-xl font-light">
-                Delivery Information
-              </h2>
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
+            <section className="border border-[#E5DDD2] bg-white/55 p-5 sm:p-8">
+              <div className="mb-8 flex items-center justify-between border-b border-[#EAE3DA] pb-5">
+                <h2 className="text-lg font-light tracking-wide">Delivery details</h2>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[#A58B68]">
+                  Step 01
+                </span>
+              </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <label className="text-xs text-[#81766B] sm:col-span-2">
-                  Full Name
+                <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
+                  Full name <span className="text-[#A58B68]">*</span>
                   <input
-                    value={customer.fullName}
-                    onChange={(e) =>
-                      updateField("fullName", e.target.value)
-                    }
-                    className="mt-2 w-full border border-[#E5DDD2] bg-[#FDFCFB] p-4 text-sm text-[#332A23] outline-none focus:border-[#A58B68]"
-                    placeholder="Your full name"
                     autoComplete="name"
+                    className={inputClassName}
+                    placeholder="Your full name"
+                    value={customer.fullName}
+                    onChange={(event) => updateField("fullName", event.target.value)}
                   />
                 </label>
 
-                <label className="text-xs text-[#81766B]">
-                  Phone Number
+                <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D]">
+                  Phone number <span className="text-[#A58B68]">*</span>
                   <input
-                    type="tel"
-                    value={customer.phone}
-                    onChange={(e) =>
-                      updateField("phone", e.target.value)
-                    }
-                    className="mt-2 w-full border border-[#E5DDD2] bg-[#FDFCFB] p-4 text-sm text-[#332A23] outline-none focus:border-[#A58B68]"
-                    placeholder="01xxxxxxxxx"
                     autoComplete="tel"
+                    inputMode="tel"
+                    className={inputClassName}
+                    placeholder="Your phone number"
+                    value={customer.phone}
+                    onChange={(event) => updateField("phone", event.target.value)}
                   />
                 </label>
 
-                <label className="text-xs text-[#81766B]">
-                  Email Address
+                <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D]">
+                  Email address
                   <input
-                    type="email"
-                    value={customer.email}
-                    onChange={(e) =>
-                      updateField("email", e.target.value)
-                    }
-                    className="mt-2 w-full border border-[#E5DDD2] bg-[#FDFCFB] p-4 text-sm text-[#332A23] outline-none focus:border-[#A58B68]"
-                    placeholder="name@example.com"
                     autoComplete="email"
+                    inputMode="email"
+                    type="email"
+                    className={inputClassName}
+                    placeholder="name@example.com"
+                    value={customer.email}
+                    onChange={(event) => updateField("email", event.target.value)}
                   />
                 </label>
 
-                <label className="text-xs text-[#81766B]">
-                  City
+                <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
+                  City <span className="text-[#A58B68]">*</span>
                   <input
-                    value={customer.city}
-                    onChange={(e) =>
-                      updateField("city", e.target.value)
-                    }
-                    className="mt-2 w-full border border-[#E5DDD2] bg-[#FDFCFB] p-4 text-sm text-[#332A23] outline-none focus:border-[#A58B68]"
-                    placeholder="Your city"
                     autoComplete="address-level2"
+                    className={inputClassName}
+                    placeholder="Your city"
+                    value={customer.city}
+                    onChange={(event) => updateField("city", event.target.value)}
                   />
                 </label>
 
-                <label className="text-xs text-[#81766B]">
-                  Full Address
-                  <input
-                    value={customer.address}
-                    onChange={(e) =>
-                      updateField("address", e.target.value)
-                    }
-                    className="mt-2 w-full border border-[#E5DDD2] bg-[#FDFCFB] p-4 text-sm text-[#332A23] outline-none focus:border-[#A58B68]"
-                    placeholder="Street, building, apartment"
+                <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
+                  Full address <span className="text-[#A58B68]">*</span>
+                  <textarea
                     autoComplete="street-address"
+                    rows={4}
+                    className={`${inputClassName} resize-none`}
+                    placeholder="Street, building, floor, and apartment number"
+                    value={customer.address}
+                    onChange={(event) => updateField("address", event.target.value)}
                   />
                 </label>
               </div>
 
-              <div className="mt-8 border-t border-[#E5DDD2] pt-6">
-                <div className="flex items-center gap-3 text-sm text-[#81766B]">
-                  <Truck size={19} className="text-[#A58B68]" />
-                  Delivery fee: 120 EGP
-                </div>
-                <div className="mt-4 flex items-center gap-3 text-xs text-[#81766B]">
-                  <ShieldCheck size={17} className="text-[#A58B68]" />
-                  Your order details will be handled securely.
+              <div className="mt-8 border-t border-[#EAE3DA] pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F1ECE5] text-[#8A745C]">
+                    <Truck size={19} strokeWidth={1.4} />
+                  </div>
+                  <div>
+                    <p className="text-sm">Cash on delivery</p>
+                    <p className="mt-1 text-xs text-[#8C7D6D]">
+                      Pay when your order arrives.
+                    </p>
+                  </div>
                 </div>
               </div>
             </section>
 
-            <aside className="h-fit border border-[#E5DDD2] bg-white p-6 md:p-9">
-              <h2 className="mb-7 text-xl font-light">
-                Order Summary
-              </h2>
+            <aside className="h-fit border border-[#E5DDD2] bg-[#F2EDE6] p-5 sm:p-8">
+              <div className="mb-7 flex items-center justify-between border-b border-[#DED5CA] pb-5">
+                <h2 className="text-lg font-light tracking-wide">Your order</h2>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[#A58B68]">
+                  {cart.length} {cart.length === 1 ? "Item" : "Items"}
+                </span>
+              </div>
 
               <div className="space-y-6">
                 {cart.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex gap-4"
-                  >
-                    <div className="relative h-24 w-20 shrink-0 bg-[#F8F5F0]">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        sizes="80px"
-                        className="object-cover"
-                      />
+                  <div key={item.id} className="flex gap-4">
+                    <div className="h-24 w-20 shrink-0 overflow-hidden bg-[#E7DFD5]">
+                      {item.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : null}
                     </div>
-
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm">{item.name}</h3>
-                      <p className="mt-1 text-xs text-[#81766B]">
-                        Size: {item.size} · Color: {item.color}
-                      </p>
-                      <p className="mt-1 text-xs text-[#81766B]">
-                        Quantity: {item.quantity}
-                      </p>
-                      <p className="mt-2 text-sm">
-                        {(item.price * item.quantity).toLocaleString("en-EG")} EGP
+                    <div className="flex min-w-0 flex-1 justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-medium text-[#332A23]">{item.name}</h3>
+                        <p className="mt-2 text-xs text-[#8C7D6D]">
+                          Size: {item.size} · Color: {item.color}
+                        </p>
+                        <p className="mt-1 text-xs text-[#8C7D6D]">
+                          Quantity: {item.quantity}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-sm tabular-nums">
+                        {(Number(item.price) * item.quantity).toLocaleString("en-EG")} EGP
                       </p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-8 space-y-4 border-t border-[#E5DDD2] pt-6 text-sm">
-                <div className="flex justify-between text-[#81766B]">
+              <div className="mt-8 space-y-4 border-t border-[#DED5CA] pt-6 text-sm">
+                <div className="flex justify-between text-[#76695D]">
                   <span>Subtotal</span>
-                  <span>{subtotal.toLocaleString("en-EG")} EGP</span>
+                  <span className="tabular-nums">{subtotal.toLocaleString("en-EG")} EGP</span>
                 </div>
-
-                <div className="flex justify-between text-[#81766B]">
-                  <span>Delivery Fee</span>
-                  <span>120 EGP</span>
+                <div className="flex justify-between text-[#76695D]">
+                  <span>Delivery</span>
+                  <span className="tabular-nums">{deliveryFee.toLocaleString("en-EG")} EGP</span>
                 </div>
-
-                <div className="flex justify-between border-t border-[#E5DDD2] pt-5 text-base font-medium">
+                <div className="flex justify-between border-t border-[#DED5CA] pt-5 text-base text-[#332A23]">
                   <span>Total</span>
-                  <span>
+                  <span className="font-medium tabular-nums">
                     {total.toLocaleString("en-EG")} EGP
                   </span>
                 </div>
               </div>
 
+              {orderError && (
+                <p role="alert" className="mt-5 border border-red-200 bg-red-50 px-4 py-3 text-xs leading-relaxed text-red-700">
+                  {orderError}
+                </p>
+              )}
+
               <button
                 type="button"
-                disabled
-                className="mt-8 w-full cursor-not-allowed bg-[#332A23] px-6 py-5 text-xs uppercase tracking-[0.2em] text-white opacity-60"
+                onClick={handlePlaceOrder}
+                disabled={isSubmitting || cart.length === 0}
+                className="mt-7 w-full bg-[#332A23] px-6 py-5 text-[10px] uppercase tracking-[0.24em] text-white transition hover:bg-[#59483A] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Order Submission Coming Soon
+                {isSubmitting ? "Placing your order..." : "Place order · Cash on delivery"}
               </button>
-
-              <p className="mt-4 text-center text-xs leading-6 text-[#81766B]">
-                Secure order submission will be enabled after
-                backend verification is completed.
+              <p className="mt-4 text-center text-[10px] leading-relaxed text-[#8C7D6D]">
+                Your order details are submitted securely.
               </p>
             </aside>
           </div>
         )}
+
+        <footer className="mt-16 border-t border-[#E5DDD2] pt-6 text-center">
+          <p className="text-[9px] uppercase tracking-[0.3em] text-[#A99B8B]">
+            TALA · Made with care
+          </p>
+        </footer>
       </div>
     </main>
   );
