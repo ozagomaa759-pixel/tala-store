@@ -13,6 +13,8 @@ type SupabaseProduct = {
   images: string[] | null;
   status: string;
   is_featured: boolean;
+  is_best_seller: boolean;
+  is_new_arrival: boolean;
   sort_order: number;
   categories:
     | { name: string }
@@ -45,6 +47,8 @@ export async function getTalaProducts(): Promise<Product[]> {
       images,
       status,
       is_featured,
+      is_best_seller,
+      is_new_arrival,
       sort_order,
       categories (
         name
@@ -123,7 +127,7 @@ export async function getTalaProducts(): Promise<Product[]> {
     const category = allowedCategories.includes(
       categoryName as (typeof allowedCategories)[number]
     )
-      ? (categoryName as Product["category"])
+      ? (categoryName as (typeof allowedCategories)[number])
       : "Dresses";
 
     const images = [
@@ -148,8 +152,8 @@ export async function getTalaProducts(): Promise<Product[]> {
       sizes: Array.from(new Set([...sizesSet, "XXL"])),
       rating: 0,
       reviews: 0,
-      isNew: false,
-      isBestSeller: false,
+      isNew: product.is_new_arrival,
+      isBestSeller: product.is_best_seller,
       isFeatured: product.is_featured,
       isAvailable: productVariants.length > 0,
       tags: [],
