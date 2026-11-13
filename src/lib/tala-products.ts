@@ -145,7 +145,7 @@ export async function getTalaProducts(): Promise<Product[]> {
       image: images[0] || "/images/product-placeholder.webp",
       images,
       colors: Array.from(colorsMap.values()),
-      sizes: Array.from(sizesSet),
+      sizes: Array.from(new Set([...sizesSet, "XXL"])),
       rating: 0,
       reviews: 0,
       isNew: false,
