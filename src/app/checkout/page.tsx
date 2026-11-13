@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +20,6 @@ export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customer, setCustomer] = useState({
     fullName: "",
-    email: "",
     phone: "",
     city: "",
     address: "",
@@ -47,7 +47,10 @@ export default function CheckoutPage() {
   const deliveryFee = cart.length > 0 ? DELIVERY_FEE : 0;
   const total = subtotal + deliveryFee;
 
-  const updateField = (field: keyof typeof customer, value: string) => {
+  const updateField = (
+    field: keyof typeof customer,
+    value: string
+  ) => {
     setCustomer((current) => ({ ...current, [field]: value }));
   };
 
@@ -77,7 +80,12 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer,
+          customer: {
+            fullName: customer.fullName.trim(),
+            phone: customer.phone.trim(),
+            city: customer.city.trim(),
+            address: customer.address.trim(),
+          },
           items: cart.map((item) => ({
             productId: item.productId,
             size: item.size,
@@ -90,11 +98,14 @@ export default function CheckoutPage() {
       const result = await response.json();
 
       if (!response.ok || !result.success || !result.order) {
-        throw new Error(result.message || "Unable to place your order.");
+        throw new Error(
+          result.message || "Unable to place your order."
+        );
       }
 
       clearCart();
       setCart([]);
+
       setSuccessOrder({
         order_number: result.order.order_number,
         total: Number(result.order.total),
@@ -117,9 +128,11 @@ export default function CheckoutPage() {
           <p className="mb-8 text-xs font-medium uppercase tracking-[0.55em] text-[#A58B68]">
             TALA
           </p>
+
           <h1 className="text-4xl font-light leading-tight tracking-[-0.04em] text-[#332A23] sm:text-6xl md:text-7xl">
             Thank you for choosing TALA
           </h1>
+
           <p className="mt-7 text-xl font-light leading-relaxed text-[#806F5E] sm:text-2xl md:text-3xl">
             Your order means everything 😊
           </p>
@@ -139,12 +152,14 @@ export default function CheckoutPage() {
             <ArrowLeft size={15} strokeWidth={1.6} />
             Back to bag
           </Link>
+
           <Link
             href="/"
             className="text-2xl font-semibold tracking-[0.28em] text-[#332A23]"
           >
             TALA
           </Link>
+
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-[#8C7D6D]">
             <LockKeyhole size={13} strokeWidth={1.5} />
             Secure checkout
@@ -155,9 +170,11 @@ export default function CheckoutPage() {
           <p className="text-[10px] uppercase tracking-[0.4em] text-[#A58B68]">
             TALA Boutique
           </p>
+
           <h1 className="mt-4 text-4xl font-light tracking-[-0.04em] sm:text-5xl">
             Checkout
           </h1>
+
           <p className="mt-3 text-sm font-light text-[#8C7D6D]">
             A few details and your order will be on its way.
           </p>
@@ -165,11 +182,20 @@ export default function CheckoutPage() {
 
         {cart.length === 0 ? (
           <section className="mx-auto max-w-xl border border-[#E5DDD2] bg-white/60 px-6 py-16 text-center">
-            <ShoppingBag className="mx-auto text-[#A58B68]" size={30} strokeWidth={1.3} />
-            <h2 className="mt-6 text-2xl font-light">Your bag is empty</h2>
+            <ShoppingBag
+              className="mx-auto text-[#A58B68]"
+              size={30}
+              strokeWidth={1.3}
+            />
+
+            <h2 className="mt-6 text-2xl font-light">
+              Your bag is empty
+            </h2>
+
             <p className="mt-2 text-sm text-[#8C7D6D]">
               Add something you love before checking out.
             </p>
+
             <Link
               href="/products"
               className="mt-8 inline-flex bg-[#332A23] px-8 py-4 text-[10px] uppercase tracking-[0.22em] text-white transition hover:bg-[#59483A]"
@@ -181,7 +207,10 @@ export default function CheckoutPage() {
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
             <section className="border border-[#E5DDD2] bg-white/55 p-5 sm:p-8">
               <div className="mb-8 flex items-center justify-between border-b border-[#EAE3DA] pb-5">
-                <h2 className="text-lg font-light tracking-wide">Delivery details</h2>
+                <h2 className="text-lg font-light tracking-wide">
+                  Delivery details
+                </h2>
+
                 <span className="text-[10px] uppercase tracking-[0.2em] text-[#A58B68]">
                   Step 01
                 </span>
@@ -190,60 +219,59 @@ export default function CheckoutPage() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
                   Full name <span className="text-[#A58B68]">*</span>
+
                   <input
                     autoComplete="name"
                     className={inputClassName}
                     placeholder="Your full name"
                     value={customer.fullName}
-                    onChange={(event) => updateField("fullName", event.target.value)}
+                    onChange={(event) =>
+                      updateField("fullName", event.target.value)
+                    }
                   />
                 </label>
 
-                <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D]">
+                <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
                   Phone number <span className="text-[#A58B68]">*</span>
+
                   <input
                     autoComplete="tel"
                     inputMode="tel"
                     className={inputClassName}
                     placeholder="Your phone number"
                     value={customer.phone}
-                    onChange={(event) => updateField("phone", event.target.value)}
-                  />
-                </label>
-
-                <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D]">
-                  Email address
-                  <input
-                    autoComplete="email"
-                    inputMode="email"
-                    type="email"
-                    className={inputClassName}
-                    placeholder="name@example.com"
-                    value={customer.email}
-                    onChange={(event) => updateField("email", event.target.value)}
+                    onChange={(event) =>
+                      updateField("phone", event.target.value)
+                    }
                   />
                 </label>
 
                 <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
                   City <span className="text-[#A58B68]">*</span>
+
                   <input
                     autoComplete="address-level2"
                     className={inputClassName}
                     placeholder="Your city"
                     value={customer.city}
-                    onChange={(event) => updateField("city", event.target.value)}
+                    onChange={(event) =>
+                      updateField("city", event.target.value)
+                    }
                   />
                 </label>
 
                 <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
                   Full address <span className="text-[#A58B68]">*</span>
+
                   <textarea
                     autoComplete="street-address"
                     rows={4}
                     className={`${inputClassName} resize-none`}
                     placeholder="Street, building, floor, and apartment number"
                     value={customer.address}
-                    onChange={(event) => updateField("address", event.target.value)}
+                    onChange={(event) =>
+                      updateField("address", event.target.value)
+                    }
                   />
                 </label>
               </div>
@@ -253,6 +281,7 @@ export default function CheckoutPage() {
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F1ECE5] text-[#8A745C]">
                     <Truck size={19} strokeWidth={1.4} />
                   </div>
+
                   <div>
                     <p className="text-sm">Cash on delivery</p>
                     <p className="mt-1 text-xs text-[#8C7D6D]">
@@ -265,7 +294,10 @@ export default function CheckoutPage() {
 
             <aside className="h-fit border border-[#E5DDD2] bg-[#F2EDE6] p-5 sm:p-8">
               <div className="mb-7 flex items-center justify-between border-b border-[#DED5CA] pb-5">
-                <h2 className="text-lg font-light tracking-wide">Your order</h2>
+                <h2 className="text-lg font-light tracking-wide">
+                  Your order
+                </h2>
+
                 <span className="text-[10px] uppercase tracking-[0.2em] text-[#A58B68]">
                   {cart.length} {cart.length === 1 ? "Item" : "Items"}
                 </span>
@@ -284,16 +316,22 @@ export default function CheckoutPage() {
                         />
                       ) : null}
                     </div>
+
                     <div className="flex min-w-0 flex-1 justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="text-sm font-medium text-[#332A23]">{item.name}</h3>
+                        <h3 className="text-sm font-medium text-[#332A23]">
+                          {item.name}
+                        </h3>
+
                         <p className="mt-2 text-xs text-[#8C7D6D]">
                           Size: {item.size} · Color: {item.color}
                         </p>
+
                         <p className="mt-1 text-xs text-[#8C7D6D]">
                           Quantity: {item.quantity}
                         </p>
                       </div>
+
                       <p className="shrink-0 text-sm tabular-nums">
                         {(Number(item.price) * item.quantity).toLocaleString("en-EG")} EGP
                       </p>
@@ -305,12 +343,18 @@ export default function CheckoutPage() {
               <div className="mt-8 space-y-4 border-t border-[#DED5CA] pt-6 text-sm">
                 <div className="flex justify-between text-[#76695D]">
                   <span>Subtotal</span>
-                  <span className="tabular-nums">{subtotal.toLocaleString("en-EG")} EGP</span>
+                  <span className="tabular-nums">
+                    {subtotal.toLocaleString("en-EG")} EGP
+                  </span>
                 </div>
+
                 <div className="flex justify-between text-[#76695D]">
                   <span>Delivery</span>
-                  <span className="tabular-nums">{deliveryFee.toLocaleString("en-EG")} EGP</span>
+                  <span className="tabular-nums">
+                    {deliveryFee.toLocaleString("en-EG")} EGP
+                  </span>
                 </div>
+
                 <div className="flex justify-between border-t border-[#DED5CA] pt-5 text-base text-[#332A23]">
                   <span>Total</span>
                   <span className="font-medium tabular-nums">
@@ -320,7 +364,10 @@ export default function CheckoutPage() {
               </div>
 
               {orderError && (
-                <p role="alert" className="mt-5 border border-red-200 bg-red-50 px-4 py-3 text-xs leading-relaxed text-red-700">
+                <p
+                  role="alert"
+                  className="mt-5 border border-red-200 bg-red-50 px-4 py-3 text-xs leading-relaxed text-red-700"
+                >
                   {orderError}
                 </p>
               )}
@@ -331,8 +378,11 @@ export default function CheckoutPage() {
                 disabled={isSubmitting || cart.length === 0}
                 className="mt-7 w-full bg-[#332A23] px-6 py-5 text-[10px] uppercase tracking-[0.24em] text-white transition hover:bg-[#59483A] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "Placing your order..." : "Place order · Cash on delivery"}
+                {isSubmitting
+                  ? "Placing your order..."
+                  : "Place order · Cash on delivery"}
               </button>
+
               <p className="mt-4 text-center text-[10px] leading-relaxed text-[#8C7D6D]">
                 Your order details are submitted securely.
               </p>
