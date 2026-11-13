@@ -1,24 +1,28 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 
 export const dynamic = "force-dynamic";
 
-function errorResponse(message: string, status = 400) {
-  return NextResponse.json({ success: false, error: message }, { status });
+const ALLOWED_STATUSES = ["draft", "published", "archived"] as const;
+
+function errorResponse(error: string, status = 400) {
+  return NextResponse.json(
+    { success: false, error },
+    { status }
+  );
 }
 
 function makeSlug(value: string) {
   return value
-    .trim()
-    .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/^-+|-+$/g, "");
 }
 
-function isValidPrice(value: unknown) {
+function isValidPrice(value: unknown): value is number {
   return (
     typeof value === "number" &&
     Number.isFinite(value) &&
@@ -26,16 +30,28 @@ function isValidPrice(value: unknown) {
   );
 }
 
-// GET: عرض المنتجات
+function isValidStatus(
+  value: unknown
+): value is (typeof ALLOWED_STATUSES)[number] {
+  return (
+    typeof value === "string" &&
+    ALLOWED_STATUSES.includes(
+      value as (typeof ALLOWED_STATUSES)[number]
+    )
+  );
+}
+
+// GET: جلب المنتجات
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin();
 
-    if (!auth.authorized) {
+    if (!auth.authorized || !auth.supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = new URL(request.url);
+
     const search = searchParams.get("search");
     const categoryId = searchParams.get("category_id");
     const status = searchParams.get("status");
@@ -46,30 +62,35 @@ export async function GET(request: NextRequest) {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
 
-    if (search) {
-      query = query.ilike("name", `%${search}%`);
+    if (search?.trim()) {
+      const value = search.trim().replace(/[%]/g, "");
+      query = query.or(
+        `name.ilike.%${value}%,slug.ilike.%${value}%`
+      );
     }
 
     if (categoryId) {
       query = query.eq("category_id", categoryId);
     }
 
-    if (status) {
+    if (status && isValidStatus(status)) {
       query = query.eq("status", status);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      return errorResponse(error.message, 500);
+      console.error("GET products error:", error);
+      return errorResponse("Failed to fetch products", 500);
     }
 
     return NextResponse.json({
       success: true,
       products: data ?? [],
     });
-  } catch {
-    return errorResponse("Failed to fetch products", 500);
+  } catch (error) {
+    console.error("GET products error:", error);
+    return errorResponse("Internal server error", 500);
   }
 }
 
@@ -78,7 +99,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin();
 
-    if (!auth.authorized) {
+    if (!auth.authorized || !auth.supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -91,7 +112,7 @@ export async function POST(request: NextRequest) {
       return errorResponse("Product name is required");
     }
 
-    if (!isValidPrice(body.price)) {
+    if (!isValidPrice(Number(body.price))) {
       return errorResponse("A valid product price is required");
     }
 
@@ -113,46 +134,63 @@ export async function POST(request: NextRequest) {
 
     if (
       compareAtPrice !== null &&
-      (!Number.isFinite(compareAtPrice) || compareAtPrice < 0)
+      !isValidPrice(compareAtPrice)
     ) {
       return errorResponse("Invalid compare-at price");
     }
 
-    const product = {
+    const status =
+      body.status === undefined ? "draft" : body.status;
+
+    if (!isValidStatus(status)) {
+      return errorResponse("Invalid product status");
+    }
+
+    const images = Array.isArray(body.images)
+      ? body.images.filter(
+          (image: unknown) => typeof image === "string"
+        )
+      : [];
+
+    const productData = {
       name,
       slug,
       category_id: body.category_id || null,
-      description:
-        typeof body.description === "string"
-          ? body.description
-          : "",
-      price: body.price,
+      description: body.description || null,
+      price: Number(body.price),
       compare_at_price: compareAtPrice,
       main_image: body.main_image || null,
-      images: Array.isArray(body.images) ? body.images : [],
-      status: body.status || "draft",
+      images,
+      status,
       is_featured: body.is_featured === true,
-      sort_order: Number.isInteger(body.sort_order)
-        ? body.sort_order
+      is_best_seller: body.is_best_seller === true,
+      is_new_arrival: body.is_new_arrival === true,
+      sort_order: Number.isInteger(Number(body.sort_order))
+        ? Number(body.sort_order)
         : 0,
     };
 
     const { data, error } = await auth.supabase
       .from("products")
-      .insert(product)
-      .select()
+      .insert(productData)
+      .select("*")
       .single();
 
     if (error) {
-      return errorResponse(error.message, 400);
+      console.error("POST product error:", error);
+      return errorResponse("Failed to create product", 500);
     }
 
     return NextResponse.json(
-      { success: true, product: data },
+      {
+        success: true,
+        product: data,
+      },
       { status: 201 }
     );
-  } catch {
-    return errorResponse("Failed to create product", 500);
+  } catch (error) {
+    console.error("POST product error:", error);
+    return errorResponse("Internal server error", 500);
   }
 }
 
@@ -161,18 +199,19 @@ export async function PATCH(request: NextRequest) {
   try {
     const auth = await requireAdmin();
 
-    if (!auth.authorized) {
+    if (!auth.authorized || !auth.supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
     const body = await request.json();
-    const id = body.id;
 
-    if (typeof id !== "string" || !id.trim()) {
+    if (typeof body.id !== "string" || !body.id.trim()) {
       return errorResponse("Product ID is required");
     }
 
-    const updates: Record<string, unknown> = {};
+    const updates: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
 
     if (body.name !== undefined) {
       if (
@@ -194,42 +233,46 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.price !== undefined) {
-      if (!isValidPrice(body.price)) {
+      const price = Number(body.price);
+
+      if (!isValidPrice(price)) {
         return errorResponse("Invalid product price");
       }
 
-      updates.price = body.price;
+      updates.price = price;
     }
 
     if (body.compare_at_price !== undefined) {
       if (
-        body.compare_at_price !== null &&
-        body.compare_at_price !== "" &&
-        (
-          !Number.isFinite(Number(body.compare_at_price)) ||
-          Number(body.compare_at_price) < 0
-        )
+        body.compare_at_price === null ||
+        body.compare_at_price === ""
       ) {
-        return errorResponse("Invalid compare-at price");
+        updates.compare_at_price = null;
+      } else {
+        const compareAtPrice = Number(body.compare_at_price);
+
+        if (!isValidPrice(compareAtPrice)) {
+          return errorResponse("Invalid compare-at price");
+        }
+
+        updates.compare_at_price = compareAtPrice;
       }
-
-      updates.compare_at_price =
-        body.compare_at_price === "" ||
-        body.compare_at_price === null
-          ? null
-          : Number(body.compare_at_price);
     }
 
-    if (body.category_id !== undefined) {
-      updates.category_id = body.category_id || null;
-    }
+    const allowedFields = [
+      "category_id",
+      "description",
+      "main_image",
+      "is_featured",
+      "is_best_seller",
+      "is_new_arrival",
+      "sort_order",
+    ] as const;
 
-    if (body.description !== undefined) {
-      updates.description = body.description;
-    }
-
-    if (body.main_image !== undefined) {
-      updates.main_image = body.main_image || null;
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updates[field] = body[field];
+      }
     }
 
     if (body.images !== undefined) {
@@ -237,48 +280,59 @@ export async function PATCH(request: NextRequest) {
         return errorResponse("Images must be an array");
       }
 
-      updates.images = body.images;
+      updates.images = body.images.filter(
+        (image: unknown) => typeof image === "string"
+      );
     }
 
     if (body.status !== undefined) {
-      if (!["draft", "active", "archived"].includes(body.status)) {
+      if (!isValidStatus(body.status)) {
         return errorResponse("Invalid product status");
       }
 
       updates.status = body.status;
     }
 
-    if (body.is_featured !== undefined) {
-      updates.is_featured = body.is_featured === true;
+    if (
+      body.is_featured !== undefined &&
+      typeof body.is_featured !== "boolean"
+    ) {
+      return errorResponse("Invalid featured value");
     }
 
-    if (body.sort_order !== undefined) {
-      if (!Number.isInteger(body.sort_order)) {
-        return errorResponse("Invalid sort order");
-      }
-
-      updates.sort_order = body.sort_order;
+    if (
+      body.is_best_seller !== undefined &&
+      typeof body.is_best_seller !== "boolean"
+    ) {
+      return errorResponse("Invalid best seller value");
     }
 
-    updates.updated_at = new Date().toISOString();
+    if (
+      body.is_new_arrival !== undefined &&
+      typeof body.is_new_arrival !== "boolean"
+    ) {
+      return errorResponse("Invalid new arrival value");
+    }
 
     const { data, error } = await auth.supabase
       .from("products")
       .update(updates)
-      .eq("id", id)
-      .select()
+      .eq("id", body.id)
+      .select("*")
       .single();
 
     if (error) {
-      return errorResponse(error.message, 400);
+      console.error("PATCH product error:", error);
+      return errorResponse("Failed to update product", 500);
     }
 
     return NextResponse.json({
       success: true,
       product: data,
     });
-  } catch {
-    return errorResponse("Failed to update product", 500);
+  } catch (error) {
+    console.error("PATCH product error:", error);
+    return errorResponse("Internal server error", 500);
   }
 }
 
@@ -287,11 +341,12 @@ export async function DELETE(request: NextRequest) {
   try {
     const auth = await requireAdmin();
 
-    if (!auth.authorized) {
+    if (!auth.authorized || !auth.supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
-    const id = request.nextUrl.searchParams.get("id");
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
 
     if (!id) {
       return errorResponse("Product ID is required");
@@ -303,14 +358,16 @@ export async function DELETE(request: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      return errorResponse(error.message, 400);
+      console.error("DELETE product error:", error);
+      return errorResponse("Failed to delete product", 500);
     }
 
     return NextResponse.json({
       success: true,
       message: "Product deleted successfully",
     });
-  } catch {
-    return errorResponse("Failed to delete product", 500);
+  } catch (error) {
+    console.error("DELETE product error:", error);
+    return errorResponse("Internal server error", 500);
   }
 }
