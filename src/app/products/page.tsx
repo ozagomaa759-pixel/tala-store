@@ -2629,7 +2629,36 @@ const [products, setProducts] = useState<Product[]>([]);
       );
     };
   }, []);
+useEffect(() => {
+  let isMounted = true;
 
+  const loadProducts = async () => {
+    try {
+      setIsLoading(true);
+
+      const data = await getTalaProducts();
+
+      if (isMounted) {
+        setProducts(data);
+      }
+    } catch (error) {
+      console.error("Failed to load TALA products:", error);
+      if (isMounted) {
+        setProducts([]);
+      }
+    } finally {
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  loadProducts();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
   useEffect(() => {
     if (!favoritesReady) return;
 
