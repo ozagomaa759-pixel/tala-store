@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 type CustomerInput = {
   fullName: string;
   phone: string;
-  email: string;
   city: string;
   address: string;
 };
@@ -104,7 +103,6 @@ export async function POST(request: NextRequest) {
     const customer: CustomerInput = {
       fullName: cleanString(rawCustomer.fullName),
       phone: cleanString(rawCustomer.phone),
-      email: cleanString(rawCustomer.email),
       city: cleanString(rawCustomer.city),
       address: cleanString(rawCustomer.address),
     };
@@ -124,22 +122,11 @@ export async function POST(request: NextRequest) {
     if (
       customer.fullName.length > 120 ||
       customer.phone.length > 30 ||
-      customer.email.length > 254 ||
       customer.city.length > 100 ||
       customer.address.length > 500
     ) {
       return errorResponse(
         "Some customer information is too long.",
-        400
-      );
-    }
-
-    if (
-      customer.email &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)
-    ) {
-      return errorResponse(
-        "Please enter a valid email address.",
         400
       );
     }
