@@ -2602,7 +2602,6 @@ function ProductsPage() {
     setFavoritesReady(true);
 
     setCartCount(getCartCount());
-    setIsLoading(false);
 
     const syncCart = () => {
       setCartCount(getCartCount());
