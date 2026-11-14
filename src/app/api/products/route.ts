@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -77,11 +76,13 @@ export async function GET() {
     );
 
     let variants: Array<{
+      id: string;
       product_id: string;
       size: string | null;
       color: string | null;
       color_code: string | null;
       stock_quantity: number;
+      price_override: number | null;
       is_active: boolean;
     }> = [];
 
@@ -89,7 +90,7 @@ export async function GET() {
       const { data, error } = await supabase
         .from("product_variants")
         .select(
-          "product_id, size, color, color_code, stock_quantity, is_active"
+          "id, product_id, size, color, color_code, stock_quantity, price_override, is_active"
         )
         .in("product_id", productIds)
         .eq("is_active", true);
