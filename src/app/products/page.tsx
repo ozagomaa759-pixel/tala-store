@@ -3132,7 +3132,7 @@ useEffect(() => {
   viewMode={viewMode}
   onViewModeChange={setViewMode}
   resultCount={filteredProducts.length}
-  totalCount={PRODUCTS.length}
+  totalCount={products.length}
   selectedCategory={selectedCategory}
   onOpenFilters={() =>
     setMobileFiltersOpen(true)
