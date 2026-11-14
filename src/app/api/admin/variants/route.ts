@@ -1,9 +1,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createVariantsAdminClient } from "@/lib/supabase/admin";
+import type { VariantsDatabase } from "@/types/database";
 
-export const dynamic = "force-dynamic";
+type VariantUpdate =
+  VariantsDatabase["public"]["Tables"]["product_variants"]["Update"];
 
 function errorResponse(message: string, status = 400) {
   return NextResponse.json(
@@ -31,7 +33,7 @@ async function getAdminDb() {
     return null;
   }
 
-  return createAdminClient();
+  return createVariantsAdminClient();
 }
 
 export async function GET(request: NextRequest) {
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
       return errorResponse("Invalid price override");
     }
 
-    const variant = {
+    const variant: VariantsDatabase["public"]["Tables"]["product_variants"]["Insert"] = {
       product_id: body.product_id.trim(),
       size: body.size.trim(),
       color:
@@ -169,7 +171,7 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Variant ID is required");
     }
 
-    const updates: Record<string, unknown> = {};
+    const updates: VariantUpdate = {};
 
     if (body.product_id !== undefined) {
       if (
@@ -188,7 +190,7 @@ export async function PATCH(request: NextRequest) {
       "color_code",
       "sku",
       "image_url",
-    ]) {
+    ] as const) {
       if (body[field] !== undefined) {
         if (
           body[field] !== null &&
@@ -239,7 +241,7 @@ export async function PATCH(request: NextRequest) {
     const { data, error } = await db
       .from("product_variants")
       .update(updates)
-      .eq("id", body.id)
+      .eq("id", body.id.trim())
       .select()
       .single();
 
