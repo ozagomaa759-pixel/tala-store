@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,13 @@ function errorResponse(message: string, status: number) {
   );
 }
 
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    message: "TALA Upload API is running",
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin();
@@ -28,6 +36,8 @@ export async function POST(request: NextRequest) {
     if (!auth.authorized) {
       return errorResponse("Unauthorized", 401);
     }
+
+    const db = createAdminClient();
 
     const formData = await request.formData();
     const file = formData.get("file");
@@ -38,10 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (file.size === 0 || file.size > MAX_FILE_SIZE) {
-      return errorResponse(
-        "Image must be between 1 byte and 5 MB",
-        400
-      );
+      return errorResponse("Image must be between 1 byte and 5 MB", 400);
     }
 
     const extension = ALLOWED_TYPES[file.type];
@@ -62,7 +69,7 @@ export async function POST(request: NextRequest) {
     const fileName = `${crypto.randomUUID()}.${extension}`;
     const filePath = `${safeProductId}/${fileName}`;
 
-    const { data, error } = await auth.supabase.storage
+    const { data, error } = await db.storage
       .from("products")
       .upload(filePath, file, {
         contentType: file.type,
@@ -71,20 +78,13 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error("TALA image upload error:", error.message);
+      console.error("TALA upload error:", error);
       return errorResponse(error.message, 400);
     }
 
-    const { data: publicUrlData } = auth.supabase.storage
+    const { data: publicUrlData } = db.storage
       .from("products")
       .getPublicUrl(data.path);
-
-    if (!publicUrlData.publicUrl) {
-      return errorResponse(
-        "Image uploaded but public URL could not be generated",
-        500
-      );
-    }
 
     return NextResponse.json(
       {
@@ -95,20 +95,11 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("TALA upload route error:", error);
+    console.error("TALA upload error:", error);
 
     return errorResponse(
-      error instanceof Error
-        ? error.message
-        : "Unexpected image upload error",
+      error instanceof Error ? error.message : "Image upload failed",
       500
     );
   }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    success: true,
-    message: "TALA upload API is running. Use POST to upload images.",
-  });
 }
