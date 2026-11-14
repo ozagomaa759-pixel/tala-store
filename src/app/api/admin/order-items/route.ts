@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin();
 
-    if (!auth.authorized) {
+    if (!auth.authorized || !auth.supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin();
 
-    if (!auth.authorized) {
+    if (!auth.authorized || !auth.supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -122,7 +121,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const auth = await requireAdmin();
 
-    if (!auth.authorized) {
+    if (!auth.authorized || !auth.supabase) {
       return errorResponse("Unauthorized", 401);
     }
 
