@@ -24,8 +24,10 @@ export default function CheckoutPage() {
     city: "",
     address: "",
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState("");
+
   const [successOrder, setSuccessOrder] = useState<{
     order_number: string;
     total: number;
@@ -38,7 +40,8 @@ export default function CheckoutPage() {
   const subtotal = useMemo(
     () =>
       cart.reduce(
-        (total, item) => total + Number(item.price) * item.quantity,
+        (total, item) =>
+          total + Number(item.price) * item.quantity,
         0
       ),
     [cart]
@@ -51,7 +54,10 @@ export default function CheckoutPage() {
     field: keyof typeof customer,
     value: string
   ) => {
-    setCustomer((current) => ({ ...current, [field]: value }));
+    setCustomer((current) => ({
+      ...current,
+      [field]: value,
+    }));
   };
 
   const handlePlaceOrder = async () => {
@@ -63,7 +69,9 @@ export default function CheckoutPage() {
       !customer.city.trim() ||
       !customer.address.trim()
     ) {
-      setOrderError("Please complete all required delivery details.");
+      setOrderError(
+        "Please complete all required delivery details."
+      );
       return;
     }
 
@@ -78,7 +86,9 @@ export default function CheckoutPage() {
     try {
       const response = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           customer: {
             fullName: customer.fullName.trim(),
@@ -97,7 +107,11 @@ export default function CheckoutPage() {
 
       const result = await response.json();
 
-      if (!response.ok || !result.success || !result.order) {
+      if (
+        !response.ok ||
+        !result.success ||
+        !result.order
+      ) {
         throw new Error(
           result.message || "Unable to place your order."
         );
@@ -136,6 +150,21 @@ export default function CheckoutPage() {
           <p className="mt-7 text-xl font-light leading-relaxed text-[#806F5E] sm:text-2xl md:text-3xl">
             Your order means everything 😊
           </p>
+
+          <p className="mt-8 text-xs uppercase tracking-[0.2em] text-[#A58B68]">
+            Order: {successOrder.order_number}
+          </p>
+
+          <p className="mt-3 text-sm text-[#806F5E]">
+            Total: {successOrder.total.toLocaleString("en-EG")} EGP
+          </p>
+
+          <Link
+            href="/"
+            className="mt-10 inline-flex bg-[#332A23] px-9 py-4 text-[10px] uppercase tracking-[0.22em] text-white transition hover:bg-[#59483A]"
+          >
+            Continue shopping
+          </Link>
         </section>
       </main>
     );
@@ -144,6 +173,7 @@ export default function CheckoutPage() {
   return (
     <main className="min-h-screen bg-[#F8F5F0] text-[#332A23]">
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
+        {/* Header */}
         <header className="flex items-center justify-between border-b border-[#E5DDD2] pb-6">
           <Link
             href="/cart"
@@ -166,16 +196,19 @@ export default function CheckoutPage() {
           </div>
         </header>
 
+        {/* Checkout Heading */}
         <div className="mb-10 mt-12 text-center sm:mb-14 sm:mt-16">
           <p className="text-[10px] uppercase tracking-[0.4em] text-[#A58B68]">
             TALA Boutique
           </p>
 
-          <h1 className="mt-4 text-4xl font-light tracking-[-0.04em] sm:text-5xl">
-            Checkout
+          <h1 className="mt-4 text-4xl font-light uppercase tracking-[0.12em] text-[#332A23] sm:text-5xl">
+            CHECKOUT
           </h1>
 
-          <p className="mt-3 text-sm font-light text-[#8C7D6D]">
+          <div className="mx-auto mt-5 h-px w-16 bg-[#A58B68]" />
+
+          <p className="mt-4 text-sm font-light text-[#8C7D6D]">
             A few details and your order will be on its way.
           </p>
         </div>
@@ -205,6 +238,7 @@ export default function CheckoutPage() {
           </section>
         ) : (
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
+            {/* Delivery Details */}
             <section className="border border-[#E5DDD2] bg-white/55 p-5 sm:p-8">
               <div className="mb-8 flex items-center justify-between border-b border-[#EAE3DA] pb-5">
                 <h2 className="text-lg font-light tracking-wide">
@@ -218,7 +252,8 @@ export default function CheckoutPage() {
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
-                  Full name <span className="text-[#A58B68]">*</span>
+                  Full name{" "}
+                  <span className="text-[#A58B68]">*</span>
 
                   <input
                     autoComplete="name"
@@ -232,7 +267,8 @@ export default function CheckoutPage() {
                 </label>
 
                 <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
-                  Phone number <span className="text-[#A58B68]">*</span>
+                  Phone number{" "}
+                  <span className="text-[#A58B68]">*</span>
 
                   <input
                     autoComplete="tel"
@@ -247,7 +283,8 @@ export default function CheckoutPage() {
                 </label>
 
                 <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
-                  City <span className="text-[#A58B68]">*</span>
+                  City{" "}
+                  <span className="text-[#A58B68]">*</span>
 
                   <input
                     autoComplete="address-level2"
@@ -261,7 +298,8 @@ export default function CheckoutPage() {
                 </label>
 
                 <label className="text-[10px] uppercase tracking-[0.16em] text-[#76695D] sm:col-span-2">
-                  Full address <span className="text-[#A58B68]">*</span>
+                  Full address{" "}
+                  <span className="text-[#A58B68]">*</span>
 
                   <textarea
                     autoComplete="street-address"
@@ -276,6 +314,7 @@ export default function CheckoutPage() {
                 </label>
               </div>
 
+              {/* Payment Method */}
               <div className="mt-8 border-t border-[#EAE3DA] pt-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F1ECE5] text-[#8A745C]">
@@ -283,7 +322,10 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <p className="text-sm">Cash on delivery</p>
+                    <p className="text-sm">
+                      Cash on delivery
+                    </p>
+
                     <p className="mt-1 text-xs text-[#8C7D6D]">
                       Pay when your order arrives.
                     </p>
@@ -292,6 +334,7 @@ export default function CheckoutPage() {
               </div>
             </section>
 
+            {/* Order Summary */}
             <aside className="h-fit border border-[#E5DDD2] bg-[#F2EDE6] p-5 sm:p-8">
               <div className="mb-7 flex items-center justify-between border-b border-[#DED5CA] pb-5">
                 <h2 className="text-lg font-light tracking-wide">
@@ -299,7 +342,8 @@ export default function CheckoutPage() {
                 </h2>
 
                 <span className="text-[10px] uppercase tracking-[0.2em] text-[#A58B68]">
-                  {cart.length} {cart.length === 1 ? "Item" : "Items"}
+                  {cart.length}{" "}
+                  {cart.length === 1 ? "Item" : "Items"}
                 </span>
               </div>
 
@@ -333,16 +377,21 @@ export default function CheckoutPage() {
                       </div>
 
                       <p className="shrink-0 text-sm tabular-nums">
-                        {(Number(item.price) * item.quantity).toLocaleString("en-EG")} EGP
+                        {(
+                          Number(item.price) * item.quantity
+                        ).toLocaleString("en-EG")}{" "}
+                        EGP
                       </p>
                     </div>
                   </div>
                 ))}
               </div>
 
+              {/* Totals */}
               <div className="mt-8 space-y-4 border-t border-[#DED5CA] pt-6 text-sm">
                 <div className="flex justify-between text-[#76695D]">
                   <span>Subtotal</span>
+
                   <span className="tabular-nums">
                     {subtotal.toLocaleString("en-EG")} EGP
                   </span>
@@ -350,6 +399,7 @@ export default function CheckoutPage() {
 
                 <div className="flex justify-between text-[#76695D]">
                   <span>Delivery</span>
+
                   <span className="tabular-nums">
                     {deliveryFee.toLocaleString("en-EG")} EGP
                   </span>
@@ -357,12 +407,14 @@ export default function CheckoutPage() {
 
                 <div className="flex justify-between border-t border-[#DED5CA] pt-5 text-base text-[#332A23]">
                   <span>Total</span>
+
                   <span className="font-medium tabular-nums">
                     {total.toLocaleString("en-EG")} EGP
                   </span>
                 </div>
               </div>
 
+              {/* Error */}
               {orderError && (
                 <p
                   role="alert"
@@ -372,6 +424,7 @@ export default function CheckoutPage() {
                 </p>
               )}
 
+              {/* Place Order */}
               <button
                 type="button"
                 onClick={handlePlaceOrder}
@@ -390,6 +443,7 @@ export default function CheckoutPage() {
           </div>
         )}
 
+        {/* Footer */}
         <footer className="mt-16 border-t border-[#E5DDD2] pt-6 text-center">
           <p className="text-[9px] uppercase tracking-[0.3em] text-[#A99B8B]">
             TALA · Made with care
