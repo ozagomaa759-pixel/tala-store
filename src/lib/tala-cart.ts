@@ -1,4 +1,6 @@
 
+"use client";
+
 import {
   getCart,
   addToCart,
@@ -74,10 +76,12 @@ export function useCartCount(): number {
 
     window.addEventListener("tala-cart-updated", updateCount);
     window.addEventListener("storage", updateCount);
+    window.addEventListener("focus", updateCount);
 
     return () => {
       window.removeEventListener("tala-cart-updated", updateCount);
       window.removeEventListener("storage", updateCount);
+      window.removeEventListener("focus", updateCount);
     };
   }, []);
 
