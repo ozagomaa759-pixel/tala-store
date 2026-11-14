@@ -1,93 +1,90 @@
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import {
+  ADMIN_SESSION_COOKIE_NAME,
+  ADMIN_SESSION_DURATION_SECONDS,
+  createAdminSessionToken,
+} from "@/lib/admin-session";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const COOKIE_NAME = "tala_admin_session";
-const SESSION_DURATION = 8 * 60 * 60;
-
-async function sign(value: string, secret: string) {
-  const encoder = new TextEncoder();
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(value)
-  );
-
-  return btoa(
-    String.fromCharCode(...new Uint8Array(signature))
-  )
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-function safeCompare(a: string, b: string) {
+function safeCompare(a: string, b: string): boolean {
   const encoder = new TextEncoder();
   const first = encoder.encode(a);
   const second = encoder.encode(b);
 
   if (first.length !== second.length) return false;
 
-  let result = 0;
+  let difference = 0;
 
   for (let i = 0; i < first.length; i++) {
-    result |= first[i] ^ second[i];
+    difference |= first[i] ^ second[i];
   }
 
-  return result === 0;
+  return difference === 0;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const password = process.env.ADMIN_PASSWORD;
-    const secret = process.env.ADMIN_SESSION_SECRET;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const sessionSecret = process.env.ADMIN_SESSION_SECRET;
 
-    if (!password || !secret) {
+    if (!adminPassword || !sessionSecret) {
+      console.error("Admin login environment variables are missing.");
+
       return NextResponse.json(
-        { success: false, message: "Admin login is not configured." },
+        {
+          success: false,
+          message: "Admin login is not configured.",
+        },
         { status: 500 }
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const enteredPassword =
-      typeof body?.password === "string" ? body.password : "";
+    const body: unknown = await request.json().catch(() => null);
 
-    if (!safeCompare(enteredPassword, password)) {
+    const enteredPassword =
+      typeof body === "object" &&
+      body !== null &&
+      "password" in body &&
+      typeof body.password === "string"
+        ? body.password
+        : "";
+
+    if (!safeCompare(enteredPassword, adminPassword)) {
       return NextResponse.json(
-        { success: false, message: "Incorrect password." },
+        {
+          success: false,
+          message: "Incorrect password.",
+        },
         { status: 401 }
       );
     }
 
-    const expiresAt = Math.floor(Date.now() / 1000) + SESSION_DURATION;
-    const payload = String(expiresAt);
-    const signature = await sign(payload, secret);
+    const token = await createAdminSessionToken(sessionSecret);
 
-    const response = NextResponse.json({
-      success: true,
-      message: "Login successful.",
-    });
+    const response = NextResponse.json(
+      {
+        success: true,
+        message: "Login successful.",
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
 
     response.cookies.set(
-      COOKIE_NAME,
-      `${payload}.${signature}`,
+      ADMIN_SESSION_COOKIE_NAME,
+      token,
       {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
-        maxAge: SESSION_DURATION,
+        maxAge: ADMIN_SESSION_DURATION_SECONDS,
       }
     );
 
@@ -96,7 +93,10 @@ export async function POST(request: NextRequest) {
     console.error("Admin login error:", error);
 
     return NextResponse.json(
-      { success: false, message: "Something went wrong." },
+      {
+        success: false,
+        message: "Something went wrong. Please try again.",
+      },
       { status: 500 }
     );
   }
