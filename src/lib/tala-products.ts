@@ -100,33 +100,29 @@ export async function getTalaProducts(): Promise<Product[]> {
 
   if (productsError) {
     console.error("TALA products loading error:", productsError);
-    throw new Error("Could not load products.");
+    throw new Error("تعذر تحميل منتجات TALA. حاول تحديث الصفحة.");
   }
 
   if (categoriesError) {
     console.error("TALA categories loading error:", categoriesError);
-    throw new Error("Could not load product categories.");
+    throw new Error("تعذر تحميل تصنيفات TALA. حاول تحديث الصفحة.");
   }
 
-  const products =
-    (productsData ?? []) as unknown as ProductRow[];
-
-  const categories =
-    (categoriesData ?? []) as unknown as CategoryRow[];
+  const products = (productsData ?? []) as unknown as ProductRow[];
+  const categories = (categoriesData ?? []) as unknown as CategoryRow[];
 
   if (products.length === 0) {
     return [];
   }
 
   const categoryMap = new Map(
-    categories.map((category) => [
-      category.id,
-      category.name,
-    ])
+    categories.map((category) => [category.id, category.name])
   );
 
   const productIds = products.map((product) => product.id);
 
+  // Variants are optional. A product must remain visible even
+  // when it has no sizes, colors, or inventory records.
   const { data: variantsData, error: variantsError } =
     await supabase
       .from("product_variants")
@@ -134,41 +130,36 @@ export async function getTalaProducts(): Promise<Product[]> {
         "product_id, size, color, color_code, stock_quantity, is_active"
       )
       .in("product_id", productIds)
-      .eq("is_active", true)
-      .gt("stock_quantity", 0);
+      .eq("is_active", true);
 
   if (variantsError) {
     console.error("TALA variants loading error:", variantsError);
-    throw new Error("Could not load product variants.");
   }
 
-  const variants =
-    (variantsData ?? []) as unknown as VariantRow[];
+  const variants = (
+    variantsError ? [] : variantsData ?? []
+  ) as unknown as VariantRow[];
 
   const variantsByProduct = new Map<string, VariantRow[]>();
 
   for (const variant of variants) {
-    const current =
-      variantsByProduct.get(variant.product_id) ?? [];
-
+    const current = variantsByProduct.get(variant.product_id) ?? [];
     current.push(variant);
     variantsByProduct.set(variant.product_id, current);
   }
 
   return products.map((product): Product => {
-    const productVariants =
-      variantsByProduct.get(product.id) ?? [];
-
-    const images = normalizeImages(
-      product.main_image,
-      product.images
-    );
-
+    const productVariants = variantsByProduct.get(product.id) ?? [];
+    const images = normalizeImages(product.main_image, product.images);
     const firstImage = images[0] ?? PLACEHOLDER_IMAGE;
+
+    const availableVariants = productVariants.filter(
+      (variant) => Number(variant.stock_quantity ?? 0) > 0
+    );
 
     const uniqueSizes = [
       ...new Set(
-        productVariants
+        availableVariants
           .map((variant) => variant.size?.trim())
           .filter((size): size is string => Boolean(size))
       ),
@@ -176,7 +167,7 @@ export async function getTalaProducts(): Promise<Product[]> {
 
     const uniqueColors = [
       ...new Map(
-        productVariants
+        availableVariants
           .filter((variant) => variant.color?.trim())
           .map((variant) => [
             variant.color!.trim(),
@@ -209,7 +200,9 @@ export async function getTalaProducts(): Promise<Product[]> {
       isNew: Boolean(product.is_new),
       isBestSeller: Boolean(product.is_best_seller),
       isFeatured: Boolean(product.is_featured),
-      isAvailable: productVariants.length > 0,
+      isAvailable:
+        product.is_available !== false &&
+        availableVariants.length > 0,
       tags: product.tags ?? [],
     };
   });
