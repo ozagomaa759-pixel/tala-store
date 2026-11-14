@@ -1,11 +1,22 @@
-
 export type ProductColor = {
   name: string;
   value: string;
 };
 
+export type ProductVariantStock = {
+  id: string;
+  size: string;
+  color: string;
+  color_code: string | null;
+  stock_quantity: number;
+  price_override: number | null;
+  is_active: boolean;
+};
+
 export type Product = {
   id: string;
+  slug?: string;
+  variants?: ProductVariantStock[];
   name: string;
   subtitle: string;
   description: string;
