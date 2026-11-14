@@ -3011,7 +3011,7 @@ useEffect(() => {
   onBestSellersOnlyChange: setBestSellersOnly,
   onClear: clearFilters,
   favoritesCount: favorites.length,
-  productsCount: PRODUCTS.length,
+  productsCount: products.length,
 };
 
   // ----------------------------------------
