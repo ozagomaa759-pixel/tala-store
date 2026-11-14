@@ -5,9 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  ArrowRight,
   LockKeyhole,
   ShoppingBag,
   Truck,
+  CheckCircle2,
 } from "lucide-react";
 import { getCart, clearCart, type CartItem } from "@/lib/cart";
 
@@ -135,10 +137,19 @@ export default function CheckoutPage() {
     }
   };
 
+  // SUCCESS SCREEN
   if (successOrder) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F8F5F0] px-6 text-center">
         <section className="w-full max-w-3xl py-20">
+          <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-full border border-[#D8C7B2] bg-[#F1ECE5]">
+            <CheckCircle2
+              size={30}
+              strokeWidth={1.3}
+              className="text-[#A58B68]"
+            />
+          </div>
+
           <p className="mb-8 text-xs font-medium uppercase tracking-[0.55em] text-[#A58B68]">
             TALA
           </p>
@@ -159,12 +170,31 @@ export default function CheckoutPage() {
             Total: {successOrder.total.toLocaleString("en-EG")} EGP
           </p>
 
+          <div className="mx-auto mt-10 h-px w-20 bg-[#D8C7B2]" />
+
+          <p className="mt-8 text-sm leading-7 text-[#806F5E]">
+            We appreciate your trust in TALA.
+            <br />
+            We look forward to delivering your order.
+          </p>
+
           <Link
             href="/"
-            className="mt-10 inline-flex bg-[#332A23] px-9 py-4 text-[10px] uppercase tracking-[0.22em] text-white transition hover:bg-[#59483A]"
+            scroll={true}
+            className="mt-10 inline-flex min-h-[58px] items-center justify-center gap-3 bg-[#332A23] px-10 py-5 text-[10px] font-medium uppercase tracking-[0.22em] text-white transition duration-300 hover:bg-[#59483A]"
+            style={{
+              backgroundColor: "#332A23",
+              color: "#FFFFFF",
+              WebkitTextFillColor: "#FFFFFF",
+            }}
           >
-            Continue shopping
+            Back to Home
+            <ArrowRight size={15} />
           </Link>
+
+          <p className="mt-6 text-[9px] uppercase tracking-[0.3em] text-[#A99B8B]">
+            TALA · Luxury Fashion
+          </p>
         </section>
       </main>
     );
