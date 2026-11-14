@@ -41,47 +41,71 @@ export default function ProductDetails({
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState("");
 
+  const activeVariants = variants.filter(
+    (variant) =>
+      variant.is_active && variant.stock_quantity > 0
+  );
+
   const sizes = Array.from(
-    new Set(variants.map((v) => v.size).filter(Boolean))
+    new Set(
+      activeVariants
+        .map((variant) => variant.size)
+        .filter((size): size is string => Boolean(size))
+    )
   );
 
   const colors = Array.from(
-    new Set(variants.map((v) => v.color).filter(Boolean))
+    new Set(
+      activeVariants
+        .map((variant) => variant.color)
+        .filter((color): color is string => Boolean(color))
+    )
   );
 
   const currentImage =
     selectedVariant?.image_url ||
     images[0] ||
+    product.main_image ||
     "";
 
   const currentPrice =
     selectedVariant?.price_override ?? product.price;
 
-  function addToCart() {
-    if (variants.length > 0 && !selectedVariant) {
+  const availableStock =
+    selectedVariant?.stock_quantity ?? 0;
+
+  function addProductToCart() {
+    if (activeVariants.length > 0 && !selectedVariant) {
       setMessage("Please select a size and color.");
       return;
     }
 
-    if (
-      selectedVariant &&
-      quantity > selectedVariant.stock_quantity
-    ) {
+    if (activeVariants.length === 0) {
+      setMessage("This product is currently unavailable.");
+      return;
+    }
+
+    if (!selectedVariant) {
+      setMessage("Please select a product option.");
+      return;
+    }
+
+    if (quantity > selectedVariant.stock_quantity) {
       setMessage("Not enough stock available.");
       return;
     }
 
     addToTalaCart({
-      id: product.id,
+      productId: product.id,
       name: product.name,
       price: currentPrice,
       quantity,
       image: currentImage,
-      size: selectedVariant?.size ?? undefined,
-      color: selectedVariant?.color ?? undefined,
+      size: selectedVariant.size ?? "",
+      color: selectedVariant.color ?? "",
     });
 
-    setMessage("Added to cart successfully.");
+    setMessage("Added to bag successfully.");
   }
 
   return (
@@ -102,15 +126,18 @@ export default function ProductDetails({
 
           <div className="mt-4 flex gap-3 overflow-x-auto">
             {images.map((image, index) => (
-              <img
+              <button
                 key={`${image}-${index}`}
-                src={image}
-                alt={`${product.name} ${index + 1}`}
-                onClick={() => {
-                  setSelectedVariant(null);
-                }}
-                className="h-20 w-16 rounded-lg object-cover"
-              />
+                type="button"
+                onClick={() => setSelectedVariant(null)}
+                className="shrink-0"
+              >
+                <img
+                  src={image}
+                  alt={`${product.name} ${index + 1}`}
+                  className="h-20 w-16 rounded-lg object-cover"
+                />
+              </button>
             ))}
           </div>
         </div>
@@ -146,21 +173,31 @@ export default function ProductDetails({
           {sizes.length > 0 && (
             <div className="mt-8">
               <h2 className="mb-3 text-sm">Select Size</h2>
+
               <div className="flex flex-wrap gap-3">
                 {sizes.map((size) => (
                   <button
                     key={size}
+                    type="button"
                     onClick={() => {
                       setSelectedVariant((old) => {
-                        const match = variants.find(
-                          (v) =>
-                            v.size === size &&
-                            v.color === old?.color
+                        const match = activeVariants.find(
+                          (variant) =>
+                            variant.size === size &&
+                            variant.color === old?.color
                         );
-                        return match ?? variants.find(
-                          (v) => v.size === size
-                        ) ?? null;
+
+                        return (
+                          match ??
+                          activeVariants.find(
+                            (variant) => variant.size === size
+                          ) ??
+                          null
+                        );
                       });
+
+                      setQuantity(1);
+                      setMessage("");
                     }}
                     className={`rounded-lg border px-5 py-3 ${
                       selectedVariant?.size === size
@@ -178,29 +215,39 @@ export default function ProductDetails({
           {colors.length > 0 && (
             <div className="mt-7">
               <h2 className="mb-3 text-sm">Select Color</h2>
+
               <div className="flex flex-wrap gap-3">
                 {colors.map((color) => {
-                  const variant = variants.find(
-                    (v) =>
-                      v.color === color &&
+                  const variant = activeVariants.find(
+                    (item) =>
+                      item.color === color &&
                       (!selectedVariant?.size ||
-                        v.size === selectedVariant.size)
+                        item.size === selectedVariant.size)
                   );
 
                   return (
                     <button
                       key={color}
+                      type="button"
                       onClick={() => {
                         setSelectedVariant((old) => {
-                          const match = variants.find(
-                            (v) =>
-                              v.color === color &&
-                              (!old?.size || v.size === old.size)
+                          const match = activeVariants.find(
+                            (item) =>
+                              item.color === color &&
+                              (!old?.size || item.size === old.size)
                           );
-                          return match ?? variants.find(
-                            (v) => v.color === color
-                          ) ?? null;
+
+                          return (
+                            match ??
+                            activeVariants.find(
+                              (item) => item.color === color
+                            ) ??
+                            null
+                          );
                         });
+
+                        setQuantity(1);
+                        setMessage("");
                       }}
                       className={`rounded-lg border px-4 py-3 ${
                         selectedVariant?.color === color
@@ -209,6 +256,7 @@ export default function ProductDetails({
                       }`}
                     >
                       {color}
+
                       {variant?.color_code && (
                         <span
                           className="ml-2 inline-block h-3 w-3 rounded-full border"
@@ -226,24 +274,33 @@ export default function ProductDetails({
 
           <div className="mt-8">
             <h2 className="mb-3 text-sm">Quantity</h2>
+
             <div className="flex items-center gap-5">
               <button
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                type="button"
+                onClick={() =>
+                  setQuantity((current) => Math.max(1, current - 1))
+                }
                 className="h-10 w-10 rounded-lg border"
               >
                 −
               </button>
+
               <span>{quantity}</span>
+
               <button
+                type="button"
+                disabled={
+                  !selectedVariant ||
+                  quantity >= availableStock ||
+                  quantity >= 10
+                }
                 onClick={() =>
-                  setQuantity((q) =>
-                    Math.min(
-                      selectedVariant?.stock_quantity ?? 99,
-                      q + 1
-                    )
+                  setQuantity((current) =>
+                    Math.min(availableStock, 10, current + 1)
                   )
                 }
-                className="h-10 w-10 rounded-lg border"
+                className="h-10 w-10 rounded-lg border disabled:opacity-40"
               >
                 +
               </button>
@@ -251,10 +308,14 @@ export default function ProductDetails({
           </div>
 
           <button
-            onClick={addToCart}
-            className="mt-9 w-full rounded-xl bg-[#29251F] px-6 py-4 text-sm tracking-[0.2em] text-white transition hover:bg-[#75604C]"
+            type="button"
+            onClick={addProductToCart}
+            disabled={activeVariants.length === 0}
+            className="mt-9 w-full rounded-xl bg-[#29251F] px-6 py-4 text-sm tracking-[0.2em] text-white transition hover:bg-[#75604C] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            ADD TO BAG
+            {activeVariants.length === 0
+              ? "CURRENTLY UNAVAILABLE"
+              : "ADD TO BAG"}
           </button>
 
           {message && (
