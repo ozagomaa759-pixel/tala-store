@@ -2,19 +2,25 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { LockKeyhole, Eye, EyeOff, ArrowRight } from "lucide-react";
+import {
+  LockKeyhole,
+  Eye,
+  EyeOff,
+  ArrowRight,
+} from "lucide-react";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
-
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
+
+    if (loading || !password) return;
 
     setLoading(true);
     setError("");
@@ -25,18 +31,33 @@ export default function AdminLoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "same-origin",
+        cache: "no-store",
         body: JSON.stringify({ password }),
       });
 
-      const data = await response.json();
+      const data: unknown = await response.json().catch(() => null);
 
-      if (!response.ok || !data.success) {
-        setError(data.message || "Incorrect password.");
+      const success =
+        typeof data === "object" &&
+        data !== null &&
+        "success" in data &&
+        data.success === true;
+
+      const message =
+        typeof data === "object" &&
+        data !== null &&
+        "message" in data &&
+        typeof data.message === "string"
+          ? data.message
+          : "";
+
+      if (!response.ok || !success) {
+        setError(message || "Incorrect password.");
         return;
       }
 
-      router.replace("/admin");
-      router.refresh();
+      window.location.replace("/admin");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -47,7 +68,6 @@ export default function AdminLoginPage() {
   return (
     <main className="min-h-screen bg-[#F8F5F0] px-6 flex items-center justify-center text-[#332A23]">
       <div className="w-full max-w-md">
-
         <div className="text-center mb-12">
           <h1 className="text-5xl font-light tracking-[0.25em]">
             TALA
@@ -59,7 +79,6 @@ export default function AdminLoginPage() {
         </div>
 
         <div className="border border-[#E5DACE] bg-white/70 p-8 sm:p-10 shadow-sm">
-
           <div className="text-center mb-9">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#E5DACE]">
               <LockKeyhole size={22} strokeWidth={1.2} />
@@ -96,7 +115,7 @@ export default function AdminLoginPage() {
 
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword((value) => !value)}
                 className="text-[#8A7969]"
                 aria-label="Toggle password visibility"
               >
@@ -109,7 +128,7 @@ export default function AdminLoginPage() {
             </div>
 
             {error && (
-              <p className="mt-4 text-sm text-red-700">
+              <p className="mt-4 text-sm text-red-700" role="alert">
                 {error}
               </p>
             )}
