@@ -1,8 +1,27 @@
+
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+
+type InventoryVariant = {
+  id: string;
+  product_id: string;
+  size: string | null;
+  color: string | null;
+  stock_quantity: number;
+  is_active: boolean;
+  updated_at: string | null;
+};
+
+type InventoryProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+};
 
 function errorResponse(message: string, status = 400) {
   return NextResponse.json(
@@ -29,9 +48,12 @@ export async function GET() {
         .from("products")
         .select("id, name, slug, status")
         .order("name", { ascending: true }),
+
       supabase
         .from("product_variants")
-        .select("id, product_id, size, color, stock_quantity, is_active, updated_at")
+        .select(
+          "id, product_id, size, color, stock_quantity, is_active, updated_at"
+        )
         .order("updated_at", { ascending: false }),
     ]);
 
@@ -45,30 +67,31 @@ export async function GET() {
       return errorResponse("Could not load stock records.", 500);
     }
 
-    const productRows = (products ?? []) as Array<{
-      id: string;
-      name: string;
-      slug: string;
-      status: string;
-    }>;
+    const productRows = (products ?? []) as unknown as InventoryProduct[];
+    const variantRows = (variants ?? []) as unknown as InventoryVariant[];
 
     const productMap = new Map(
       productRows.map((product) => [product.id, product])
     );
 
-    const inventory = (variants ?? []).map((variant) => ({
-      ...variant,
-      product_name:
-        productMap.get(variant.product_id)?.name ?? "Unknown product",
-      product_slug:
-        productMap.get(variant.product_id)?.slug ?? "",
-      product_status:
-        productMap.get(variant.product_id)?.status ?? "unknown",
-    }));
+    const inventory = variantRows.map((variant) => {
+      const product = productMap.get(variant.product_id);
+
+      return {
+        ...variant,
+        product_name: product?.name ?? "Unknown product",
+        product_slug: product?.slug ?? "",
+        product_status: product?.status ?? "unknown",
+      };
+    });
 
     return NextResponse.json(
       { success: true, inventory },
-      { headers: { "Cache-Control": "no-store, max-age=0" } }
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
     );
   } catch (error) {
     console.error("Inventory GET error:", error);
@@ -100,7 +123,9 @@ export async function PATCH(request: NextRequest) {
         !Number.isInteger(body.stock_quantity) ||
         body.stock_quantity < 0
       ) {
-        return errorResponse("Stock must be a whole number of zero or more.");
+        return errorResponse(
+          "Stock must be a whole number of zero or more."
+        );
       }
 
       updates.stock_quantity = body.stock_quantity;
@@ -124,7 +149,9 @@ export async function PATCH(request: NextRequest) {
       .from("product_variants")
       .update(updates)
       .eq("id", body.id.trim())
-      .select("id, product_id, size, color, stock_quantity, is_active, updated_at")
+      .select(
+        "id, product_id, size, color, stock_quantity, is_active, updated_at"
+      )
       .single();
 
     if (error) {
