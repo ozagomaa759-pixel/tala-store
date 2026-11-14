@@ -1,5 +1,3 @@
-
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_NAME = "tala_admin_session";
@@ -15,15 +13,16 @@ async function verifyAdminSession(
 
   const [expiresAt, signature] = parts;
 
-  if (!/^\d+$/.test(expiresAt)) return false;
+  if (!/^\\d+$/.test(expiresAt)) return false;
 
-  if (Number(expiresAt) <= Math.floor(Date.now() / 1000)) {
+  const expiry = Number(expiresAt);
+
+  if (!Number.isSafeInteger(expiry) || expiry <= Math.floor(Date.now() / 1000)) {
     return false;
   }
 
   try {
     const encoder = new TextEncoder();
-
     const key = await crypto.subtle.importKey(
       "raw",
       encoder.encode(secret),
@@ -35,9 +34,8 @@ async function verifyAdminSession(
     const base64 = signature
       .replace(/-/g, "+")
       .replace(/_/g, "/");
-
-    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-
+    const padded =
+      base64 + "=".repeat((4 - (base64.length % 4)) % 4);
     const binary = atob(padded);
     const signatureBytes = Uint8Array.from(
       binary,
@@ -56,81 +54,44 @@ async function verifyAdminSession(
 }
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (supabaseUrl && supabaseAnonKey) {
-    const supabase = createServerClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) => {
-              request.cookies.set(name, value);
-            });
-
-            response = NextResponse.next({ request });
-
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options);
-            });
-          },
-        },
-      }
-    );
-
-    await supabase.auth.getUser();
-  }
-
   const pathname = request.nextUrl.pathname;
 
-  const isAdminPage = pathname.startsWith("/admin");
-  const isOrdersApi =
+  const isAdminLogin = pathname === "/admin/login";
+  const isAdminPage =
+    pathname === "/admin" || pathname.startsWith("/admin/");
+  const isOrdersGet =
     pathname === "/api/orders" && request.method === "GET";
 
-  const isLoginPage = pathname === "/admin/login";
-  const isLoginApi = pathname === "/api/admin/login";
-
-  if (
-    (isAdminPage && !isLoginPage) ||
-    isOrdersApi
-  ) {
-    if (isLoginApi) return response;
-
-    const secret = process.env.ADMIN_SESSION_SECRET;
-
-    const token = request.cookies.get(COOKIE_NAME)?.value;
-
-    const authorized = secret
-      ? await verifyAdminSession(token, secret)
-      : false;
-
-    if (!authorized) {
-      if (isOrdersApi) {
-        return NextResponse.json(
-          { success: false, message: "Unauthorized." },
-          { status: 401 }
-        );
-      }
-
-      const loginUrl = new URL("/admin/login", request.url);
-      return NextResponse.redirect(loginUrl);
-    }
+  if (isAdminLogin || (!isAdminPage && !isOrdersGet)) {
+    return NextResponse.next();
   }
 
-  return response;
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const authorized = secret
+    ? await verifyAdminSession(token, secret)
+    : false;
+
+  if (authorized) {
+    return NextResponse.next();
+  }
+
+  if (isOrdersGet) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized." },
+      { status: 401 }
+    );
+  }
+
+  const loginUrl = new URL("/admin/login", request.url);
+  loginUrl.searchParams.set(
+    "next",
+    `${request.nextUrl.pathname}${request.nextUrl.search}`
+  );
+
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/admin", "/admin/:path*", "/api/orders"],
 };
