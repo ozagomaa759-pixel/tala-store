@@ -14,15 +14,19 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/avif": "avif",
 };
 
+function errorResponse(message: string, status: number) {
+  return NextResponse.json(
+    { success: false, error: message },
+    { status }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin();
 
     if (!auth.authorized) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return errorResponse("Unauthorized", 401);
     }
 
     const formData = await request.formData();
@@ -30,25 +34,22 @@ export async function POST(request: NextRequest) {
     const productId = formData.get("productId");
 
     if (!(file instanceof File)) {
-      return NextResponse.json(
-        { success: false, error: "Image file is required" },
-        { status: 400 }
-      );
+      return errorResponse("Image file is required", 400);
     }
 
     if (file.size === 0 || file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { success: false, error: "Image must be between 1 byte and 5 MB" },
-        { status: 400 }
+      return errorResponse(
+        "Image must be between 1 byte and 5 MB",
+        400
       );
     }
 
     const extension = ALLOWED_TYPES[file.type];
 
     if (!extension) {
-      return NextResponse.json(
-        { success: false, error: "Only JPG, PNG, WEBP and AVIF images are allowed" },
-        { status: 400 }
+      return errorResponse(
+        "Only JPG, PNG, WEBP and AVIF images are allowed",
+        400
       );
     }
 
@@ -70,15 +71,20 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 400 }
-      );
+      console.error("TALA image upload error:", error.message);
+      return errorResponse(error.message, 400);
     }
 
     const { data: publicUrlData } = auth.supabase.storage
       .from("products")
       .getPublicUrl(data.path);
+
+    if (!publicUrlData.publicUrl) {
+      return errorResponse(
+        "Image uploaded but public URL could not be generated",
+        500
+      );
+    }
 
     return NextResponse.json(
       {
@@ -88,10 +94,21 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch {
-    return NextResponse.json(
-      { success: false, error: "Image upload failed" },
-      { status: 500 }
+  } catch (error) {
+    console.error("TALA upload route error:", error);
+
+    return errorResponse(
+      error instanceof Error
+        ? error.message
+        : "Unexpected image upload error",
+      500
     );
   }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    message: "TALA upload API is running. Use POST to upload images.",
+  });
 }
