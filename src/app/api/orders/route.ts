@@ -1,6 +1,6 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/supabase/require-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +45,12 @@ function errorResponse(message: string, status: number) {
 
 export async function GET() {
   try {
-    // Admin session is verified by middleware before this route runs.
+    const auth = await requireAdmin();
+
+    if (!auth.authorized) {
+      return errorResponse("Unauthorized.", 401);
+    }
+
     const supabase = createAdminClient();
 
     const { data, error } = await supabase
