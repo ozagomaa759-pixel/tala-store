@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 
@@ -46,7 +47,8 @@ export async function GET(request: NextRequest) {
       customers: data ?? [],
       count: data?.length ?? 0,
     });
-  } catch {
+  } catch (error) {
+    console.error("Fetch customers error:", error);
     return errorResponse("Failed to fetch customers", 500);
   }
 }
@@ -112,7 +114,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data, error } = await auth.supabase
       .from("customers")
-      .update(updates)
+      .update(updates as never)
       .eq("id", body.id)
       .select()
       .single();
@@ -126,7 +128,8 @@ export async function PATCH(request: NextRequest) {
       customer: data,
       message: "Customer updated successfully",
     });
-  } catch {
+  } catch (error) {
+    console.error("Update customer error:", error);
     return errorResponse("Failed to update customer", 500);
   }
 }
@@ -159,7 +162,8 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: "Customer deleted successfully",
     });
-  } catch {
+  } catch (error) {
+    console.error("Delete customer error:", error);
     return errorResponse("Failed to delete customer", 500);
   }
 }
