@@ -1,6 +1,12 @@
+
 import "server-only";
 
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient as createSupabaseClient,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
+
+import type { VariantsDatabase } from "@/types/database";
 
 let adminClient:
   | ReturnType<typeof createSupabaseClient>
@@ -33,4 +39,8 @@ export function createAdminClient() {
   );
 
   return adminClient;
+}
+
+export function createVariantsAdminClient() {
+  return createAdminClient() as unknown as SupabaseClient<VariantsDatabase>;
 }
