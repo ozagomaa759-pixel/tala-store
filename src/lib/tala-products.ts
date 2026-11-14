@@ -1,5 +1,4 @@
 
-import { createClient } from "@/lib/supabase/browser";
 import type { Product } from "@/data/products";
 
 type ProductRow = {
@@ -17,7 +16,6 @@ type ProductRow = {
   is_featured?: boolean | null;
   is_available?: boolean | null;
   tags?: string[] | null;
-  sort_order?: number | null;
 };
 
 type CategoryRow = {
@@ -32,6 +30,14 @@ type VariantRow = {
   color_code?: string | null;
   stock_quantity?: number | null;
   is_active?: boolean | null;
+};
+
+type ProductsApiResponse = {
+  success: boolean;
+  message?: string;
+  products?: ProductRow[];
+  categories?: CategoryRow[];
+  variants?: VariantRow[];
 };
 
 const PLACEHOLDER_IMAGE =
@@ -79,82 +85,62 @@ function normalizeImages(
 }
 
 export async function getTalaProducts(): Promise<Product[]> {
-  const supabase = createClient();
+  const response = await fetch("/api/products", {
+    method: "GET",
+    cache: "no-store",
+  });
 
-  const [
-    { data: productsData, error: productsError },
-    { data: categoriesData, error: categoriesError },
-  ] = await Promise.all([
-    supabase
-      .from("products")
-      .select("*")
-      .eq("status", "published")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false }),
-
-    supabase
-      .from("categories")
-      .select("id, name")
-      .eq("is_active", true),
-  ]);
-
-  if (productsError) {
-    console.error("TALA products loading error:", productsError);
-    throw new Error("تعذر تحميل منتجات TALA. حاول تحديث الصفحة.");
+  if (!response.ok) {
+    throw new Error(
+      `Products API failed with status ${response.status}`
+    );
   }
 
-  if (categoriesError) {
-    console.error("TALA categories loading error:", categoriesError);
-    throw new Error("تعذر تحميل تصنيفات TALA. حاول تحديث الصفحة.");
+  const result =
+    (await response.json()) as ProductsApiResponse;
+
+  if (!result.success) {
+    throw new Error(
+      result.message || "Could not load TALA products."
+    );
   }
 
-  const products = (productsData ?? []) as unknown as ProductRow[];
-  const categories = (categoriesData ?? []) as unknown as CategoryRow[];
-
-  if (products.length === 0) {
-    return [];
-  }
+  const products = result.products ?? [];
+  const categories = result.categories ?? [];
+  const variants = result.variants ?? [];
 
   const categoryMap = new Map(
-    categories.map((category) => [category.id, category.name])
+    categories.map((category) => [
+      category.id,
+      category.name,
+    ])
   );
 
-  const productIds = products.map((product) => product.id);
-
-  // Variants are optional. A product must remain visible even
-  // when it has no sizes, colors, or inventory records.
-  const { data: variantsData, error: variantsError } =
-    await supabase
-      .from("product_variants")
-      .select(
-        "product_id, size, color, color_code, stock_quantity, is_active"
-      )
-      .in("product_id", productIds)
-      .eq("is_active", true);
-
-  if (variantsError) {
-    console.error("TALA variants loading error:", variantsError);
-  }
-
-  const variants = (
-    variantsError ? [] : variantsData ?? []
-  ) as unknown as VariantRow[];
-
-  const variantsByProduct = new Map<string, VariantRow[]>();
+  const variantsByProduct = new Map<
+    string,
+    VariantRow[]
+  >();
 
   for (const variant of variants) {
-    const current = variantsByProduct.get(variant.product_id) ?? [];
+    const current =
+      variantsByProduct.get(variant.product_id) ?? [];
+
     current.push(variant);
     variantsByProduct.set(variant.product_id, current);
   }
 
   return products.map((product): Product => {
-    const productVariants = variantsByProduct.get(product.id) ?? [];
-    const images = normalizeImages(product.main_image, product.images);
-    const firstImage = images[0] ?? PLACEHOLDER_IMAGE;
+    const productVariants =
+      variantsByProduct.get(product.id) ?? [];
 
     const availableVariants = productVariants.filter(
-      (variant) => Number(variant.stock_quantity ?? 0) > 0
+      (variant) =>
+        Number(variant.stock_quantity ?? 0) > 0
+    );
+
+    const images = normalizeImages(
+      product.main_image,
+      product.images
     );
 
     const uniqueSizes = [
@@ -191,7 +177,7 @@ export async function getTalaProducts(): Promise<Product[]> {
       category: normalizeCategory(
         categoryMap.get(product.category_id ?? "")
       ),
-      image: firstImage,
+      image: images[0] ?? PLACEHOLDER_IMAGE,
       images,
       colors: uniqueColors,
       sizes: uniqueSizes,
