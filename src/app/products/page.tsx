@@ -48,7 +48,6 @@ import {
 } from "lucide-react";
 
 import {
-  PRODUCTS,
   type Product,
   type ProductColor,
 } from "@/data/products";
@@ -76,7 +75,8 @@ type ProductCategory =
   | "Tops"
   | "Bottoms"
   | "Outerwear"
-  | "Sets";
+  | "Sets"
+  | "Jackets";
 
 type SortOption =
   | "featured"
@@ -118,6 +118,7 @@ const CATEGORIES: ProductCategory[] = [
   "Bottoms",
   "Outerwear",
   "Sets",
+  "Jackets",
 ];
 
 const SORT_OPTIONS: {
@@ -180,18 +181,32 @@ function getDiscount(
 function getInitialColor(
   product: Product
 ): ProductColor {
-  return product.colors[0] ?? {
-    name: "Default",
-    value: "#D8C8B4",
-  };
+  const firstAvailable = product.variants?.find(
+    (variant) => variant.is_active && variant.stock_quantity > 0
+  );
+
+  return (
+    product.colors.find((color) => color.name === firstAvailable?.color) ??
+    product.colors[0] ?? {
+      name: "Default",
+      value: "#D8C8B4",
+    }
+  );
 }
 
 function getInitialSize(
   product: Product
 ): string {
-  return product.sizes.includes(DEFAULT_SIZE)
-    ? DEFAULT_SIZE
-    : product.sizes[0] ?? "M";
+  const firstAvailable = product.variants?.find(
+    (variant) => variant.is_active && variant.stock_quantity > 0
+  );
+
+  return (
+    firstAvailable?.size ||
+    (product.sizes.includes(DEFAULT_SIZE)
+      ? DEFAULT_SIZE
+      : product.sizes[0] ?? "M")
+  );
 }
 
 function normalizeSearch(value: string): string {
@@ -953,7 +968,7 @@ function ProductCard({
       >
         <div className="relative aspect-[4/5] overflow-hidden bg-[#EAE3D9]">
           <Link
-            href={`/products/${product.id}`}
+            href={`/products/${encodeURIComponent(product.slug || product.id)}`}
             aria-label={`View ${product.name}`}
             className="group block h-full"
           >
@@ -977,7 +992,7 @@ function ProductCard({
             {product.category}
           </span>
 
-          <Link href={`/products/${product.id}`}>
+          <Link href={`/products/${encodeURIComponent(product.slug || product.id)}`}>
             <h3 className="font-serif text-2xl text-[#40372F] transition-colors hover:text-[#9B8065]">
               {product.name}
             </h3>
@@ -1054,7 +1069,7 @@ function ProductCard({
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-[#EAE3D9]">
         <Link
-          href={`/products/${product.id}`}
+          href={`/products/${encodeURIComponent(product.slug || product.id)}`}
           aria-label={`View ${product.name}`}
           className="block h-full"
         >
@@ -1111,7 +1126,7 @@ function ProductCard({
           )}
         </div>
 
-        <Link href={`/products/${product.id}`}>
+        <Link href={`/products/${encodeURIComponent(product.slug || product.id)}`}>
           <h3 className="truncate font-serif text-base text-[#40372F] transition-colors hover:text-[#9B8065] sm:text-lg">
             {product.name}
           </h3>
@@ -1437,7 +1452,7 @@ function QuickViewInformation({
         </button>
 
         <Link
-          href={`/products/${product.id}`}
+          href={`/products/${encodeURIComponent(product.slug || product.id)}`}
           className="flex h-12 w-full items-center justify-center border border-[#DCCFC0] text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66584B] transition hover:border-[#40372F] hover:bg-[#F1EBE2]"
         >
           View full product details
@@ -1613,6 +1628,7 @@ type ProductFiltersProps = {
 
   favoritesCount: number;
   productsCount: number;
+  categoryCounts: Record<string, number>;
 };
 
 /* ---------------------------------------------------------
@@ -1849,20 +1865,8 @@ function ProductFilterContent({
   onClear,
   favoritesCount,
   productsCount,
+  categoryCounts,
 }: ProductFiltersProps) {
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      All: PRODUCTS.length,
-    };
-
-    PRODUCTS.forEach((product) => {
-      counts[product.category] =
-        (counts[product.category] ?? 0) + 1;
-    });
-
-    return counts;
-  }, []);
-
   const hasActiveFilters =
     selectedCategory !== "All" ||
     maxPrice !== PRICE_LIMIT ||
@@ -2747,13 +2751,34 @@ useEffect(() => {
       const selectedSize =
         options?.size ?? getInitialSize(product);
 
-      const quantity =
-        options?.quantity ?? 1;
+      const quantity = options?.quantity ?? 1;
+      const selectedVariant = product.variants?.find(
+        (variant) =>
+          variant.is_active &&
+          variant.size === selectedSize &&
+          variant.color === selectedColor.name
+      );
+
+      if (!selectedVariant || selectedVariant.stock_quantity <= 0) {
+        showNotification(
+          "This size and color combination is sold out. Please choose another option.",
+          "error"
+        );
+        return;
+      }
+
+      if (quantity > selectedVariant.stock_quantity) {
+        showNotification(
+          `Only ${selectedVariant.stock_quantity} item(s) are available.`,
+          "error"
+        );
+        return;
+      }
 
       const updatedCart = addToCart({
         productId: product.id,
         name: product.name,
-        price: product.price,
+        price: selectedVariant.price_override ?? product.price,
         image: product.image,
         size: selectedSize,
         color: selectedColor.name,
@@ -2781,10 +2806,17 @@ useEffect(() => {
 
   const openQuickView = useCallback(
     (product: Product) => {
+      const firstAvailable = product.variants?.find(
+        (variant) => variant.is_active && variant.stock_quantity > 0
+      );
+
       setQuickView({
         product,
-        selectedSize: getInitialSize(product),
-        selectedColor: getInitialColor(product),
+        selectedSize: firstAvailable?.size ?? getInitialSize(product),
+        selectedColor:
+          product.colors.find(
+            (color) => color.name === firstAvailable?.color
+          ) ?? getInitialColor(product),
         quantity: 1,
       });
     },
@@ -2797,28 +2829,58 @@ useEffect(() => {
 
   const changeQuickViewSize = useCallback(
     (size: string) => {
-      setQuickView((current) =>
-        current
-          ? {
-              ...current,
-              selectedSize: size,
-            }
-          : null
-      );
+      setQuickView((current) => {
+        if (!current) return null;
+
+        const matching = current.product.variants?.filter(
+          (variant) =>
+            variant.is_active &&
+            variant.size === size &&
+            variant.stock_quantity > 0
+        ) ?? [];
+
+        const sameColor = matching.find(
+          (variant) => variant.color === current.selectedColor.name
+        );
+
+        const nextVariant = sameColor ?? matching[0];
+
+        return {
+          ...current,
+          selectedSize: size,
+          selectedColor: nextVariant
+            ? current.product.colors.find(
+                (color) => color.name === nextVariant.color
+              ) ?? current.selectedColor
+            : current.selectedColor,
+        };
+      });
     },
     []
   );
 
   const changeQuickViewColor = useCallback(
     (color: ProductColor) => {
-      setQuickView((current) =>
-        current
-          ? {
-              ...current,
-              selectedColor: color,
-            }
-          : null
-      );
+      setQuickView((current) => {
+        if (!current) return null;
+
+        const matching = current.product.variants?.filter(
+          (variant) =>
+            variant.is_active &&
+            variant.color === color.name &&
+            variant.stock_quantity > 0
+        ) ?? [];
+
+        const sameSize = matching.find(
+          (variant) => variant.size === current.selectedSize
+        );
+
+        return {
+          ...current,
+          selectedColor: color,
+          selectedSize: sameSize?.size ?? matching[0]?.size ?? current.selectedSize,
+        };
+      });
     },
     []
   );
@@ -2859,11 +2921,87 @@ useEffect(() => {
   // FILTERING AND SEARCH
   // ----------------------------------------
 const filteredProducts = useMemo(() => {
-  return [...products].sort(
-    (a, b) => b.price - a.price
-  );
+  const normalizedSearch = normalizeSearch(search);
+
+  const filtered = products.filter((product) => {
+    const matchesSearch =
+      !normalizedSearch ||
+      [
+        product.name,
+        product.subtitle,
+        product.description,
+        product.category,
+        ...product.tags,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch);
+
+    const matchesCategory =
+      selectedCategory === "All" ||
+      product.category === selectedCategory;
+
+    const matchesPrice = product.price <= maxPrice;
+    const matchesFavorites =
+      !onlyFavorites || favorites.includes(product.id);
+    const matchesNew = !newOnly || product.isNew;
+    const matchesBestSeller =
+      !bestSellersOnly || product.isBestSeller;
+
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesPrice &&
+      matchesFavorites &&
+      matchesNew &&
+      matchesBestSeller
+    );
+  });
+
+  return filtered.sort((a, b) => {
+    switch (sortBy) {
+      case "newest":
+        return Number(b.isNew) - Number(a.isNew);
+      case "price-low":
+        return a.price - b.price;
+      case "price-high":
+        return b.price - a.price;
+      case "rating":
+        return b.rating - a.rating;
+      case "featured":
+      default:
+        return (
+          Number(b.isFeatured) - Number(a.isFeatured) ||
+          Number(b.isNew) - Number(a.isNew) ||
+          b.price - a.price
+        );
+    }
+  });
+}, [
+  products,
+  search,
+  selectedCategory,
+  maxPrice,
+  onlyFavorites,
+  favorites,
+  newOnly,
+  bestSellersOnly,
+  sortBy,
+]);
+
+const categoryCounts = useMemo(() => {
+  const counts: Record<string, number> = {
+    All: products.length,
+  };
+
+  for (const product of products) {
+    counts[product.category] =
+      (counts[product.category] ?? 0) + 1;
+  }
+
+  return counts;
 }, [products]);
-  
+
   // ----------------------------------------
   // PAGINATION
   // ----------------------------------------
@@ -2937,6 +3075,7 @@ const filteredProducts = useMemo(() => {
   onClear: clearFilters,
   favoritesCount: favorites.length,
   productsCount: products.length,
+  categoryCounts,
 };
 
   // ----------------------------------------
