@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 
@@ -32,7 +33,8 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: true });
 
     if (error) {
-      return errorResponse(error.message, 500);
+      console.error("Fetch order items error:", error);
+      return errorResponse("Failed to fetch order items", 500);
     }
 
     return NextResponse.json({
@@ -40,7 +42,8 @@ export async function GET(request: NextRequest) {
       items: data ?? [],
       count: data?.length ?? 0,
     });
-  } catch {
+  } catch (error) {
+    console.error("Order items GET error:", error);
     return errorResponse("Failed to fetch order items", 500);
   }
 }
@@ -70,10 +73,9 @@ export async function POST(request: NextRequest) {
       return errorResponse("Product name is required");
     }
 
-    if (
-      !Number.isInteger(body.quantity) ||
-      body.quantity < 1
-    ) {
+    const quantity = Number(body.quantity);
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
       return errorResponse("Quantity must be at least 1");
     }
 
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     const item = {
-      order_id: body.order_id,
+      order_id: body.order_id.trim(),
       product_id: body.product_id || null,
       variant_id: body.variant_id || null,
       product_name: body.product_name.trim(),
@@ -92,26 +94,30 @@ export async function POST(request: NextRequest) {
       selected_size: body.selected_size || null,
       selected_color: body.selected_color || null,
       sku: body.sku || null,
-      quantity: body.quantity,
+      quantity,
       unit_price: unitPrice,
-      line_total: Number((unitPrice * body.quantity).toFixed(2)),
+      line_total: Number((unitPrice * quantity).toFixed(2)),
     };
 
-    const { data, error } = await auth.supabase
+    const supabase = auth.supabase as any;
+
+    const { data, error } = await supabase
       .from("order_items")
       .insert(item)
       .select()
       .single();
 
     if (error) {
+      console.error("Insert order item error:", error);
       return errorResponse(error.message, 400);
     }
 
     return NextResponse.json(
-      { success: true, item: data },
+      { success: true, item },
       { status: 201 }
     );
-  } catch {
+  } catch (error) {
+    console.error("Order items POST error:", error);
     return errorResponse("Failed to add order item", 500);
   }
 }
@@ -137,6 +143,7 @@ export async function DELETE(request: NextRequest) {
       .eq("id", itemId);
 
     if (error) {
+      console.error("Delete order item error:", error);
       return errorResponse(error.message, 400);
     }
 
@@ -144,7 +151,8 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: "Order item deleted successfully",
     });
-  } catch {
+  } catch (error) {
+    console.error("Order items DELETE error:", error);
     return errorResponse("Failed to delete order item", 500);
   }
 }
