@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Check, ShoppingBag } from "lucide-react";
 import { addToTalaCart } from "@/lib/tala-cart";
 
 type Product = {
@@ -40,6 +41,17 @@ export default function ProductDetails({
 
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState("");
+  const [isAdded, setIsAdded] = useState(false);
+
+  useEffect(() => {
+    if (!isAdded) return;
+
+    const timeout = window.setTimeout(() => {
+      setIsAdded(false);
+    }, 2000);
+
+    return () => window.clearTimeout(timeout);
+  }, [isAdded]);
 
   const activeVariants = variants.filter(
     (variant) =>
@@ -75,10 +87,7 @@ export default function ProductDetails({
     selectedVariant?.stock_quantity ?? 0;
 
   function addProductToCart() {
-    if (activeVariants.length > 0 && !selectedVariant) {
-      setMessage("Please select a size and color.");
-      return;
-    }
+    setMessage("");
 
     if (activeVariants.length === 0) {
       setMessage("This product is currently unavailable.");
@@ -86,7 +95,7 @@ export default function ProductDetails({
     }
 
     if (!selectedVariant) {
-      setMessage("Please select a product option.");
+      setMessage("Please select a size and color.");
       return;
     }
 
@@ -105,6 +114,7 @@ export default function ProductDetails({
       color: selectedVariant.color ?? "",
     });
 
+    setIsAdded(true);
     setMessage("Added to bag successfully.");
   }
 
@@ -198,6 +208,7 @@ export default function ProductDetails({
 
                       setQuantity(1);
                       setMessage("");
+                      setIsAdded(false);
                     }}
                     className={`rounded-lg border px-5 py-3 ${
                       selectedVariant?.size === size
@@ -248,6 +259,7 @@ export default function ProductDetails({
 
                         setQuantity(1);
                         setMessage("");
+                        setIsAdded(false);
                       }}
                       className={`rounded-lg border px-4 py-3 ${
                         selectedVariant?.color === color
@@ -311,11 +323,25 @@ export default function ProductDetails({
             type="button"
             onClick={addProductToCart}
             disabled={activeVariants.length === 0}
-            className="mt-9 w-full rounded-xl bg-[#29251F] px-6 py-4 text-sm tracking-[0.2em] text-white transition hover:bg-[#75604C] disabled:cursor-not-allowed disabled:opacity-50"
+            className={`mt-9 flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm tracking-[0.2em] text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 ${
+              isAdded
+                ? "bg-[#71836B]"
+                : "bg-[#29251F] hover:bg-[#75604C]"
+            }`}
           >
-            {activeVariants.length === 0
-              ? "CURRENTLY UNAVAILABLE"
-              : "ADD TO BAG"}
+            {activeVariants.length === 0 ? (
+              "CURRENTLY UNAVAILABLE"
+            ) : isAdded ? (
+              <>
+                <Check size={19} strokeWidth={2.5} />
+                ADDED TO BAG
+              </>
+            ) : (
+              <>
+                <ShoppingBag size={18} />
+                ADD TO BAG
+              </>
+            )}
           </button>
 
           {message && (
