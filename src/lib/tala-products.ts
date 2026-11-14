@@ -1,8 +1,8 @@
-
-import type { Product } from "@/data/products";
+import type { Product, ProductVariantStock } from "@/data/products";
 
 type ProductRow = {
   id: string;
+  slug: string;
   name: string;
   subtitle?: string | null;
   description?: string | null;
@@ -24,13 +24,8 @@ type CategoryRow = {
   name: string;
 };
 
-type VariantRow = {
+type VariantRow = ProductVariantStock & {
   product_id: string;
-  size?: string | null;
-  color?: string | null;
-  color_code?: string | null;
-  stock_quantity?: number | null;
-  is_active?: boolean | null;
 };
 
 type ProductsApiResponse = {
@@ -117,7 +112,7 @@ export async function getTalaProducts(): Promise<Product[]> {
     ])
   );
 
-  const variantsByProduct = new Map<string, VariantRow[]>();
+  const variantsByProduct = new Map<string, ProductVariantStock[]>();
 
   for (const variant of variants) {
     if (variant.is_active === false) continue;
@@ -125,7 +120,19 @@ export async function getTalaProducts(): Promise<Product[]> {
     const current =
       variantsByProduct.get(variant.product_id) ?? [];
 
-    current.push(variant);
+    current.push({
+      id: variant.id,
+      size: variant.size ?? "",
+      color: variant.color ?? "Default",
+      color_code: variant.color_code ?? null,
+      stock_quantity: Number(variant.stock_quantity ?? 0),
+      price_override:
+        variant.price_override == null
+          ? null
+          : Number(variant.price_override),
+      is_active: true,
+    });
+
     variantsByProduct.set(variant.product_id, current);
   }
 
@@ -134,8 +141,7 @@ export async function getTalaProducts(): Promise<Product[]> {
       variantsByProduct.get(product.id) ?? [];
 
     const availableVariants = productVariants.filter(
-      (variant) =>
-        Number(variant.stock_quantity ?? 0) > 0
+      (variant) => variant.stock_quantity > 0
     );
 
     const images = normalizeImages(
@@ -146,19 +152,19 @@ export async function getTalaProducts(): Promise<Product[]> {
     const uniqueSizes = [
       ...new Set(
         availableVariants
-          .map((variant) => variant.size?.trim())
-          .filter((size): size is string => Boolean(size))
+          .map((variant) => variant.size.trim())
+          .filter(Boolean)
       ),
     ];
 
     const uniqueColors = [
       ...new Map(
         availableVariants
-          .filter((variant) => variant.color?.trim())
+          .filter((variant) => variant.color.trim())
           .map((variant) => [
-            variant.color!.trim(),
+            variant.color.trim(),
             {
-              name: variant.color!.trim(),
+              name: variant.color.trim(),
               value: variant.color_code || "#D8C8B8",
             },
           ])
@@ -167,6 +173,8 @@ export async function getTalaProducts(): Promise<Product[]> {
 
     return {
       id: product.id,
+      slug: product.slug,
+      variants: productVariants,
       name: product.name,
       subtitle: product.subtitle ?? "",
       description: product.description ?? "",
@@ -189,7 +197,7 @@ export async function getTalaProducts(): Promise<Product[]> {
       ),
       isBestSeller: Boolean(product.is_best_seller),
       isFeatured: Boolean(product.is_featured),
-      isAvailable: product.is_available !== false,
+      isAvailable: availableVariants.length > 0,
       tags: product.tags ?? [],
     };
   });
