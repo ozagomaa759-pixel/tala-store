@@ -1,6 +1,14 @@
+
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -13,6 +21,9 @@ import {
   ShoppingBag,
   Upload,
   X,
+  Pencil,
+  Trash2,
+  Star,
 } from "lucide-react";
 
 type Category = {
@@ -38,11 +49,25 @@ type Product = {
   is_new_arrival?: boolean;
 };
 
-type Notice = { type: "success" | "error"; text: string };
+type Variant = {
+  id?: string;
+  size: string;
+  color: string;
+  color_code: string;
+  stock_quantity: number;
+  is_active: boolean;
+};
+
+type Notice = {
+  type: "success" | "error";
+  text: string;
+};
 
 const inputClass =
   "mt-2 w-full border border-[#E5DACE] bg-white px-4 py-3 text-sm text-[#332A23] outline-none transition focus:border-[#A28A72]";
-const labelClass = "text-xs uppercase tracking-[0.16em] text-[#8A7969]";
+
+const labelClass =
+  "text-xs uppercase tracking-[0.16em] text-[#8A7969]";
 
 function makeSlug(value: string) {
   return value
@@ -60,6 +85,8 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState("");
@@ -68,21 +95,37 @@ export default function AdminProductsPage() {
   const [price, setPrice] = useState("");
   const [compareAtPrice, setCompareAtPrice] = useState("");
   const [status, setStatus] = useState("draft");
-  const [sizes, setSizes] = useState("S, M, L, XL");
+
+  const [sizes, setSizes] = useState("S, M, L, XL, XXL");
   const [colorName, setColorName] = useState("Black");
   const [colorCode, setColorCode] = useState("#222222");
   const [stock, setStock] = useState("5");
+
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [mainImage, setMainImage] = useState("");
 
   const activeCategories = useMemo(
     () => categories.filter((category) => category.is_active !== false),
     [categories]
   );
 
+  const previews = useMemo(
+    () => selectedFiles.map((file) => URL.createObjectURL(file)),
+    [selectedFiles]
+  );
+
+  useEffect(() => {
+    return () => previews.forEach((url) => URL.revokeObjectURL(url));
+  }, [previews]);
+
   async function loadData() {
     setLoading(true);
     setNotice(null);
+
     try {
       const [productsResponse, categoriesResponse] = await Promise.all([
         fetch("/api/admin/products", { cache: "no-store" }),
@@ -95,16 +138,27 @@ export default function AdminProductsPage() {
       if (!productsResponse.ok || productsData.success === false) {
         throw new Error(productsData.error || "Could not load products.");
       }
+
       if (!categoriesResponse.ok || categoriesData.success === false) {
         throw new Error(categoriesData.error || "Could not load categories.");
       }
 
-      setProducts(Array.isArray(productsData.products) ? productsData.products : []);
-      setCategories(Array.isArray(categoriesData.categories) ? categoriesData.categories : []);
+      setProducts(
+        Array.isArray(productsData.products) ? productsData.products : []
+      );
+
+      setCategories(
+        Array.isArray(categoriesData.categories)
+          ? categoriesData.categories
+          : []
+      );
     } catch (error) {
       setNotice({
         type: "error",
-        text: error instanceof Error ? error.message : "Something went wrong while loading.",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while loading.",
       });
     } finally {
       setLoading(false);
@@ -115,47 +169,84 @@ export default function AdminProductsPage() {
     void loadData();
   }, []);
 
-  useEffect(() => {
-    const urls = selectedFiles.map((file) => URL.createObjectURL(file));
-    setPreviews(urls);
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, [selectedFiles]);
-
   function resetForm() {
+    setEditingProductId(null);
     setName("");
     setDescription("");
     setCategoryId(activeCategories[0]?.id || "");
     setPrice("");
     setCompareAtPrice("");
     setStatus("draft");
-    setSizes("S, M, L, XL");
+
+    setSizes("S, M, L, XL, XXL");
     setColorName("Black");
     setColorCode("#222222");
     setStock("5");
+
+    setVariants([]);
+    setDeletedVariantIds([]);
+
     setSelectedFiles([]);
-    setPreviews([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setImageUrls([]);
+    setMainImage("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function closeForm() {
+    if (saving) return;
+    setShowForm(false);
+    resetForm();
   }
 
   function handleFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
+
     const allowed = files.filter((file) =>
-      ["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type)
+      ["image/jpeg", "image/png", "image/webp", "image/avif"].includes(
+        file.type
+      )
     );
-    const tooLarge = allowed.find((file) => file.size > 5 * 1024 * 1024);
+
+    const tooLarge = allowed.find(
+      (file) => file.size > 5 * 1024 * 1024
+    );
+
     if (files.length !== allowed.length) {
-      setNotice({ type: "error", text: "Use JPG, PNG, WEBP, or AVIF images only." });
+      setNotice({
+        type: "error",
+        text: "Use JPG, PNG, WEBP, or AVIF images only.",
+      });
       return;
     }
+
     if (tooLarge) {
-      setNotice({ type: "error", text: "Each image must be 5 MB or smaller." });
+      setNotice({
+        type: "error",
+        text: "Each image must be 5 MB or smaller.",
+      });
       return;
     }
-    setSelectedFiles(allowed);
+
+    setSelectedFiles((current) => [...current, ...allowed]);
+
+    if (!mainImage && imageUrls.length === 0 && allowed.length > 0) {
+      setMainImage("__first_new_image__");
+    }
+
     setNotice(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
-  async function uploadImage(file: File, productId: string): Promise<string> {
+  async function uploadImage(
+    file: File,
+    productId: string
+  ): Promise<string> {
     const body = new FormData();
     body.append("file", file);
     body.append("productId", productId);
@@ -164,120 +255,529 @@ export default function AdminProductsPage() {
       method: "POST",
       body,
     });
+
     const data = await response.json();
+
     if (!response.ok || !data.success || !data.url) {
       throw new Error(data.error || `Could not upload ${file.name}.`);
     }
+
     return data.url as string;
   }
 
-  async function handleCreateProduct(event: FormEvent<HTMLFormElement>) {
+  async function openEditForm(product: Product) {
+    setNotice(null);
+    setSaving(true);
+
+    try {
+      const response = await fetch(
+        `/api/admin/variants?product_id=${encodeURIComponent(product.id)}`,
+        { cache: "no-store" }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.error || "Could not load product sizes.");
+      }
+
+      const existingImages = Array.from(
+        new Set(
+          [
+            ...(Array.isArray(product.images) ? product.images : []),
+            product.main_image,
+          ].filter(
+            (image): image is string =>
+              typeof image === "string" && image.length > 0
+          )
+        )
+      );
+
+      setEditingProductId(product.id);
+      setName(product.name);
+      setDescription(product.description || "");
+      setCategoryId(product.category_id || "");
+      setPrice(String(product.price ?? ""));
+      setCompareAtPrice(
+        product.compare_at_price == null
+          ? ""
+          : String(product.compare_at_price)
+      );
+      setStatus(product.status || "draft");
+
+      setImageUrls(existingImages);
+      setMainImage(
+        product.main_image && existingImages.includes(product.main_image)
+          ? product.main_image
+          : existingImages[0] || ""
+      );
+
+      setSelectedFiles([]);
+      setDeletedVariantIds([]);
+
+      const loadedVariants: Variant[] = Array.isArray(data.variants)
+        ? data.variants.map((variant: {
+            id: string;
+            size: string | null;
+            color: string | null;
+            color_code: string | null;
+            stock_quantity: number;
+            is_active: boolean;
+          }) => ({
+            id: variant.id,
+            size: variant.size || "",
+            color: variant.color || "Black",
+            color_code: variant.color_code || "#222222",
+            stock_quantity: Number(variant.stock_quantity ?? 0),
+            is_active: variant.is_active !== false,
+          }))
+        : [];
+
+      setVariants(loadedVariants);
+
+      setShowForm(true);
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } catch (error) {
+      setNotice({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Could not open product editor.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function updateVariant(
+    index: number,
+    field: keyof Variant,
+    value: string | number | boolean
+  ) {
+    setVariants((current) =>
+      current.map((variant, i) =>
+        i === index ? { ...variant, [field]: value } : variant
+      )
+    );
+  }
+
+  function addVariant() {
+    setVariants((current) => [
+      ...current,
+      {
+        size: "",
+        color: colorName || "Black",
+        color_code: colorCode || "#222222",
+        stock_quantity: Number(stock) || 0,
+        is_active: true,
+      },
+    ]);
+  }
+
+  function removeVariant(index: number) {
+    const variant = variants[index];
+
+    if (variant.id) {
+      setDeletedVariantIds((current) => [...current, variant.id!]);
+    }
+
+    setVariants((current) =>
+      current.filter((_, i) => i !== index)
+    );
+  }
+
+  function removeImage(url: string) {
+    setImageUrls((current) => current.filter((image) => image !== url));
+
+    if (mainImage === url) {
+      setMainImage(
+        imageUrls.find((image) => image !== url) || ""
+      );
+    }
+  }
+
+  function removeNewFile(index: number) {
+    setSelectedFiles((current) =>
+      current.filter((_, i) => i !== index)
+    );
+  }
+
+  async function saveVariants(productId: string) {
+    for (const variantId of deletedVariantIds) {
+      const response = await fetch(
+        `/api/admin/variants?id=${encodeURIComponent(variantId)}`,
+        { method: "DELETE" }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.error || "Could not remove a product size.");
+      }
+    }
+
+    for (const variant of variants) {
+      if (!variant.size.trim()) {
+        throw new Error("Every size must have a size name.");
+      }
+
+      if (
+        !Number.isInteger(variant.stock_quantity) ||
+        variant.stock_quantity < 0
+      ) {
+        throw new Error(`Invalid stock quantity for size ${variant.size}.`);
+      }
+
+      const payload = {
+        product_id: productId,
+        size: variant.size.trim(),
+        color: variant.color.trim() || "Default",
+        color_code: variant.color_code || null,
+        stock_quantity: variant.stock_quantity,
+        is_active: variant.is_active,
+      };
+
+      const response = await fetch("/api/admin/variants", {
+        method: variant.id ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          variant.id ? { id: variant.id, ...payload } : payload
+        ),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        throw new Error(
+          data.error ||
+            `Could not save size ${variant.size}.`
+        );
+      }
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
 
     const numericPrice = Number(price);
-    const numericComparePrice = compareAtPrice.trim() ? Number(compareAtPrice) : null;
-    const numericStock = Number(stock);
-    const parsedSizes = Array.from(
-      new Set(sizes.split(",").map((size) => size.trim()).filter(Boolean))
-    );
+    const numericComparePrice = compareAtPrice.trim()
+      ? Number(compareAtPrice)
+      : null;
 
-    if (!name.trim() || !categoryId || !price.trim() || !Number.isFinite(numericPrice) || numericPrice <= 0) {
-      setNotice({ type: "error", text: "Enter a product name, category, and a valid price." });
+    if (
+      !name.trim() ||
+      !categoryId ||
+      !price.trim() ||
+      !Number.isFinite(numericPrice) ||
+      numericPrice <= 0
+    ) {
+      setNotice({
+        type: "error",
+        text: "Enter a product name, category, and a valid price.",
+      });
       return;
     }
-    if (compareAtPrice.trim() && (numericComparePrice === null || !Number.isFinite(numericComparePrice) || numericComparePrice < numericPrice)) {
-      setNotice({ type: "error", text: "Compare-at price must be a valid amount greater than or equal to the price." });
+
+    if (
+      compareAtPrice.trim() &&
+      (numericComparePrice === null ||
+        !Number.isFinite(numericComparePrice) ||
+        numericComparePrice < numericPrice)
+    ) {
+      setNotice({
+        type: "error",
+        text:
+          "Compare-at price must be greater than or equal to the product price.",
+      });
       return;
     }
-    if (!parsedSizes.length || !Number.isInteger(numericStock) || numericStock < 0) {
-      setNotice({ type: "error", text: "Enter at least one size and a valid stock quantity." });
-      return;
-    }
-    if (!selectedFiles.length) {
-      setNotice({ type: "error", text: "Add at least one product image before saving." });
-      return;
+
+    if (editingProductId) {
+      if (
+        imageUrls.length === 0 &&
+        selectedFiles.length === 0
+      ) {
+        setNotice({
+          type: "error",
+          text: "A product must have at least one image.",
+        });
+        return;
+      }
+
+      if (
+        variants.some(
+          (variant) =>
+            !variant.size.trim() ||
+            !Number.isInteger(variant.stock_quantity) ||
+            variant.stock_quantity < 0
+        )
+      ) {
+        setNotice({
+          type: "error",
+          text: "Check the size names and stock quantities.",
+        });
+        return;
+      }
+    } else {
+      const parsedSizes = Array.from(
+        new Set(
+          sizes
+            .split(",")
+            .map((size) => size.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const numericStock = Number(stock);
+
+      if (
+        !parsedSizes.length ||
+        !Number.isInteger(numericStock) ||
+        numericStock < 0
+      ) {
+        setNotice({
+          type: "error",
+          text: "Enter at least one size and a valid stock quantity.",
+        });
+        return;
+      }
+
+      if (!selectedFiles.length) {
+        setNotice({
+          type: "error",
+          text: "Add at least one product image before saving.",
+        });
+        return;
+      }
     }
 
     setSaving(true);
+
     try {
-      const createResponse = await fetch("/api/admin/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          slug: makeSlug(name),
-          category_id: categoryId,
-          description: description.trim(),
-          price: numericPrice,
-          compare_at_price: numericComparePrice,
-          main_image: "",
-          images: [],
-          status,
-          is_featured: false,
-          is_best_seller: false,
-          is_new_arrival: true,
-          sort_order: 0,
-        }),
-      });
-      const createdData = await createResponse.json();
-      if (!createResponse.ok || !createdData.success || !createdData.product?.id) {
-        throw new Error(createdData.error || "The product could not be created.");
+      let productId = editingProductId;
+
+      if (editingProductId) {
+        const updateResponse = await fetch("/api/admin/products", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingProductId,
+            name: name.trim(),
+            slug: makeSlug(name),
+            category_id: categoryId,
+            description: description.trim(),
+            price: numericPrice,
+            compare_at_price: numericComparePrice,
+            status,
+          }),
+        });
+
+        const updateData = await updateResponse.json();
+
+        if (!updateResponse.ok || updateData.success === false) {
+          throw new Error(
+            updateData.error || "Could not update product details."
+          );
+        }
+      } else {
+        const createResponse = await fetch("/api/admin/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            slug: makeSlug(name),
+            category_id: categoryId,
+            description: description.trim(),
+            price: numericPrice,
+            compare_at_price: numericComparePrice,
+            main_image: null,
+            images: [],
+            status,
+            is_featured: false,
+            is_best_seller: false,
+            is_new_arrival: true,
+            sort_order: 0,
+          }),
+        });
+
+        const createdData = await createResponse.json();
+
+        if (
+          !createResponse.ok ||
+          !createdData.success ||
+          !createdData.product?.id
+        ) {
+          throw new Error(
+            createdData.error || "The product could not be created."
+          );
+        }
+
+        productId = createdData.product.id as string;
       }
 
-      const productId = createdData.product.id as string;
+      if (!productId) {
+        throw new Error("Product ID is missing.");
+      }
+
       const uploadedUrls: string[] = [];
+
       for (const file of selectedFiles) {
         uploadedUrls.push(await uploadImage(file, productId));
       }
 
-      const updateResponse = await fetch("/api/admin/products", {
+      const finalImages = Array.from(
+        new Set([...imageUrls, ...uploadedUrls])
+      );
+
+      let finalMainImage = mainImage;
+
+      if (
+        !finalMainImage ||
+        finalMainImage === "__first_new_image__" ||
+        !finalImages.includes(finalMainImage)
+      ) {
+        finalMainImage = finalImages[0] || "";
+      }
+
+      if (!finalMainImage && uploadedUrls.length > 0) {
+        finalMainImage = uploadedUrls[0];
+      }
+
+      const imageResponse = await fetch("/api/admin/products", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: productId,
-          main_image: uploadedUrls[0],
-          images: uploadedUrls,
+          main_image: finalMainImage || null,
+          images: finalImages,
         }),
       });
-      const updatedData = await updateResponse.json();
-      if (!updateResponse.ok || updatedData.success === false) {
-        throw new Error(updatedData.error || "Product saved, but its images could not be attached.");
+
+      const imageData = await imageResponse.json();
+
+      if (!imageResponse.ok || imageData.success === false) {
+        throw new Error(
+          imageData.error || "Product saved, but its images could not be updated."
+        );
       }
 
-      for (const size of parsedSizes) {
-        const variantResponse = await fetch("/api/admin/variants", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            product_id: productId,
-            size,
-            color: colorName.trim() || "Default",
-            color_code: colorCode,
-            stock_quantity: numericStock,
-            is_active: true,
-          }),
-        });
-        const variantData = await variantResponse.json();
-        if (!variantResponse.ok || variantData.success === false) {
-          throw new Error(
-            `Product and images were saved, but size ${size} could not be added: ${
-              variantData.error || "variant error"
-            }`
-          );
+      if (editingProductId) {
+        await saveVariants(productId);
+      } else {
+        const parsedSizes = Array.from(
+          new Set(
+            sizes
+              .split(",")
+              .map((size) => size.trim())
+              .filter(Boolean)
+          )
+        );
+
+        for (const size of parsedSizes) {
+          const variantResponse = await fetch("/api/admin/variants", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              product_id: productId,
+              size,
+              color: colorName.trim() || "Default",
+              color_code: colorCode,
+              stock_quantity: Number(stock),
+              is_active: true,
+            }),
+          });
+
+          const variantData = await variantResponse.json();
+
+          if (!variantResponse.ok || variantData.success === false) {
+            throw new Error(
+              `Product was saved, but size ${size} could not be added: ${
+                variantData.error || "Variant error"
+              }`
+            );
+          }
         }
       }
 
-      setNotice({ type: "success", text: "Product, images, sizes, and stock were saved successfully." });
+      setNotice({
+        type: "success",
+        text: editingProductId
+          ? "Product, photos, sizes, and stock updated successfully."
+          : "Product, photos, sizes, and stock created successfully.",
+      });
+
       setShowForm(false);
       resetForm();
       await loadData();
     } catch (error) {
       setNotice({
         type: "error",
-        text: error instanceof Error ? error.message : "Could not save this product.",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Could not save this product.",
       });
+
       await loadData();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleProductStatus(product: Product) {
+    const nextStatus =
+      product.status === "published" ? "draft" : "published";
+
+    const confirmed = window.confirm(
+      nextStatus === "published"
+        ? `Publish "${product.name}"? It will become visible in the store.`
+        : `Move "${product.name}" to Draft? It will be hidden from the store.`
+    );
+
+    if (!confirmed) return;
+
+    setNotice(null);
+    setSaving(true);
+
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: product.id,
+          status: nextStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.error || "Could not change product status.");
+      }
+
+      setNotice({
+        type: "success",
+        text:
+          nextStatus === "published"
+            ? "Product published successfully."
+            : "Product moved to Draft successfully.",
+      });
+
+      await loadData();
+    } catch (error) {
+      setNotice({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Could not change product status.",
+      });
     } finally {
       setSaving(false);
     }
@@ -305,7 +805,9 @@ export default function AdminProductsPage() {
               <p className="text-[10px] uppercase tracking-[0.3em] text-[#A28A72]">
                 TALA Administration
               </p>
-              <h1 className="mt-2 text-4xl font-light sm:text-5xl">Products</h1>
+              <h1 className="mt-2 text-4xl font-light sm:text-5xl">
+                Products
+              </h1>
               <p className="mt-2 text-sm text-[#77695D]">
                 Manage your collection, product photos, sizes, and stock.
               </p>
@@ -315,10 +817,15 @@ export default function AdminProductsPage() {
           <button
             type="button"
             onClick={() => {
-              resetForm();
-              setShowForm((current) => !current);
+              if (showForm) {
+                closeForm();
+              } else {
+                resetForm();
+                setShowForm(true);
+              }
             }}
-            className="inline-flex items-center gap-2 bg-[#332A23] px-5 py-3 text-xs uppercase tracking-[0.15em] text-white transition hover:bg-[#59483B]"
+            disabled={saving}
+            className="inline-flex items-center gap-2 bg-[#332A23] px-5 py-3 text-xs uppercase tracking-[0.15em] text-white transition hover:bg-[#59483B] disabled:opacity-50"
           >
             {showForm ? <X size={16} /> : <Plus size={16} />}
             {showForm ? "Close Form" : "Add Product"}
@@ -340,17 +847,29 @@ export default function AdminProductsPage() {
 
         {showForm && (
           <form
-            onSubmit={handleCreateProduct}
+            onSubmit={handleSubmit}
             className="mt-8 border border-[#E5DACE] bg-white/80 p-5 sm:p-8"
           >
-            <div className="mb-8">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
-                New collection item
-              </p>
-              <h2 className="mt-2 text-2xl font-light">Add a product</h2>
-              <p className="mt-2 text-xs leading-6 text-[#77695D]">
-                Add the product details, upload its photos, then enter the sizes and available stock.
-              </p>
+            <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
+                  {editingProductId ? "Edit collection item" : "New collection item"}
+                </p>
+                <h2 className="mt-2 text-2xl font-light">
+                  {editingProductId ? "Edit product" : "Add a product"}
+                </h2>
+                <p className="mt-2 text-xs leading-6 text-[#77695D]">
+                  {editingProductId
+                    ? "Update product information, photos, sizes, and stock."
+                    : "Add the product details, upload its photos, then enter the sizes and available stock."}
+                </p>
+              </div>
+
+              {editingProductId && (
+                <span className="border border-[#D9CCBE] px-3 py-2 text-[10px] uppercase tracking-wider text-[#8A7969]">
+                  Editing existing product
+                </span>
+              )}
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2">
@@ -391,7 +910,6 @@ export default function AdminProductsPage() {
                   step="0.01"
                   value={price}
                   onChange={(event) => setPrice(event.target.value)}
-                  placeholder="e.g. 1250"
                   required
                 />
               </label>
@@ -418,6 +936,7 @@ export default function AdminProductsPage() {
                 >
                   <option value="draft">Draft — hidden from store</option>
                   <option value="published">Published — visible in store</option>
+                  <option value="archived">Archived</option>
                 </select>
               </label>
 
@@ -440,14 +959,16 @@ export default function AdminProductsPage() {
                     JPG, PNG, WEBP, or AVIF · up to 5 MB per image
                   </p>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="inline-flex items-center gap-2 border border-[#BCA995] px-4 py-2.5 text-xs uppercase tracking-wider"
                 >
                   <ImagePlus size={16} />
-                  Choose photos
+                  Add photos
                 </button>
+
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -458,17 +979,68 @@ export default function AdminProductsPage() {
                 />
               </div>
 
-              {previews.length > 0 ? (
+              {(imageUrls.length > 0 || previews.length > 0) ? (
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {previews.map((preview, index) => (
-                    <div key={`${preview}-${index}`} className="relative aspect-[4/5] overflow-hidden bg-[#F1ECE5]">
+                  {imageUrls.map((url) => (
+                    <div
+                      key={url}
+                      className="relative aspect-[4/5] overflow-hidden bg-[#F1ECE5]"
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={preview} alt={`Product preview ${index + 1}`} className="h-full w-full object-cover" />
-                      {index === 0 && (
-                        <span className="absolute bottom-2 left-2 bg-white/90 px-2 py-1 text-[9px] uppercase tracking-wider">
-                          Main photo
-                        </span>
-                      )}
+                      <img
+                        src={url}
+                        alt="Product photo"
+                        className="h-full w-full object-cover"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setMainImage(url)}
+                        className={`absolute left-2 top-2 flex items-center gap-1 px-2 py-1 text-[9px] uppercase ${
+                          mainImage === url
+                            ? "bg-[#332A23] text-white"
+                            : "bg-white/90 text-[#332A23]"
+                        }`}
+                      >
+                        <Star size={11} />
+                        {mainImage === url ? "Cover" : "Set cover"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removeImage(url)}
+                        className="absolute right-2 top-2 bg-white/90 p-1.5 text-[#8A3E2D]"
+                        aria-label="Remove image"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {previews.map((preview, index) => (
+                    <div
+                      key={`${preview}-${index}`}
+                      className="relative aspect-[4/5] overflow-hidden bg-[#F1ECE5]"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={preview}
+                        alt={`New product photo ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+
+                      <span className="absolute bottom-2 left-2 bg-white/90 px-2 py-1 text-[9px] uppercase tracking-wider">
+                        New photo
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => removeNewFile(index)}
+                        className="absolute right-2 top-2 bg-white/90 p-1.5 text-[#8A3E2D]"
+                        aria-label="Remove new photo"
+                      >
+                        <X size={13} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -479,82 +1051,221 @@ export default function AdminProductsPage() {
                   className="mt-5 flex min-h-36 w-full flex-col items-center justify-center border border-dashed border-[#CDBEAE] bg-[#FBF9F6] text-[#8A7969]"
                 >
                   <Upload size={22} strokeWidth={1.3} />
-                  <span className="mt-3 text-xs">Tap to select product photos</span>
+                  <span className="mt-3 text-xs">
+                    Tap to select product photos
+                  </span>
                 </button>
               )}
+
+              <p className="mt-3 text-xs text-[#8A7969]">
+                The selected cover photo will appear in the product list and store.
+                If no cover is selected, the first available photo will be used.
+              </p>
             </div>
 
             <div className="mt-8 border-t border-[#E5DACE] pt-7">
-              <h3 className="text-lg font-light">Sizes, color & stock</h3>
-              <p className="mt-1 text-xs text-[#8A7969]">
-                One stock quantity will be assigned to each size for the selected color.
-              </p>
-              <div className="mt-5 grid gap-6 sm:grid-cols-2">
-                <label className={labelClass}>
-                  Sizes * (separate with commas)
-                  <input
-                    className={inputClass}
-                    value={sizes}
-                    onChange={(event) => setSizes(event.target.value)}
-                    placeholder="S, M, L, XL"
-                    required
-                  />
-                </label>
-                <label className={labelClass}>
-                  Stock per size *
-                  <input
-                    className={inputClass}
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={stock}
-                    onChange={(event) => setStock(event.target.value)}
-                    required
-                  />
-                </label>
-                <label className={labelClass}>
-                  Color name
-                  <input
-                    className={inputClass}
-                    value={colorName}
-                    onChange={(event) => setColorName(event.target.value)}
-                    placeholder="Black"
-                  />
-                </label>
-                <label className={labelClass}>
-                  Color code
-                  <div className="mt-2 flex items-center gap-3 border border-[#E5DACE] bg-white px-3 py-2">
-                    <input
-                      type="color"
-                      value={colorCode}
-                      onChange={(event) => setColorCode(event.target.value)}
-                      className="h-9 w-12 cursor-pointer border-0 bg-transparent"
-                    />
-                    <span className="text-sm text-[#77695D]">{colorCode}</span>
-                  </div>
-                </label>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-light">
+                    Sizes, color & stock
+                  </h3>
+                  <p className="mt-1 text-xs text-[#8A7969]">
+                    Manage each size and its stock quantity separately.
+                  </p>
+                </div>
+
+                {editingProductId && (
+                  <button
+                    type="button"
+                    onClick={addVariant}
+                    className="inline-flex items-center gap-2 border border-[#BCA995] px-4 py-2.5 text-xs uppercase tracking-wider"
+                  >
+                    <Plus size={15} />
+                    Add size
+                  </button>
+                )}
               </div>
+
+              {editingProductId ? (
+                <div className="mt-5 space-y-4">
+                  {variants.length === 0 && (
+                    <p className="border border-dashed border-[#CDBEAE] bg-[#FBF9F6] p-5 text-sm text-[#8A7969]">
+                      No sizes have been added to this product yet. Use Add size to create the first size.
+                    </p>
+                  )}
+
+                  {variants.map((variant, index) => (
+                    <div
+                      key={variant.id || `new-${index}`}
+                      className="grid gap-3 border border-[#E5DACE] bg-[#FBF9F6] p-4 sm:grid-cols-2 lg:grid-cols-4"
+                    >
+                      <label className={labelClass}>
+                        Size
+                        <input
+                          className={inputClass}
+                          value={variant.size}
+                          onChange={(event) =>
+                            updateVariant(index, "size", event.target.value)
+                          }
+                          placeholder="XXL"
+                        />
+                      </label>
+
+                      <label className={labelClass}>
+                        Color
+                        <input
+                          className={inputClass}
+                          value={variant.color}
+                          onChange={(event) =>
+                            updateVariant(index, "color", event.target.value)
+                          }
+                        />
+                      </label>
+
+                      <label className={labelClass}>
+                        Stock quantity
+                        <input
+                          className={inputClass}
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={variant.stock_quantity}
+                          onChange={(event) =>
+                            updateVariant(
+                              index,
+                              "stock_quantity",
+                              Number(event.target.value)
+                            )
+                          }
+                        />
+                      </label>
+
+                      <div className="flex items-end justify-between gap-3">
+                        <label className={labelClass}>
+                          Color code
+                          <input
+                            className={`${inputClass} h-12 p-1`}
+                            type="color"
+                            value={variant.color_code || "#222222"}
+                            onChange={(event) =>
+                              updateVariant(
+                                index,
+                                "color_code",
+                                event.target.value
+                              )
+                            }
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => removeVariant(index)}
+                          className="mb-1 border border-[#D8B9AE] p-3 text-[#8A3E2D]"
+                          aria-label="Remove size"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      <label className="flex items-center gap-2 text-xs text-[#77695D] sm:col-span-2 lg:col-span-4">
+                        <input
+                          type="checkbox"
+                          checked={variant.is_active}
+                          onChange={(event) =>
+                            updateVariant(
+                              index,
+                              "is_active",
+                              event.target.checked
+                            )
+                          }
+                        />
+                        Available for sale
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 grid gap-6 sm:grid-cols-2">
+                  <label className={labelClass}>
+                    Sizes * (separate with commas)
+                    <input
+                      className={inputClass}
+                      value={sizes}
+                      onChange={(event) => setSizes(event.target.value)}
+                      placeholder="S, M, L, XL, XXL"
+                      required
+                    />
+                  </label>
+
+                  <label className={labelClass}>
+                    Stock per size *
+                    <input
+                      className={inputClass}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={stock}
+                      onChange={(event) => setStock(event.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label className={labelClass}>
+                    Color name
+                    <input
+                      className={inputClass}
+                      value={colorName}
+                      onChange={(event) => setColorName(event.target.value)}
+                      placeholder="Black"
+                    />
+                  </label>
+
+                  <label className={labelClass}>
+                    Color code
+                    <div className="mt-2 flex items-center gap-3 border border-[#E5DACE] bg-white px-3 py-2">
+                      <input
+                        type="color"
+                        value={colorCode}
+                        onChange={(event) => setColorCode(event.target.value)}
+                        className="h-9 w-12 cursor-pointer border-0 bg-transparent"
+                      />
+                      <span className="text-sm text-[#77695D]">
+                        {colorCode}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="mt-8 flex flex-wrap justify-end gap-3 border-t border-[#E5DACE] pt-6">
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}
+                onClick={closeForm}
                 disabled={saving}
                 className="border border-[#CDBEAE] px-5 py-3 text-xs uppercase tracking-wider text-[#77695D] disabled:opacity-50"
               >
                 Cancel
               </button>
+
               <button
                 type="submit"
                 disabled={saving}
                 className="inline-flex items-center gap-2 bg-[#332A23] px-6 py-3 text-xs uppercase tracking-[0.15em] text-white disabled:opacity-60"
               >
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                {saving ? "Saving product..." : "Save product"}
+                {saving ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : editingProductId ? (
+                  <Pencil size={16} />
+                ) : (
+                  <Plus size={16} />
+                )}
+
+                {saving
+                  ? "Saving..."
+                  : editingProductId
+                    ? "Save changes"
+                    : "Save product"}
               </button>
             </div>
           </form>
@@ -568,6 +1279,7 @@ export default function AdminProductsPage() {
                 {products.length} product{products.length === 1 ? "" : "s"} in the database
               </p>
             </div>
+
             <div className="flex items-center gap-2">
               <div className="flex items-center border border-[#E5DACE] bg-white px-3">
                 <Search size={15} className="text-[#9B8A7A]" />
@@ -578,6 +1290,7 @@ export default function AdminProductsPage() {
                   className="w-36 bg-transparent px-2 py-2.5 text-xs outline-none sm:w-48"
                 />
               </div>
+
               <button
                 type="button"
                 onClick={() => void loadData()}
@@ -596,25 +1309,39 @@ export default function AdminProductsPage() {
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="p-12 text-center">
-              <ShoppingBag size={30} strokeWidth={1} className="mx-auto text-[#B5A493]" />
+              <ShoppingBag
+                size={30}
+                strokeWidth={1}
+                className="mx-auto text-[#B5A493]"
+              />
               <p className="mt-4 text-sm text-[#77695D]">
-                {search ? "No products match your search." : "No products yet. Add your first TALA item above."}
+                {search
+                  ? "No products match your search."
+                  : "No products yet. Add your first TALA item above."}
               </p>
             </div>
           ) : (
             <div className="divide-y divide-[#EDE5DC]">
               {filteredProducts.map((product) => (
-                <div key={product.id} className="flex items-center gap-4 p-4 sm:px-7">
+                <div
+                  key={product.id}
+                  className="flex flex-wrap items-center gap-4 p-4 sm:px-7"
+                >
                   <div className="h-20 w-16 shrink-0 overflow-hidden bg-[#F1ECE5]">
-                    {product.main_image ? (
+                    {product.main_image || product.images?.[0] ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={product.main_image} alt={product.name} className="h-full w-full object-cover" />
+                      <img
+                        src={product.main_image || product.images?.[0] || ""}
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="flex h-full items-center justify-center text-[#B5A493]">
                         <ImagePlus size={20} />
                       </div>
                     )}
                   </div>
+
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-sm">{product.name}</h3>
                     <p className="mt-1 text-xs text-[#8A7969]">
@@ -624,6 +1351,7 @@ export default function AdminProductsPage() {
                       {product.status}
                     </p>
                   </div>
+
                   <span
                     className={`shrink-0 border px-2.5 py-1 text-[9px] uppercase tracking-wider ${
                       product.status === "published"
@@ -633,6 +1361,29 @@ export default function AdminProductsPage() {
                   >
                     {product.status}
                   </span>
+
+                  <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void openEditForm(product)}
+                      className="inline-flex items-center gap-2 border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
+                    >
+                      <Pencil size={13} />
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void toggleProductStatus(product)}
+                      className="border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
+                    >
+                      {product.status === "published"
+                        ? "Move to Draft"
+                        : "Publish"}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
