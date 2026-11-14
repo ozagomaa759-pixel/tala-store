@@ -1,6 +1,9 @@
 
 import { notFound } from "next/navigation";
 import ProductDetails from "./product-details";
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 type Product = {
   id: string;
@@ -24,33 +27,45 @@ type Variant = {
   is_active: boolean;
 };
 
-type ApiResponse = {
-  success: boolean;
-  product?: Product;
-  variants?: Variant[];
-};
+async function getProduct(slug: string) {
+  const supabase = await createClient();
 
-async function getProduct(slug: string): Promise<ApiResponse> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select(
+      "id, name, slug, description, price, compare_at_price, main_image, images"
+    )
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
 
-  const response = await fetch(
-    `${baseUrl}/api/products/${encodeURIComponent(slug)}`,
-    { cache: "no-store" }
-  );
-
-  if (response.status === 404) {
-    return { success: false };
-  }
-
-  if (!response.ok) {
+  if (productError) {
+    console.error("TALA product query error:", productError);
     throw new Error("Could not load product.");
   }
 
-  return response.json();
+  if (!product) {
+    return null;
+  }
+
+  const { data: variants, error: variantsError } = await supabase
+    .from("product_variants")
+    .select(
+      "id, size, color, color_code, stock_quantity, price_override, image_url, is_active"
+    )
+    .eq("product_id", product.id)
+    .eq("is_active", true)
+    .order("size", { ascending: true });
+
+  if (variantsError) {
+    console.error("TALA variants query error:", variantsError);
+    throw new Error("Could not load product options.");
+  }
+
+  return {
+    product: product as Product,
+    variants: (variants ?? []) as Variant[],
+  };
 }
 
 export default async function ProductPage({
@@ -60,20 +75,13 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
 
-  let result: ApiResponse;
+  const result = await getProduct(slug);
 
-  try {
-    result = await getProduct(slug);
-  } catch (error) {
-    console.error("TALA product page error:", error);
-    throw error;
-  }
-
-  if (!result.success || !result.product) {
+  if (!result) {
     notFound();
   }
 
-  const product = result.product;
+  const { product, variants } = result;
 
   const images = [
     product.main_image,
@@ -86,7 +94,7 @@ export default async function ProductPage({
   return (
     <ProductDetails
       product={product}
-      variants={result.variants ?? []}
+      variants={variants}
       images={[...new Set(images)]}
     />
   );
