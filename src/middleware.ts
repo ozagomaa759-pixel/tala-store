@@ -1,3 +1,4 @@
+
 import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_NAME = "tala_admin_session";
@@ -13,16 +14,21 @@ async function verifyAdminSession(
 
   const [expiresAt, signature] = parts;
 
-  if (!/^\\d+$/.test(expiresAt)) return false;
+  // Correctly validate the numeric expiration timestamp.
+  if (!/^\d+$/.test(expiresAt)) return false;
 
   const expiry = Number(expiresAt);
 
-  if (!Number.isSafeInteger(expiry) || expiry <= Math.floor(Date.now() / 1000)) {
+  if (
+    !Number.isSafeInteger(expiry) ||
+    expiry <= Math.floor(Date.now() / 1000)
+  ) {
     return false;
   }
 
   try {
     const encoder = new TextEncoder();
+
     const key = await crypto.subtle.importKey(
       "raw",
       encoder.encode(secret),
@@ -34,9 +40,12 @@ async function verifyAdminSession(
     const base64 = signature
       .replace(/-/g, "+")
       .replace(/_/g, "/");
+
     const padded =
       base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+
     const binary = atob(padded);
+
     const signatureBytes = Uint8Array.from(
       binary,
       (character) => character.charCodeAt(0)
@@ -68,6 +77,7 @@ export async function middleware(request: NextRequest) {
 
   const secret = process.env.ADMIN_SESSION_SECRET;
   const token = request.cookies.get(COOKIE_NAME)?.value;
+
   const authorized = secret
     ? await verifyAdminSession(token, secret)
     : false;
@@ -84,6 +94,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const loginUrl = new URL("/admin/login", request.url);
+
   loginUrl.searchParams.set(
     "next",
     `${request.nextUrl.pathname}${request.nextUrl.search}`
