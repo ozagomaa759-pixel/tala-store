@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -60,7 +59,7 @@ export async function GET(
       .select("*")
       .eq("product_id", product.id)
       .eq("is_active", true)
-      .gt("stock_quantity", 0);
+      .order("size", { ascending: true });
 
     if (variantsError) {
       console.error("Public product variants API:", variantsError);
@@ -83,11 +82,4 @@ export async function GET(
       }
     );
   } catch (error) {
-    console.error("Public product details API error:", error);
-
-    return NextResponse.json(
-      { success: false, message: "An unexpected error occurred." },
-      { status: 500 }
-    );
-  }
-}
+    console.error("Public product details API error
