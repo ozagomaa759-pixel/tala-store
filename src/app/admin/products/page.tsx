@@ -260,7 +260,8 @@ export default function AdminProductsPage() {
     body.append("file", file);
     body.append("productId", productId);
 
-    const response = await fetch("/api/upload", {
+    // Correct upload API route
+    const response = await fetch("/api/admin/products/upload", {
       method: "POST",
       body,
     });
@@ -274,7 +275,9 @@ export default function AdminProductsPage() {
     }
 
     if (typeof data.url !== "string" || !data.url.startsWith("http")) {
-      throw new Error(`The upload response for "${file.name}" has an invalid image URL.`);
+      throw new Error(
+        `The upload response for "${file.name}" has an invalid image URL.`
+      );
     }
 
     return data.url;
@@ -645,7 +648,6 @@ export default function AdminProductsPage() {
         throw new Error("Product ID is missing.");
       }
 
-      // Upload every selected image to Supabase Storage.
       const uploadedUrls: string[] = [];
 
       for (const file of selectedFiles) {
@@ -653,7 +655,6 @@ export default function AdminProductsPage() {
         uploadedUrls.push(uploadedUrl);
       }
 
-      // Keep existing images and add the newly uploaded image URLs.
       const finalImages = Array.from(
         new Set([...imageUrls, ...uploadedUrls])
       );
@@ -672,7 +673,6 @@ export default function AdminProductsPage() {
         finalMainImage = finalImages[0];
       }
 
-      // Save the image URLs to the products table.
       const imageResponse = await fetch("/api/admin/products", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -692,7 +692,6 @@ export default function AdminProductsPage() {
         );
       }
 
-      // Do not report success unless the API confirms the saved images.
       const savedProduct = imageData.product;
 
       if (!savedProduct) {
@@ -711,7 +710,6 @@ export default function AdminProductsPage() {
         );
       }
 
-      // Save sizes and stock only after image saving has been confirmed.
       if (editingProductId) {
         await saveVariants(productId);
       } else {
@@ -1328,7 +1326,7 @@ export default function AdminProductsPage() {
 
             <div className="flex items-center gap-2">
               <div className="flex items-center border border-[#E5DACE] bg-white px-3">
-                <Search size={15} className="text-[#9B8A7A]" />
+                <Search size={15} className="text-[#9B8A7A}" />
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
