@@ -2859,87 +2859,12 @@ useEffect(() => {
   // ----------------------------------------
   // FILTERING AND SEARCH
   // ----------------------------------------
-
-  const filteredProducts = useMemo(() => {
-    const normalizedSearch =
-      normalizeSearch(search);
-
-    return products.filter((product) => {
-      const matchesCategory =
-        selectedCategory === "All" ||
-        product.category === selectedCategory;
-
-      const matchesPrice =
-        product.price <= maxPrice;
-
-      const matchesFavorites =
-        !onlyFavorites ||
-        favorites.includes(product.id);
-
-      const matchesNew =
-        !newOnly || product.isNew;
-
-      const matchesBestSeller =
-        !bestSellersOnly ||
-        product.isBestSeller;
-
-      const searchableText = normalizeSearch(
-        [
-          product.name,
-          product.category,
-          product.description,
-          ...(product.tags ?? []),
-        ].join(" ")
-      );
-
-      const matchesSearch =
-        !normalizedSearch ||
-        searchableText.includes(normalizedSearch);
-
-      return (
-        matchesCategory &&
-        matchesPrice &&
-        matchesFavorites &&
-        matchesNew &&
-        matchesBestSeller &&
-        matchesSearch
-      );
-    }).sort((a, b) => {
-      switch (sortBy) {
-        case "price-low":
-          return a.price - b.price;
-
-        case "price-high":
-          return b.price - a.price;
-
-        case "rating":
-          return b.rating - a.rating;
-
-        case "newest":
-          return (
-            Number(b.isNew) - Number(a.isNew)
-          );
-
-        case "featured":
-        default:
-          return (
-            Number(b.isFeatured) -
-              Number(a.isFeatured) ||
-            b.rating - a.rating
-          );
-      }
-    });
-  }, [
-    search,
-    selectedCategory,
-    maxPrice,
-    onlyFavorites,
-    newOnly,
-    bestSellersOnly,
-    favorites,
-    sortBy,
-  ]);
-
+const filteredProducts = useMemo(() => {
+  return [...products].sort(
+    (a, b) => b.price - a.price
+  );
+}, [products]);
+  
   // ----------------------------------------
   // PAGINATION
   // ----------------------------------------
