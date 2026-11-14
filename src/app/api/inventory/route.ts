@@ -1,6 +1,6 @@
 
-
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -38,7 +38,7 @@ export async function GET() {
       return errorResponse("Unauthorized.", 401);
     }
 
-    const supabase = createAdminClient();
+    const supabase = createAdminClient() as unknown as SupabaseClient;
 
     const [
       { data: products, error: productsError },
@@ -143,7 +143,7 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("No inventory changes were provided.");
     }
 
-    const supabase = createAdminClient();
+    const supabase = createAdminClient() as unknown as SupabaseClient;
 
     const { data, error } = await supabase
       .from("product_variants")
