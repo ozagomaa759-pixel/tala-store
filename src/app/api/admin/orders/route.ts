@@ -83,16 +83,23 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Unauthorized", 401);
     }
 
-    const body = await request.json();
+    const body: {
+      id?: unknown;
+      status?: unknown;
+      payment_status?: unknown;
+      notes?: unknown;
+    } = await request.json();
 
-    if (
-      typeof body.id !== "string" ||
-      !body.id.trim()
-    ) {
+    if (typeof body.id !== "string" || !body.id.trim()) {
       return errorResponse("Order ID is required.");
     }
 
-    const updates: Record<string, unknown> = {};
+    const updates: {
+      status?: string;
+      payment_status?: string;
+      notes?: string | null;
+      updated_at?: string;
+    } = {};
 
     if (body.status !== undefined) {
       if (
