@@ -124,7 +124,6 @@ export default function AdminProductsPage() {
 
   async function loadData() {
     setLoading(true);
-    setNotice(null);
 
     try {
       const [productsResponse, categoriesResponse] = await Promise.all([
