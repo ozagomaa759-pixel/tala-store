@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
@@ -99,13 +100,11 @@ export async function POST(request: NextRequest) {
       line_total: Number((unitPrice * quantity).toFixed(2)),
     };
 
-    const supabase = auth.supabase as any;
+    const supabase = auth.supabase as unknown as SupabaseClient;
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("order_items")
-      .insert(item)
-      .select()
-      .single();
+      .insert(item);
 
     if (error) {
       console.error("Insert order item error:", error);
