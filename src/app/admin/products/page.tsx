@@ -77,6 +77,16 @@ function makeSlug(value: string) {
     .replace(/^-|-$/g, "");
 }
 
+async function readJson(response: Response) {
+  try {
+    return await response.json();
+  } catch {
+    throw new Error(
+      `The server returned an invalid response (HTTP ${response.status}).`
+    );
+  }
+}
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -131,8 +141,8 @@ export default function AdminProductsPage() {
         fetch("/api/admin/categories", { cache: "no-store" }),
       ]);
 
-      const productsData = await productsResponse.json();
-      const categoriesData = await categoriesResponse.json();
+      const productsData = await readJson(productsResponse);
+      const categoriesData = await readJson(categoriesResponse);
 
       if (!productsResponse.ok || productsData.success === false) {
         throw new Error(productsData.error || "Could not load products.");
@@ -255,13 +265,19 @@ export default function AdminProductsPage() {
       body,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
     if (!response.ok || !data.success || !data.url) {
-      throw new Error(data.error || `Could not upload ${file.name}.`);
+      throw new Error(
+        data.error || `Could not upload "${file.name}" (HTTP ${response.status}).`
+      );
     }
 
-    return data.url as string;
+    if (typeof data.url !== "string" || !data.url.startsWith("http")) {
+      throw new Error(`The upload response for "${file.name}" has an invalid image URL.`);
+    }
+
+    return data.url;
   }
 
   async function openEditForm(product: Product) {
@@ -274,7 +290,7 @@ export default function AdminProductsPage() {
         { cache: "no-store" }
       );
 
-      const data = await response.json();
+      const data = await readJson(response);
 
       if (!response.ok || data.success === false) {
         throw new Error(data.error || "Could not load product sizes.");
@@ -391,19 +407,25 @@ export default function AdminProductsPage() {
   }
 
   function removeImage(url: string) {
-    setImageUrls((current) => current.filter((image) => image !== url));
+    const remainingImages = imageUrls.filter((image) => image !== url);
+
+    setImageUrls(remainingImages);
 
     if (mainImage === url) {
-      setMainImage(
-        imageUrls.find((image) => image !== url) || ""
-      );
+      setMainImage(remainingImages[0] || "");
     }
   }
 
   function removeNewFile(index: number) {
-    setSelectedFiles((current) =>
-      current.filter((_, i) => i !== index)
-    );
+    setSelectedFiles((current) => {
+      const remaining = current.filter((_, i) => i !== index);
+
+      if (remaining.length === 0 && mainImage === "__first_new_image__") {
+        setMainImage(imageUrls[0] || "");
+      }
+
+      return remaining;
+    });
   }
 
   async function saveVariants(productId: string) {
@@ -413,7 +435,7 @@ export default function AdminProductsPage() {
         { method: "DELETE" }
       );
 
-      const data = await response.json();
+      const data = await readJson(response);
 
       if (!response.ok || data.success === false) {
         throw new Error(data.error || "Could not remove a product size.");
@@ -449,12 +471,11 @@ export default function AdminProductsPage() {
         ),
       });
 
-      const data = await response.json();
+      const data = await readJson(response);
 
       if (!response.ok || data.success === false) {
         throw new Error(
-          data.error ||
-            `Could not save size ${variant.size}.`
+          data.error || `Could not save size ${variant.size}.`
         );
       }
     }
@@ -577,7 +598,7 @@ export default function AdminProductsPage() {
           }),
         });
 
-        const updateData = await updateResponse.json();
+        const updateData = await readJson(updateResponse);
 
         if (!updateResponse.ok || updateData.success === false) {
           throw new Error(
@@ -605,7 +626,7 @@ export default function AdminProductsPage() {
           }),
         });
 
-        const createdData = await createResponse.json();
+        const createdData = await readJson(createResponse);
 
         if (
           !createResponse.ok ||
@@ -624,15 +645,22 @@ export default function AdminProductsPage() {
         throw new Error("Product ID is missing.");
       }
 
+      // Upload every selected image to Supabase Storage.
       const uploadedUrls: string[] = [];
 
       for (const file of selectedFiles) {
-        uploadedUrls.push(await uploadImage(file, productId));
+        const uploadedUrl = await uploadImage(file, productId);
+        uploadedUrls.push(uploadedUrl);
       }
 
+      // Keep existing images and add the newly uploaded image URLs.
       const finalImages = Array.from(
         new Set([...imageUrls, ...uploadedUrls])
       );
+
+      if (finalImages.length === 0) {
+        throw new Error("No product images are available to save.");
+      }
 
       let finalMainImage = mainImage;
 
@@ -641,31 +669,49 @@ export default function AdminProductsPage() {
         finalMainImage === "__first_new_image__" ||
         !finalImages.includes(finalMainImage)
       ) {
-        finalMainImage = finalImages[0] || "";
+        finalMainImage = finalImages[0];
       }
 
-      if (!finalMainImage && uploadedUrls.length > 0) {
-        finalMainImage = uploadedUrls[0];
-      }
-
+      // Save the image URLs to the products table.
       const imageResponse = await fetch("/api/admin/products", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: productId,
-          main_image: finalMainImage || null,
+          main_image: finalMainImage,
           images: finalImages,
         }),
       });
 
-      const imageData = await imageResponse.json();
+      const imageData = await readJson(imageResponse);
 
       if (!imageResponse.ok || imageData.success === false) {
         throw new Error(
-          imageData.error || "Product saved, but its images could not be updated."
+          imageData.error ||
+            `The images could not be saved to the product (HTTP ${imageResponse.status}).`
         );
       }
 
+      // Do not report success unless the API confirms the saved images.
+      const savedProduct = imageData.product;
+
+      if (!savedProduct) {
+        throw new Error(
+          "The image API did not return the updated product. The images may not have been saved."
+        );
+      }
+
+      if (
+        savedProduct.main_image !== finalMainImage ||
+        !Array.isArray(savedProduct.images) ||
+        finalImages.some((url) => !savedProduct.images.includes(url))
+      ) {
+        throw new Error(
+          "The server response does not confirm that all product images were saved. Please try again."
+        );
+      }
+
+      // Save sizes and stock only after image saving has been confirmed.
       if (editingProductId) {
         await saveVariants(productId);
       } else {
@@ -692,11 +738,11 @@ export default function AdminProductsPage() {
             }),
           });
 
-          const variantData = await variantResponse.json();
+          const variantData = await readJson(variantResponse);
 
           if (!variantResponse.ok || variantData.success === false) {
             throw new Error(
-              `Product was saved, but size ${size} could not be added: ${
+              `Product and photos were saved, but size ${size} could not be added: ${
                 variantData.error || "Variant error"
               }`
             );
@@ -754,7 +800,7 @@ export default function AdminProductsPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = await readJson(response);
 
       if (!response.ok || data.success === false) {
         throw new Error(data.error || "Could not change product status.");
@@ -834,6 +880,7 @@ export default function AdminProductsPage() {
         {notice && (
           <div
             role="status"
+            aria-live="polite"
             className={`mt-7 border px-4 py-3 text-sm ${
               notice.type === "success"
                 ? "border-[#B8C8B2] bg-[#F0F5ED] text-[#40563A]"
