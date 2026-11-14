@@ -11,15 +11,25 @@ import {
   Truck,
   CheckCircle2,
 } from "lucide-react";
-import { getCart, clearCart, type CartItem } from "@/lib/cart";
+import {
+  getCart,
+  clearCart,
+  type CartItem,
+} from "@/lib/cart";
 
 const DELIVERY_FEE = 120;
+const FREE_DELIVERY_LIMIT = 3000;
 
 const inputClassName =
   "mt-2 w-full border border-[#DED5CA] bg-white/70 px-4 py-3.5 text-sm text-[#332A23] outline-none transition placeholder:text-[#A69A8D] focus:border-[#A58B68] focus:ring-1 focus:ring-[#A58B68]/20";
 
+const formatPrice = (price: number) =>
+  `${price.toLocaleString("en-EG")} EGP`;
+
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartLoaded, setCartLoaded] = useState(false);
+
   const [customer, setCustomer] = useState({
     fullName: "",
     phone: "",
@@ -36,7 +46,20 @@ export default function CheckoutPage() {
   } | null>(null);
 
   useEffect(() => {
-    setCart(getCart());
+    const syncCart = () => {
+      setCart(getCart());
+      setCartLoaded(true);
+    };
+
+    syncCart();
+
+    window.addEventListener("tala-cart-updated", syncCart);
+    window.addEventListener("storage", syncCart);
+
+    return () => {
+      window.removeEventListener("tala-cart-updated", syncCart);
+      window.removeEventListener("storage", syncCart);
+    };
   }, []);
 
   const subtotal = useMemo(
@@ -49,7 +72,11 @@ export default function CheckoutPage() {
     [cart]
   );
 
-  const deliveryFee = cart.length > 0 ? DELIVERY_FEE : 0;
+  const deliveryFee =
+    cart.length === 0 || subtotal >= FREE_DELIVERY_LIMIT
+      ? 0
+      : DELIVERY_FEE;
+
   const total = subtotal + deliveryFee;
 
   const updateField = (
@@ -86,6 +113,16 @@ export default function CheckoutPage() {
     setOrderError("");
 
     try {
+      // Read the latest cart before submitting the order.
+      const latestCart = getCart();
+
+      if (latestCart.length === 0) {
+        setCart([]);
+        throw new Error("Your shopping bag is empty.");
+      }
+
+      setCart(latestCart);
+
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: {
@@ -98,7 +135,7 @@ export default function CheckoutPage() {
             city: customer.city.trim(),
             address: customer.address.trim(),
           },
-          items: cart.map((item) => ({
+          items: latestCart.map((item) => ({
             productId: item.productId,
             size: item.size,
             color: item.color,
@@ -137,6 +174,21 @@ export default function CheckoutPage() {
     }
   };
 
+  if (!cartLoaded) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#F8F5F0]">
+        <div className="text-center">
+          <p className="text-3xl font-serif tracking-[0.3em] text-[#332A23]">
+            TALA
+          </p>
+          <p className="mt-4 text-[10px] uppercase tracking-[0.3em] text-[#A58B68]">
+            Preparing your checkout
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   // SUCCESS SCREEN
   if (successOrder) {
     return (
@@ -167,7 +219,7 @@ export default function CheckoutPage() {
           </p>
 
           <p className="mt-3 text-sm text-[#806F5E]">
-            Total: {successOrder.total.toLocaleString("en-EG")} EGP
+            Total: {formatPrice(successOrder.total)}
           </p>
 
           <div className="mx-auto mt-10 h-px w-20 bg-[#D8C7B2]" />
@@ -182,11 +234,6 @@ export default function CheckoutPage() {
             href="/"
             scroll={true}
             className="mt-10 inline-flex min-h-[58px] items-center justify-center gap-3 bg-[#332A23] px-10 py-5 text-[10px] font-medium uppercase tracking-[0.22em] text-white transition duration-300 hover:bg-[#59483A]"
-            style={{
-              backgroundColor: "#332A23",
-              color: "#FFFFFF",
-              WebkitTextFillColor: "#FFFFFF",
-            }}
           >
             Back to Home
             <ArrowRight size={15} />
@@ -372,8 +419,10 @@ export default function CheckoutPage() {
                 </h2>
 
                 <span className="text-[10px] uppercase tracking-[0.2em] text-[#A58B68]">
-                  {cart.length}{" "}
-                  {cart.length === 1 ? "Item" : "Items"}
+                  {cart.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                  {cart.reduce((sum, item) => sum + item.quantity, 0) === 1
+                    ? "Item"
+                    : "Items"}
                 </span>
               </div>
 
@@ -407,10 +456,9 @@ export default function CheckoutPage() {
                       </div>
 
                       <p className="shrink-0 text-sm tabular-nums">
-                        {(
+                        {formatPrice(
                           Number(item.price) * item.quantity
-                        ).toLocaleString("en-EG")}{" "}
-                        EGP
+                        )}
                       </p>
                     </div>
                   </div>
@@ -423,7 +471,7 @@ export default function CheckoutPage() {
                   <span>Subtotal</span>
 
                   <span className="tabular-nums">
-                    {subtotal.toLocaleString("en-EG")} EGP
+                    {formatPrice(subtotal)}
                   </span>
                 </div>
 
@@ -431,7 +479,9 @@ export default function CheckoutPage() {
                   <span>Delivery</span>
 
                   <span className="tabular-nums">
-                    {deliveryFee.toLocaleString("en-EG")} EGP
+                    {deliveryFee === 0
+                      ? "Complimentary"
+                      : formatPrice(deliveryFee)}
                   </span>
                 </div>
 
@@ -439,10 +489,18 @@ export default function CheckoutPage() {
                   <span>Total</span>
 
                   <span className="font-medium tabular-nums">
-                    {total.toLocaleString("en-EG")} EGP
+                    {formatPrice(total)}
                   </span>
                 </div>
               </div>
+
+              <p className="mt-4 text-xs leading-relaxed text-[#8C7D6D]">
+                {deliveryFee === 0
+                  ? "Your order qualifies for complimentary delivery."
+                  : `Add ${formatPrice(
+                      FREE_DELIVERY_LIMIT - subtotal
+                    )} more to enjoy free delivery.`}
+              </p>
 
               {/* Error */}
               {orderError && (
