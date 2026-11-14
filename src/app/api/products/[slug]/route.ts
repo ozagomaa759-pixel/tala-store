@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -20,51 +21,77 @@ export async function GET(
 
     if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
-        { success: false, message: "Supabase configuration is missing." },
+        {
+          success: false,
+          message: "Supabase configuration is missing.",
+        },
         { status: 500 }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const supabase = createClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
 
-    const { data: product, error: productError } = await supabase
-      .from("products")
-      .select("*")
-      .eq("slug", slug)
-      .eq("status", "published")
-      .maybeSingle();
+    const { data: product, error: productError } =
+      await supabase
+        .from("products")
+        .select("*")
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle();
 
     if (productError) {
-      console.error("Public product details API:", productError);
+      console.error(
+        "Public product details API:",
+        productError
+      );
+
       return NextResponse.json(
-        { success: false, message: "Could not load this product." },
+        {
+          success: false,
+          message: "Could not load this product.",
+        },
         { status: 500 }
       );
     }
 
     if (!product) {
       return NextResponse.json(
-        { success: false, message: "Product not found." },
+        {
+          success: false,
+          message: "Product not found.",
+        },
         { status: 404 }
       );
     }
 
-    const { data: variants, error: variantsError } = await supabase
-      .from("product_variants")
-      .select("*")
-      .eq("product_id", product.id)
-      .eq("is_active", true)
-      .order("size", { ascending: true });
+    const { data: variants, error: variantsError } =
+      await supabase
+        .from("product_variants")
+        .select("*")
+        .eq("product_id", product.id)
+        .eq("is_active", true)
+        .order("size", { ascending: true });
 
     if (variantsError) {
-      console.error("Public product variants API:", variantsError);
+      console.error(
+        "Public product variants API:",
+        variantsError
+      );
+
       return NextResponse.json(
-        { success: false, message: "Could not load product options." },
+        {
+          success: false,
+          message: "Could not load product options.",
+        },
         { status: 500 }
       );
     }
@@ -82,4 +109,17 @@ export async function GET(
       }
     );
   } catch (error) {
-    console.error("Public product details API error
+    console.error(
+      "Public product details API error:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "An unexpected error occurred.",
+      },
+      { status: 500 }
+    );
+  }
+}
