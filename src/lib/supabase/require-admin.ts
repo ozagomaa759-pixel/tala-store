@@ -1,6 +1,5 @@
-
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const COOKIE_NAME = "tala_admin_session";
 
@@ -58,8 +57,6 @@ async function verifyAdminSession(
 }
 
 export async function requireAdmin() {
-  const supabase = await createClient();
-
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   const secret = process.env.ADMIN_SESSION_SECRET;
@@ -71,6 +68,6 @@ export async function requireAdmin() {
   return {
     authorized,
     user: null,
-    supabase,
+    supabase: authorized ? createAdminClient() : null,
   };
 }
