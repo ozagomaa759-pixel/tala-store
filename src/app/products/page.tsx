@@ -2639,6 +2639,7 @@ useEffect(() => {
       setIsLoading(true);
 
       const data = await getTalaProducts();
+      alert("Products received: " + data.length);
 
       if (isMounted) {
         setProducts(data);
