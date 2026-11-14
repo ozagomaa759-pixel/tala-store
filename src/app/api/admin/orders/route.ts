@@ -142,8 +142,20 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    const { data, error } = await supabase
-      .from("orders")
+    const ordersTable = supabase.from("orders") as unknown as {
+      update: (values: typeof updates) => {
+        eq: (column: string, value: string) => {
+          select: () => {
+            single: () => Promise<{
+              data: unknown;
+              error: { message: string } | null;
+            }>;
+          };
+        };
+      };
+    };
+
+    const { data, error } = await ordersTable
       .update(updates)
       .eq("id", body.id)
       .select()
