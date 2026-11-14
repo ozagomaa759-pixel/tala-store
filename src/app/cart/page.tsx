@@ -164,14 +164,12 @@ export default function CartPage() {
 
   return (
     <main className="min-h-screen bg-[#f4f0e9] text-[#292521]">
-      {/* Announcement */}
       <div className="bg-[#292521] text-white text-center py-3 px-4">
         <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase">
           Complimentary shipping on orders over EGP 3,000
         </p>
       </div>
 
-      {/* Header */}
       <header className="border-b border-[#dcd4c9]">
         <div className="max-w-[1400px] mx-auto px-5 sm:px-8 py-6 flex items-center justify-between">
           <Link
@@ -191,7 +189,6 @@ export default function CartPage() {
         </div>
       </header>
 
-      {/* Page Heading */}
       <section className="max-w-[1400px] mx-auto px-5 sm:px-8 pt-12 pb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -220,7 +217,6 @@ export default function CartPage() {
         </motion.div>
       </section>
 
-      {/* Notification */}
       <AnimatePresence>
         {notice && (
           <motion.div
@@ -235,7 +231,6 @@ export default function CartPage() {
       </AnimatePresence>
 
       {items.length === 0 ? (
-        /* Empty Cart */
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -271,7 +266,6 @@ export default function CartPage() {
       ) : (
         <section className="max-w-[1400px] mx-auto px-5 sm:px-8 pb-24">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_390px] gap-10 xl:gap-16">
-            {/* Cart Items */}
             <div>
               <div className="hidden sm:grid grid-cols-[1fr_120px_120px] gap-4 pb-5 border-b border-[#d8cfc3] text-[10px] tracking-[0.2em] uppercase text-[#928679]">
                 <span>Product details</span>
@@ -381,7 +375,6 @@ export default function CartPage() {
                 </AnimatePresence>
               </div>
 
-              {/* Clear Cart */}
               <div className="flex justify-end pt-5">
                 {!showClearConfirm ? (
                   <button
@@ -409,7 +402,6 @@ export default function CartPage() {
                 )}
               </div>
 
-              {/* Service Features */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-12 pt-8 border-t border-[#d8cfc3]">
                 <div className="flex gap-3">
                   <Truck size={20} strokeWidth={1.3} />
@@ -443,7 +435,6 @@ export default function CartPage() {
               </div>
             </div>
 
-            {/* Order Summary */}
             <aside className="lg:sticky lg:top-8 h-fit">
               <div className="bg-[#ebe5dc] p-6 sm:p-8">
                 <div className="flex items-center justify-between mb-7">
@@ -480,7 +471,6 @@ export default function CartPage() {
 
                 <div className="border-t border-[#d2c8bc] my-7" />
 
-                {/* Coupon */}
                 <div>
                   <label className="text-[10px] tracking-[0.2em] uppercase text-[#827970] flex items-center gap-2 mb-3">
                     <Tag size={14} />
@@ -534,12 +524,19 @@ export default function CartPage() {
                   payment.
                 </p>
 
-                {/* Active Checkout */}
                 <Link
                   href="/checkout"
-                  className="w-full mt-7 bg-[#292521] text-white py-5 text-[10px] tracking-[0.25em] uppercase hover:bg-[#51473d] transition flex items-center justify-center"
+                  className="group relative w-full mt-7 min-h-[60px] bg-[#292521] text-[#ffffff] py-5 px-4 text-center text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:bg-[#51473d] flex items-center justify-center gap-3"
+                  style={{
+                    backgroundColor: "#292521",
+                    color: "#ffffff",
+                    WebkitTextFillColor: "#ffffff",
+                  }}
                 >
-                  Proceed to Checkout
+                  <span className="relative z-10">
+                    Proceed to Checkout
+                  </span>
+                  <ArrowRight size={16} className="relative z-10" />
                 </Link>
 
                 <div className="flex items-center justify-center gap-2 mt-5 text-[10px] text-[#928679]">
@@ -548,7 +545,6 @@ export default function CartPage() {
                 </div>
               </div>
 
-              {/* Extra Message */}
               <div className="mt-6 text-center px-5">
                 <Sparkles
                   size={18}
@@ -566,7 +562,6 @@ export default function CartPage() {
         </section>
       )}
 
-      {/* Footer */}
       <footer className="bg-[#292521] text-white px-5 sm:px-8 py-12">
         <div className="max-w-[1400px] mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-7">
