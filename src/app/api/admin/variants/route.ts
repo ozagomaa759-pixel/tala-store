@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -23,18 +24,27 @@ function validOptionalPrice(value: unknown) {
   );
 }
 
-// GET: عرض متغيرات المنتج
+async function getAdminDb() {
+  const auth = await requireAdmin();
+
+  if (!auth.authorized) {
+    return null;
+  }
+
+  return createAdminClient();
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const db = await getAdminDb();
 
-    if (!auth.authorized) {
+    if (!db) {
       return errorResponse("Unauthorized", 401);
     }
 
     const productId = request.nextUrl.searchParams.get("product_id");
 
-    let query = auth.supabase
+    let query = db
       .from("product_variants")
       .select("*")
       .order("created_at", { ascending: false });
@@ -58,12 +68,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: إضافة مقاس أو لون
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const db = await getAdminDb();
 
-    if (!auth.authorized) {
+    if (!db) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -77,10 +86,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (
+      typeof body.size !== "string" ||
+      !body.size.trim()
+    ) {
+      return errorResponse("A valid size is required");
+    }
+
+    if (
       !Number.isInteger(body.stock_quantity) ||
       body.stock_quantity < 0
     ) {
-      return errorResponse("Stock quantity must be a non-negative integer");
+      return errorResponse(
+        "Stock quantity must be a non-negative integer"
+      );
     }
 
     if (!validOptionalPrice(body.price_override)) {
@@ -88,14 +106,20 @@ export async function POST(request: NextRequest) {
     }
 
     const variant = {
-      product_id: body.product_id,
-      size: typeof body.size === "string" ? body.size.trim() : null,
-      color: typeof body.color === "string" ? body.color.trim() : null,
+      product_id: body.product_id.trim(),
+      size: body.size.trim(),
+      color:
+        typeof body.color === "string"
+          ? body.color.trim() || null
+          : null,
       color_code:
         typeof body.color_code === "string"
-          ? body.color_code.trim()
+          ? body.color_code.trim() || null
           : null,
-      sku: typeof body.sku === "string" ? body.sku.trim() : null,
+      sku:
+        typeof body.sku === "string"
+          ? body.sku.trim() || null
+          : null,
       stock_quantity: body.stock_quantity,
       price_override:
         body.price_override === "" ||
@@ -109,7 +133,7 @@ export async function POST(request: NextRequest) {
       is_active: body.is_active !== false,
     };
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await db
       .from("product_variants")
       .insert(variant)
       .select()
@@ -128,12 +152,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH: تعديل المقاس أو اللون أو المخزون
 export async function PATCH(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const db = await getAdminDb();
 
-    if (!auth.authorized) {
+    if (!db) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -156,10 +179,16 @@ export async function PATCH(request: NextRequest) {
         return errorResponse("Invalid product ID");
       }
 
-      updates.product_id = body.product_id;
+      updates.product_id = body.product_id.trim();
     }
 
-    for (const field of ["size", "color", "color_code", "sku", "image_url"]) {
+    for (const field of [
+      "size",
+      "color",
+      "color_code",
+      "sku",
+      "image_url",
+    ]) {
       if (body[field] !== undefined) {
         if (
           body[field] !== null &&
@@ -168,7 +197,10 @@ export async function PATCH(request: NextRequest) {
           return errorResponse(`Invalid ${field}`);
         }
 
-        updates[field] = body[field];
+        updates[field] =
+          typeof body[field] === "string"
+            ? body[field].trim()
+            : null;
       }
     }
 
@@ -200,9 +232,11 @@ export async function PATCH(request: NextRequest) {
       updates.is_active = body.is_active;
     }
 
-    updates.updated_at = new Date().toISOString();
+    if (Object.keys(updates).length === 0) {
+      return errorResponse("No valid fields to update");
+    }
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await db
       .from("product_variants")
       .update(updates)
       .eq("id", body.id)
@@ -222,12 +256,11 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE: حذف نسخة المنتج
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const db = await getAdminDb();
 
-    if (!auth.authorized) {
+    if (!db) {
       return errorResponse("Unauthorized", 401);
     }
 
@@ -237,7 +270,7 @@ export async function DELETE(request: NextRequest) {
       return errorResponse("Variant ID is required");
     }
 
-    const { error } = await auth.supabase
+    const { error } = await db
       .from("product_variants")
       .delete()
       .eq("id", id);
