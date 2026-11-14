@@ -69,6 +69,16 @@ const inputClass =
 const labelClass =
   "text-xs uppercase tracking-[0.16em] text-[#8A7969]";
 
+const DEFAULT_VARIANTS: Variant[] = ["S", "M", "L", "XL", "XXL"].map(
+  (size) => ({
+    size,
+    color: "Black",
+    color_code: "#222222",
+    stock_quantity: 5,
+    is_active: true,
+  })
+);
+
 function makeSlug(value: string) {
   return value
     .trim()
@@ -105,11 +115,6 @@ export default function AdminProductsPage() {
   const [price, setPrice] = useState("");
   const [compareAtPrice, setCompareAtPrice] = useState("");
   const [status, setStatus] = useState("draft");
-
-  const [sizes, setSizes] = useState("S, M, L, XL, XXL");
-  const [colorName, setColorName] = useState("Black");
-  const [colorCode, setColorCode] = useState("#222222");
-  const [stock, setStock] = useState("5");
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
@@ -187,12 +192,7 @@ export default function AdminProductsPage() {
     setCompareAtPrice("");
     setStatus("draft");
 
-    setSizes("S, M, L, XL, XXL");
-    setColorName("Black");
-    setColorCode("#222222");
-    setStock("5");
-
-    setVariants([]);
+    setVariants(DEFAULT_VARIANTS.map((variant) => ({ ...variant })));
     setDeletedVariantIds([]);
 
     setSelectedFiles([]);
@@ -384,14 +384,14 @@ export default function AdminProductsPage() {
     );
   }
 
-  function addVariant() {
+  function addVariant(size = "") {
     setVariants((current) => [
       ...current,
       {
-        size: "",
-        color: colorName || "Black",
-        color_code: colorCode || "#222222",
-        stock_quantity: Number(stock) || 0,
+        size,
+        color: "Black",
+        color_code: "#222222",
+        stock_quantity: 5,
         is_active: true,
       },
     ]);
@@ -521,63 +521,49 @@ export default function AdminProductsPage() {
       return;
     }
 
-    if (editingProductId) {
-      if (
-        imageUrls.length === 0 &&
-        selectedFiles.length === 0
-      ) {
-        setNotice({
-          type: "error",
-          text: "A product must have at least one image.",
-        });
-        return;
-      }
+    if (
+      variants.length === 0 ||
+      variants.some(
+        (variant) =>
+          !variant.size.trim() ||
+          !Number.isInteger(variant.stock_quantity) ||
+          variant.stock_quantity < 0
+      )
+    ) {
+      setNotice({
+        type: "error",
+        text: "Add at least one valid size and enter a stock quantity of zero or more.",
+      });
+      return;
+    }
 
-      if (
-        variants.some(
-          (variant) =>
-            !variant.size.trim() ||
-            !Number.isInteger(variant.stock_quantity) ||
-            variant.stock_quantity < 0
-        )
-      ) {
-        setNotice({
-          type: "error",
-          text: "Check the size names and stock quantities.",
-        });
-        return;
-      }
-    } else {
-      const parsedSizes = Array.from(
-        new Set(
-          sizes
-            .split(",")
-            .map((size) => size.trim())
-            .filter(Boolean)
-        )
-      );
+    const variantKeys = variants.map(
+      (variant) =>
+        `${variant.size.trim().toLowerCase()}::${variant.color.trim().toLowerCase()}`
+    );
 
-      const numericStock = Number(stock);
+    if (new Set(variantKeys).size !== variantKeys.length) {
+      setNotice({
+        type: "error",
+        text: "The same size and color combination cannot be added twice.",
+      });
+      return;
+    }
 
-      if (
-        !parsedSizes.length ||
-        !Number.isInteger(numericStock) ||
-        numericStock < 0
-      ) {
-        setNotice({
-          type: "error",
-          text: "Enter at least one size and a valid stock quantity.",
-        });
-        return;
-      }
+    if (editingProductId && imageUrls.length === 0 && selectedFiles.length === 0) {
+      setNotice({
+        type: "error",
+        text: "A product must have at least one image.",
+      });
+      return;
+    }
 
-      if (!selectedFiles.length) {
-        setNotice({
-          type: "error",
-          text: "Add at least one product image before saving.",
-        });
-        return;
-      }
+    if (!editingProductId && selectedFiles.length === 0) {
+      setNotice({
+        type: "error",
+        text: "Add at least one product image before saving.",
+      });
+      return;
     }
 
     setSaving(true);
@@ -710,43 +696,7 @@ export default function AdminProductsPage() {
         );
       }
 
-      if (editingProductId) {
-        await saveVariants(productId);
-      } else {
-        const parsedSizes = Array.from(
-          new Set(
-            sizes
-              .split(",")
-              .map((size) => size.trim())
-              .filter(Boolean)
-          )
-        );
-
-        for (const size of parsedSizes) {
-          const variantResponse = await fetch("/api/admin/variants", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              product_id: productId,
-              size,
-              color: colorName.trim() || "Default",
-              color_code: colorCode,
-              stock_quantity: Number(stock),
-              is_active: true,
-            }),
-          });
-
-          const variantData = await readJson(variantResponse);
-
-          if (!variantResponse.ok || variantData.success === false) {
-            throw new Error(
-              `Product and photos were saved, but size ${size} could not be added: ${
-                variantData.error || "Variant error"
-              }`
-            );
-          }
-        }
-      }
+      await saveVariants(productId);
 
       setNotice({
         type: "success",
@@ -1118,100 +1068,110 @@ export default function AdminProductsPage() {
                   </p>
                 </div>
 
-                {editingProductId && (
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={addVariant}
+                    onClick={() => addVariant()}
                     className="inline-flex items-center gap-2 border border-[#BCA995] px-4 py-2.5 text-xs uppercase tracking-wider"
                   >
                     <Plus size={15} />
                     Add size
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => addVariant("One Size")}
+                    className="border border-[#BCA995] px-4 py-2.5 text-xs uppercase tracking-wider"
+                  >
+                    Add One Size
+                  </button>
+                </div>
               </div>
 
-              {editingProductId ? (
-                <div className="mt-5 space-y-4">
-                  {variants.length === 0 && (
-                    <p className="border border-dashed border-[#CDBEAE] bg-[#FBF9F6] p-5 text-sm text-[#8A7969]">
-                      No sizes have been added to this product yet. Use Add size to create the first size.
-                    </p>
-                  )}
+              <div className="mt-5 space-y-4">
+                {variants.length === 0 && (
+                  <p className="border border-dashed border-[#CDBEAE] bg-[#FBF9F6] p-5 text-sm text-[#8A7969]">
+                    No sizes have been added. Add a size or choose One Size.
+                  </p>
+                )}
 
-                  {variants.map((variant, index) => (
-                    <div
-                      key={variant.id || `new-${index}`}
-                      className="grid gap-3 border border-[#E5DACE] bg-[#FBF9F6] p-4 sm:grid-cols-2 lg:grid-cols-4"
-                    >
-                      <label className={labelClass}>
-                        Size
-                        <input
-                          className={inputClass}
-                          value={variant.size}
-                          onChange={(event) =>
-                            updateVariant(index, "size", event.target.value)
-                          }
-                          placeholder="XXL"
-                        />
-                      </label>
+                {variants.map((variant, index) => (
+                  <div
+                    key={variant.id || `new-${index}`}
+                    className="grid gap-3 border border-[#E5DACE] bg-[#FBF9F6] p-4 sm:grid-cols-2 lg:grid-cols-4"
+                  >
+                    <label className={labelClass}>
+                      Size
+                      <input
+                        className={inputClass}
+                        value={variant.size}
+                        onChange={(event) =>
+                          updateVariant(index, "size", event.target.value)
+                        }
+                        placeholder="S, M, XL or One Size"
+                      />
+                    </label>
 
-                      <label className={labelClass}>
-                        Color
-                        <input
-                          className={inputClass}
-                          value={variant.color}
-                          onChange={(event) =>
-                            updateVariant(index, "color", event.target.value)
-                          }
-                        />
-                      </label>
+                    <label className={labelClass}>
+                      Color name
+                      <input
+                        className={inputClass}
+                        value={variant.color}
+                        onChange={(event) =>
+                          updateVariant(index, "color", event.target.value)
+                        }
+                        placeholder="Black"
+                      />
+                    </label>
 
+                    <label className={labelClass}>
+                      Stock quantity
+                      <input
+                        className={inputClass}
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={variant.stock_quantity}
+                        onChange={(event) =>
+                          updateVariant(
+                            index,
+                            "stock_quantity",
+                            event.target.value === ""
+                              ? 0
+                              : Number(event.target.value)
+                          )
+                        }
+                      />
+                    </label>
+
+                    <div className="flex items-end justify-between gap-3">
                       <label className={labelClass}>
-                        Stock quantity
+                        Color code
                         <input
-                          className={inputClass}
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={variant.stock_quantity}
+                          className={`${inputClass} h-12 p-1`}
+                          type="color"
+                          value={variant.color_code || "#222222"}
                           onChange={(event) =>
                             updateVariant(
                               index,
-                              "stock_quantity",
-                              Number(event.target.value)
+                              "color_code",
+                              event.target.value
                             )
                           }
                         />
                       </label>
 
-                      <div className="flex items-end justify-between gap-3">
-                        <label className={labelClass}>
-                          Color code
-                          <input
-                            className={`${inputClass} h-12 p-1`}
-                            type="color"
-                            value={variant.color_code || "#222222"}
-                            onChange={(event) =>
-                              updateVariant(
-                                index,
-                                "color_code",
-                                event.target.value
-                              )
-                            }
-                          />
-                        </label>
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(index)}
+                        className="mb-1 border border-[#D8B9AE] p-3 text-[#8A3E2D]"
+                        aria-label="Remove size"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
 
-                        <button
-                          type="button"
-                          onClick={() => removeVariant(index)}
-                          className="mb-1 border border-[#D8B9AE] p-3 text-[#8A3E2D]"
-                          aria-label="Remove size"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-
-                      <label className="flex items-center gap-2 text-xs text-[#77695D] sm:col-span-2 lg:col-span-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2 lg:col-span-4">
+                      <label className="flex items-center gap-2 text-xs text-[#77695D]">
                         <input
                           type="checkbox"
                           checked={variant.is_active}
@@ -1225,61 +1185,20 @@ export default function AdminProductsPage() {
                         />
                         Available for sale
                       </label>
+
+                      {variant.stock_quantity === 0 ? (
+                        <span className="text-xs font-semibold tracking-wider text-[#9A5145]">
+                          ✕ SOLD OUT
+                        </span>
+                      ) : (
+                        <span className="text-xs text-[#71836B]">
+                          {variant.stock_quantity} IN STOCK
+                        </span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-6 sm:grid-cols-2">
-                  <label className={labelClass}>
-                    Sizes * (separate with commas)
-                    <input
-                      className={inputClass}
-                      value={sizes}
-                      onChange={(event) => setSizes(event.target.value)}
-                      placeholder="S, M, L, XL, XXL"
-                      required
-                    />
-                  </label>
-
-                  <label className={labelClass}>
-                    Stock per size *
-                    <input
-                      className={inputClass}
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={stock}
-                      onChange={(event) => setStock(event.target.value)}
-                      required
-                    />
-                  </label>
-
-                  <label className={labelClass}>
-                    Color name
-                    <input
-                      className={inputClass}
-                      value={colorName}
-                      onChange={(event) => setColorName(event.target.value)}
-                      placeholder="Black"
-                    />
-                  </label>
-
-                  <label className={labelClass}>
-                    Color code
-                    <div className="mt-2 flex items-center gap-3 border border-[#E5DACE] bg-white px-3 py-2">
-                      <input
-                        type="color"
-                        value={colorCode}
-                        onChange={(event) => setColorCode(event.target.value)}
-                        className="h-9 w-12 cursor-pointer border-0 bg-transparent"
-                      />
-                      <span className="text-sm text-[#77695D]">
-                        {colorCode}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-8 flex flex-wrap justify-end gap-3 border-t border-[#E5DACE] pt-6">
