@@ -48,7 +48,10 @@ async function importHmacKey(
   return crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
+    {
+      name: "HMAC",
+      hash: "SHA-256",
+    },
     false,
     [usage]
   );
@@ -74,23 +77,28 @@ export async function createAdminSessionToken(
     encoder.encode(payload)
   );
 
-  return `${payload}.${toBase64Url(
-    new Uint8Array(signature)
-  )}`;
+  return `${payload}.${toBase64Url(new Uint8Array(signature))}`;
 }
 
 export async function verifyAdminSessionToken(
   token: string | undefined,
   secret: string | undefined
 ): Promise<boolean> {
-  if (!token || !secret) return false;
+  if (!token || !secret) {
+    return false;
+  }
 
   const parts = token.split(".");
-  if (parts.length !== 2) return false;
+
+  if (parts.length !== 2) {
+    return false;
+  }
 
   const [expiresAt, encodedSignature] = parts;
 
-  if (!/^\d{10,12}$/.test(expiresAt)) return false;
+  if (!/^\d{10,12}$/.test(expiresAt)) {
+    return false;
+  }
 
   const expiry = Number(expiresAt);
   const now = Math.floor(Date.now() / 1000);
@@ -112,10 +120,14 @@ export async function verifyAdminSessionToken(
   try {
     const key = await importHmacKey(secret, "verify");
 
+    // Copy into an ArrayBuffer-backed Uint8Array for TypeScript compatibility.
+    const signatureBuffer = new Uint8Array(32);
+    signatureBuffer.set(signature);
+
     return await crypto.subtle.verify(
       "HMAC",
       key,
-      signature,
+      signatureBuffer.buffer,
       encoder.encode(expiresAt)
     );
   } catch {
