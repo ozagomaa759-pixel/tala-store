@@ -20,18 +20,17 @@ import {
   PackageCheck,
 } from "lucide-react";
 
-type CartItem = {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  image: string;
-  size: string;
-  color: string;
-  quantity: number;
-};
+import {
+  getCart,
+  saveCart,
+  updateCartQuantity,
+  removeFromCart,
+  clearCart as clearStoredCart,
+  type CartItem,
+} from "@/lib/cart";
 
-const CART_STORAGE_KEY = "tala-cart";
+const FREE_DELIVERY_LIMIT = 3000;
+const DELIVERY_FEE = 120;
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-EG", {
@@ -50,37 +49,21 @@ export default function CartPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-
-      if (saved) {
-        const parsed = JSON.parse(saved);
-
-        if (Array.isArray(parsed)) {
-          setItems(
-            parsed.filter(
-              (item): item is CartItem =>
-                item &&
-                typeof item.id === "string" &&
-                typeof item.name === "string" &&
-                typeof item.price === "number" &&
-                typeof item.quantity === "number"
-            )
-          );
-        }
-      }
-    } catch {
-      setItems([]);
-    } finally {
+    const syncCart = () => {
+      setItems(getCart());
       setLoaded(true);
-    }
+    };
+
+    syncCart();
+
+    window.addEventListener("tala-cart-updated", syncCart);
+    window.addEventListener("storage", syncCart);
+
+    return () => {
+      window.removeEventListener("tala-cart-updated", syncCart);
+      window.removeEventListener("storage", syncCart);
+    };
   }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items, loaded]);
 
   const subtotal = useMemo(
     () =>
@@ -92,7 +75,12 @@ export default function CartPage() {
   );
 
   const discount = couponApplied ? subtotal * 0.1 : 0;
-  const shipping = subtotal === 0 || subtotal >= 3000 ? 0 : 100;
+
+  const shipping =
+    subtotal === 0 || subtotal >= FREE_DELIVERY_LIMIT
+      ? 0
+      : DELIVERY_FEE;
+
   const total = Math.max(0, subtotal - discount + shipping);
 
   const totalQuantity = items.reduce(
@@ -101,32 +89,37 @@ export default function CartPage() {
   );
 
   const updateQuantity = (id: string, change: number) => {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              quantity: Math.max(
-                1,
-                Math.min(10, item.quantity + change)
-              ),
-            }
-          : item
-      )
+    const item = items.find((current) => current.id === id);
+    if (!item) return;
+
+    const nextQuantity = Math.max(
+      1,
+      Math.min(10, item.quantity + change)
     );
+
+    const updatedCart = updateCartQuantity(id, nextQuantity);
+    setItems(updatedCart);
   };
 
   const removeItem = (id: string) => {
-    setItems((current) => current.filter((item) => item.id !== id));
+    const updatedCart = removeFromCart(id);
+    setItems(updatedCart);
+
     setNotice("Product removed from your bag.");
-    setTimeout(() => setNotice(""), 2500);
+
+    window.setTimeout(() => setNotice(""), 2500);
   };
 
   const clearCart = () => {
+    clearStoredCart();
     setItems([]);
     setCouponApplied(false);
     setCoupon("");
+    setCouponError("");
     setShowClearConfirm(false);
+    setNotice("Your shopping bag has been cleared.");
+
+    window.setTimeout(() => setNotice(""), 2500);
   };
 
   const applyCoupon = () => {
@@ -144,7 +137,7 @@ export default function CartPage() {
       setCouponError("This coupon code is not valid.");
     }
 
-    setTimeout(() => setNotice(""), 2500);
+    window.setTimeout(() => setNotice(""), 2500);
   };
 
   if (!loaded) {
@@ -166,7 +159,7 @@ export default function CartPage() {
     <main className="min-h-screen bg-[#f4f0e9] text-[#292521]">
       <div className="bg-[#292521] text-white text-center py-3 px-4">
         <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase">
-          Complimentary shipping on orders over EGP 3,000
+          Complimentary delivery on orders over EGP 3,000
         </p>
       </div>
 
@@ -224,6 +217,8 @@ export default function CartPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="fixed top-5 right-5 z-50 bg-[#292521] text-white px-6 py-4 shadow-xl text-sm"
+            role="status"
+            aria-live="polite"
           >
             {notice}
           </motion.div>
@@ -327,6 +322,7 @@ export default function CartPage() {
                           </div>
 
                           <button
+                            type="button"
                             onClick={() => removeItem(item.id)}
                             className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#918477] hover:text-red-700 transition w-fit"
                           >
@@ -339,6 +335,7 @@ export default function CartPage() {
                       <div className="flex sm:justify-center items-center">
                         <div className="flex items-center border border-[#d3c9bd] h-10">
                           <button
+                            type="button"
                             onClick={() => updateQuantity(item.id, -1)}
                             disabled={item.quantity <= 1}
                             className="px-3 h-full hover:bg-[#e9e2d8] disabled:opacity-30"
@@ -352,6 +349,7 @@ export default function CartPage() {
                           </span>
 
                           <button
+                            type="button"
                             onClick={() => updateQuantity(item.id, 1)}
                             disabled={item.quantity >= 10}
                             className="px-3 h-full hover:bg-[#e9e2d8] disabled:opacity-30"
@@ -378,6 +376,7 @@ export default function CartPage() {
               <div className="flex justify-end pt-5">
                 {!showClearConfirm ? (
                   <button
+                    type="button"
                     onClick={() => setShowClearConfirm(true)}
                     className="text-[10px] uppercase tracking-widest text-[#918477] hover:text-red-700 transition"
                   >
@@ -387,12 +386,14 @@ export default function CartPage() {
                   <div className="flex items-center gap-3 text-xs">
                     <span>Remove all items?</span>
                     <button
+                      type="button"
                       onClick={clearCart}
                       className="text-red-700 font-medium"
                     >
                       Yes
                     </button>
                     <button
+                      type="button"
                       onClick={() => setShowClearConfirm(false)}
                       className="text-[#827970]"
                     >
@@ -408,7 +409,7 @@ export default function CartPage() {
                   <div>
                     <p className="text-xs font-medium">Delivery</p>
                     <p className="text-[10px] text-[#928679] mt-1">
-                      Delivery information at checkout
+                      EGP 120 on orders below EGP 3,000
                     </p>
                   </div>
                 </div>
@@ -453,7 +454,7 @@ export default function CartPage() {
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-[#81786f]">Shipping</span>
+                    <span className="text-[#81786f]">Delivery</span>
                     <span>
                       {shipping === 0
                         ? "Complimentary"
@@ -472,13 +473,17 @@ export default function CartPage() {
                 <div className="border-t border-[#d2c8bc] my-7" />
 
                 <div>
-                  <label className="text-[10px] tracking-[0.2em] uppercase text-[#827970] flex items-center gap-2 mb-3">
+                  <label
+                    htmlFor="tala-coupon"
+                    className="text-[10px] tracking-[0.2em] uppercase text-[#827970] flex items-center gap-2 mb-3"
+                  >
                     <Tag size={14} />
                     Discount code
                   </label>
 
                   <div className="flex border border-[#cfc4b7]">
                     <input
+                      id="tala-coupon"
                       value={coupon}
                       onChange={(event) => {
                         setCoupon(event.target.value);
@@ -489,6 +494,7 @@ export default function CartPage() {
                     />
 
                     <button
+                      type="button"
                       onClick={applyCoupon}
                       className="bg-[#292521] text-white px-5 text-[10px] uppercase tracking-wider hover:bg-[#51473d] transition"
                     >
@@ -520,8 +526,7 @@ export default function CartPage() {
                 </div>
 
                 <p className="text-[10px] text-[#928679] mt-3">
-                  Final delivery details and charges must be confirmed before
-                  payment.
+                  Delivery is free on orders of EGP 3,000 or more.
                 </p>
 
                 <Link
