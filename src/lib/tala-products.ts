@@ -12,6 +12,7 @@ type ProductRow = {
   images?: string[] | null;
   category_id?: string | null;
   is_new?: boolean | null;
+  is_new_arrival?: boolean | null;
   is_best_seller?: boolean | null;
   is_featured?: boolean | null;
   is_available?: boolean | null;
@@ -116,12 +117,11 @@ export async function getTalaProducts(): Promise<Product[]> {
     ])
   );
 
-  const variantsByProduct = new Map<
-    string,
-    VariantRow[]
-  >();
+  const variantsByProduct = new Map<string, VariantRow[]>();
 
   for (const variant of variants) {
+    if (variant.is_active === false) continue;
+
     const current =
       variantsByProduct.get(variant.product_id) ?? [];
 
@@ -171,9 +171,10 @@ export async function getTalaProducts(): Promise<Product[]> {
       subtitle: product.subtitle ?? "",
       description: product.description ?? "",
       price: Number(product.price) || 0,
-      oldPrice: product.compare_at_price
-        ? Number(product.compare_at_price)
-        : undefined,
+      oldPrice:
+        product.compare_at_price != null
+          ? Number(product.compare_at_price)
+          : undefined,
       category: normalizeCategory(
         categoryMap.get(product.category_id ?? "")
       ),
@@ -183,12 +184,12 @@ export async function getTalaProducts(): Promise<Product[]> {
       sizes: uniqueSizes,
       rating: 5,
       reviews: 0,
-      isNew: Boolean(product.is_new),
+      isNew: Boolean(
+        product.is_new ?? product.is_new_arrival
+      ),
       isBestSeller: Boolean(product.is_best_seller),
       isFeatured: Boolean(product.is_featured),
-      isAvailable:
-        product.is_available !== false &&
-        availableVariants.length > 0,
+      isAvailable: product.is_available !== false,
       tags: product.tags ?? [],
     };
   });
