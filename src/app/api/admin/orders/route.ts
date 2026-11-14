@@ -1,24 +1,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
-
-const ORDER_STATUSES = [
-  "new",
-  "confirmed",
-  "processing",
-  "shipped",
-  "delivered",
-  "cancelled",
-] as const;
-
-const PAYMENT_STATUSES = [
-  "pending",
-  "paid",
-  "failed",
-  "refunded",
-] as const;
 
 function errorResponse(message: string, status = 400) {
   return NextResponse.json(
@@ -35,12 +20,14 @@ export async function GET(request: NextRequest) {
       return errorResponse("Unauthorized", 401);
     }
 
+    const supabase = createAdminClient();
     const params = request.nextUrl.searchParams;
+
     const search = params.get("search")?.trim();
     const status = params.get("status");
     const paymentStatus = params.get("payment_status");
 
-    let query = auth.supabase
+    let query = supabase
       .from("orders")
       .select("*, order_items(*)")
       .order("created_at", { ascending: false });
@@ -56,30 +43,18 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      if (!ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number])) {
-        return errorResponse("Invalid order status");
-      }
-
       query = query.eq("status", status);
     }
 
     if (paymentStatus) {
-      if (
-        !PAYMENT_STATUSES.includes(
-          paymentStatus as (typeof PAYMENT_STATUSES)[number]
-        )
-      ) {
-        return errorResponse("Invalid payment status");
-      }
-
       query = query.eq("payment_status", paymentStatus);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error("Admin orders GET error:", error.message);
-      return errorResponse("Could not load orders", 500);
+      console.error("Admin orders GET:", error.message);
+      return errorResponse("Could not load orders.", 500);
     }
 
     return NextResponse.json(
@@ -95,8 +70,8 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Admin orders GET exception:", error);
-    return errorResponse("Failed to fetch orders", 500);
+    console.error("Admin orders GET:", error);
+    return errorResponse("Failed to fetch orders.", 500);
   }
 }
 
@@ -108,86 +83,77 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Unauthorized", 401);
     }
 
-    const body: unknown = await request.json();
-
-    if (!body || typeof body !== "object") {
-      return errorResponse("Invalid request body");
-    }
-
-    const payload = body as Record<string, unknown>;
+    const body = await request.json();
 
     if (
-      typeof payload.id !== "string" ||
-      !payload.id.trim()
+      typeof body.id !== "string" ||
+      !body.id.trim()
     ) {
-      return errorResponse("Order ID is required");
+      return errorResponse("Order ID is required.");
     }
 
     const updates: Record<string, unknown> = {};
 
-    if (payload.status !== undefined) {
+    if (body.status !== undefined) {
       if (
-        typeof payload.status !== "string" ||
-        !ORDER_STATUSES.includes(
-          payload.status as (typeof ORDER_STATUSES)[number]
-        )
+        typeof body.status !== "string" ||
+        !body.status.trim()
       ) {
-        return errorResponse("Invalid order status");
+        return errorResponse("Invalid order status.");
       }
 
-      updates.status = payload.status;
+      updates.status = body.status.trim();
     }
 
-    if (payload.payment_status !== undefined) {
+    if (body.payment_status !== undefined) {
       if (
-        typeof payload.payment_status !== "string" ||
-        !PAYMENT_STATUSES.includes(
-          payload.payment_status as (typeof PAYMENT_STATUSES)[number]
-        )
+        typeof body.payment_status !== "string" ||
+        !body.payment_status.trim()
       ) {
-        return errorResponse("Invalid payment status");
+        return errorResponse("Invalid payment status.");
       }
 
-      updates.payment_status = payload.payment_status;
+      updates.payment_status = body.payment_status.trim();
     }
 
-    if (payload.notes !== undefined) {
+    if (body.notes !== undefined) {
       if (
-        payload.notes !== null &&
-        (typeof payload.notes !== "string" ||
-          payload.notes.length > 2000)
+        body.notes !== null &&
+        typeof body.notes !== "string"
       ) {
-        return errorResponse("Invalid order notes");
+        return errorResponse("Invalid order notes.");
       }
 
-      updates.notes = payload.notes;
+      updates.notes = body.notes;
     }
 
     if (Object.keys(updates).length === 0) {
-      return errorResponse("No changes provided");
+      return errorResponse("No changes provided.");
     }
 
     updates.updated_at = new Date().toISOString();
 
-    const { data, error } = await auth.supabase
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
       .from("orders")
       .update(updates)
-      .eq("id", payload.id)
+      .eq("id", body.id)
       .select()
       .single();
 
     if (error) {
-      console.error("Admin orders PATCH error:", error.message);
-      return errorResponse("Could not update order", 400);
+      console.error("Admin orders PATCH:", error.message);
+      return errorResponse("Could not update order.", 400);
     }
 
     return NextResponse.json({
       success: true,
       order: data,
-      message: "Order updated successfully",
+      message: "Order updated successfully.",
     });
   } catch (error) {
-    console.error("Admin orders PATCH exception:", error);
-    return errorResponse("Failed to update order", 500);
+    console.error("Admin orders PATCH:", error);
+    return errorResponse("Failed to update order.", 500);
   }
 }
