@@ -15,8 +15,6 @@ import {
   Truck,
   RotateCcw,
   Tag,
-  X,
-  Heart,
   ShoppingCart,
   Sparkles,
   PackageCheck,
@@ -104,18 +102,17 @@ export default function CartPage() {
 
   const updateQuantity = (id: string, change: number) => {
     setItems((current) =>
-      current
-        .map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantity: Math.max(
-                  1,
-                  Math.min(10, item.quantity + change)
-                ),
-              }
-            : item
-        )
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              quantity: Math.max(
+                1,
+                Math.min(10, item.quantity + change)
+              ),
+            }
+          : item
+      )
     );
   };
 
@@ -274,7 +271,6 @@ export default function CartPage() {
       ) : (
         <section className="max-w-[1400px] mx-auto px-5 sm:px-8 pb-24">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_390px] gap-10 xl:gap-16">
-
             {/* Cart Items */}
             <div>
               <div className="hidden sm:grid grid-cols-[1fr_120px_120px] gap-4 pb-5 border-b border-[#d8cfc3] text-[10px] tracking-[0.2em] uppercase text-[#928679]">
@@ -305,7 +301,10 @@ export default function CartPage() {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <ShoppingBag size={25} className="text-[#a99a89]" />
+                              <ShoppingBag
+                                size={25}
+                                className="text-[#a99a89]"
+                              />
                             </div>
                           )}
                         </div>
@@ -437,7 +436,7 @@ export default function CartPage() {
                   <div>
                     <p className="text-xs font-medium">Secure shopping</p>
                     <p className="text-[10px] text-[#928679] mt-1">
-                      Secure checkout coming soon
+                      Secure shopping with TALA
                     </p>
                   </div>
                 </div>
@@ -465,7 +464,9 @@ export default function CartPage() {
                   <div className="flex justify-between">
                     <span className="text-[#81786f]">Shipping</span>
                     <span>
-                      {shipping === 0 ? "Complimentary" : formatPrice(shipping)}
+                      {shipping === 0
+                        ? "Complimentary"
+                        : formatPrice(shipping)}
                     </span>
                   </div>
 
@@ -529,19 +530,21 @@ export default function CartPage() {
                 </div>
 
                 <p className="text-[10px] text-[#928679] mt-3">
-                  Final delivery details and charges must be confirmed before payment.
+                  Final delivery details and charges must be confirmed before
+                  payment.
                 </p>
 
-                <button
-                  disabled
-                  className="w-full mt-7 bg-[#292521] text-white py-5 text-[10px] tracking-[0.25em] uppercase opacity-60 cursor-not-allowed"
+                {/* Active Checkout */}
+                <Link
+                  href="/checkout"
+                  className="w-full mt-7 bg-[#292521] text-white py-5 text-[10px] tracking-[0.25em] uppercase hover:bg-[#51473d] transition flex items-center justify-center"
                 >
-                  Checkout — Coming Soon
-                </button>
+                  Proceed to Checkout
+                </Link>
 
                 <div className="flex items-center justify-center gap-2 mt-5 text-[10px] text-[#928679]">
                   <ShieldCheck size={14} />
-                  Secure checkout will be configured later
+                  Cash on Delivery Available
                 </div>
               </div>
 
@@ -597,4 +600,3 @@ export default function CartPage() {
     </main>
   );
 }
-
