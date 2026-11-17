@@ -94,37 +94,31 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Order ID is required.");
     }
 
+    if (
+      body.status !== undefined &&
+      (typeof body.status !== "string" || !body.status.trim())
+    ) {
+      return errorResponse("Invalid order status.");
+    }
+
+    if (
+      body.payment_status !== undefined &&
+      (typeof body.payment_status !== "string" ||
+        !body.payment_status.trim())
+    ) {
+      return errorResponse("Invalid payment status.");
+    }
+
+    if (
+      body.notes !== undefined &&
+      body.notes !== null &&
+      typeof body.notes !== "string"
+    ) {
+      return errorResponse("Invalid order notes.");
+    }
+
     const supabase = createAdminClient();
 
-    // Validate all supplied fields before changing the order.
-    if (body.status !== undefined) {
-      if (
-        typeof body.status !== "string" ||
-        !body.status.trim()
-      ) {
-        return errorResponse("Invalid order status.");
-      }
-    }
-
-    if (body.payment_status !== undefined) {
-      if (
-        typeof body.payment_status !== "string" ||
-        !body.payment_status.trim()
-      ) {
-        return errorResponse("Invalid payment status.");
-      }
-    }
-
-    if (body.notes !== undefined) {
-      if (
-        body.notes !== null &&
-        typeof body.notes !== "string"
-      ) {
-        return errorResponse("Invalid order notes.");
-      }
-    }
-
-    // Cancellation uses the atomic database function.
     if (body.status === "cancelled") {
       const rpcClient = supabase as unknown as {
         rpc: (
@@ -180,7 +174,20 @@ export async function PATCH(request: NextRequest) {
       if (Object.keys(extraUpdates).length > 0) {
         extraUpdates.updated_at = new Date().toISOString();
 
-        const { error: extraError } = await supabase
+        const ordersUpdater = supabase as unknown as {
+          from: (table: string) => {
+            update: (values: typeof extraUpdates) => {
+              eq: (
+                column: string,
+                value: string
+              ) => Promise<{
+                error: { message: string } | null;
+              }>;
+            };
+          };
+        };
+
+        const { error: extraError } = await ordersUpdater
           .from("orders")
           .update(extraUpdates)
           .eq("id", body.id);
@@ -244,7 +251,25 @@ export async function PATCH(request: NextRequest) {
 
     updates.updated_at = new Date().toISOString();
 
-    const { data, error } = await supabase
+    const ordersUpdater = supabase as unknown as {
+      from: (table: string) => {
+        update: (values: typeof updates) => {
+          eq: (
+            column: string,
+            value: string
+          ) => {
+            select: () => {
+              single: () => Promise<{
+                data: unknown;
+                error: { message: string } | null;
+              }>;
+            };
+          };
+        };
+      };
+    };
+
+    const { data, error } = await ordersUpdater
       .from("orders")
       .update(updates)
       .eq("id", body.id)
