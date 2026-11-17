@@ -119,6 +119,55 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // Load the current order before allowing any status change.
+    const { data: currentOrder, error: currentOrderError } =
+      await supabase
+        .from("orders")
+        .select("id, status")
+        .eq("id", body.id)
+        .maybeSingle();
+
+    if (currentOrderError) {
+      console.error(
+        "Load current order:",
+        currentOrderError.message
+      );
+
+      return errorResponse("Could not verify order status.", 500);
+    }
+
+    if (!currentOrder) {
+      return errorResponse("Order not found.", 404);
+    }
+
+    // Delivered and cancelled orders are terminal.
+    // Their status cannot be changed back to an earlier state.
+    if (body.status !== undefined) {
+      const currentStatus = currentOrder.status;
+      const requestedStatus = (body.status as string).trim();
+
+      if (
+        (currentStatus === "delivered" ||
+          currentStatus === "completed") &&
+        requestedStatus !== currentStatus
+      ) {
+        return errorResponse(
+          "Delivered orders cannot change their status.",
+          400
+        );
+      }
+
+      if (
+        currentStatus === "cancelled" &&
+        requestedStatus !== "cancelled"
+      ) {
+        return errorResponse(
+          "Cancelled orders cannot change their status.",
+          400
+        );
+      }
+    }
+
     if (body.status === "cancelled") {
       const rpcClient = supabase as unknown as {
         rpc: (
