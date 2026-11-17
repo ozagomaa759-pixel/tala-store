@@ -291,3 +291,55 @@ export async function PATCH(request: NextRequest) {
     return errorResponse("Failed to update order.", 500);
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await requireAdmin();
+
+    if (!auth.authorized) {
+      return errorResponse("Unauthorized", 401);
+    }
+
+    const body: { id?: unknown } = await request.json();
+
+    if (typeof body.id !== "string" || !body.id.trim()) {
+      return errorResponse("Order ID is required.");
+    }
+
+    const supabase = createAdminClient();
+
+    const rpcClient = supabase as unknown as {
+      rpc: (
+        functionName: string,
+        params: { p_order_id: string }
+      ) => Promise<{
+        data: unknown;
+        error: { message: string } | null;
+      }>;
+    };
+
+    const { data, error } = await rpcClient.rpc(
+      "delete_tala_order",
+      { p_order_id: body.id }
+    );
+
+    if (error) {
+      console.error("Delete order:", error.message);
+
+      if (error.message.includes("ORDER_NOT_FOUND")) {
+        return errorResponse("Order not found.", 404);
+      }
+
+      return errorResponse("Could not delete order.", 400);
+    }
+
+    return NextResponse.json({
+      success: true,
+      result: data,
+      message: "Order deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Admin orders DELETE:", error);
+    return errorResponse("Failed to delete order.", 500);
+  }
+}
