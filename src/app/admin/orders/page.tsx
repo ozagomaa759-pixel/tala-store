@@ -283,7 +283,9 @@ export default function AdminOrdersPage() {
   ).length;
 
   const deliveredOrders = orders.filter(
-    (order) => order.status === "delivered"
+    (order) =>
+      order.status === "delivered" ||
+      order.status === "completed"
   ).length;
 
   return (
@@ -447,6 +449,8 @@ export default function AdminOrdersPage() {
                   order.status === "delivered" ||
                   order.status === "completed";
 
+                const isFinalStatus = isCancelled || isDelivered;
+
                 return (
                   <article
                     key={order.id}
@@ -511,25 +515,33 @@ export default function AdminOrdersPage() {
                           </label>
                           <select
                             value={order.status || "new"}
-                            disabled={isUpdating || isCancelled}
+                            disabled={isUpdating || isFinalStatus}
                             onChange={(event) =>
                               void updateOrder(order.id, {
                                 status: event.target.value,
                               })
                             }
-                            className="mt-2 h-11 w-full border border-[#E5DACE] bg-white px-3 text-sm outline-none disabled:opacity-50"
+                            className="mt-2 h-11 w-full border border-[#E5DACE] bg-white px-3 text-sm outline-none disabled:cursor-not-allowed disabled:bg-[#F3EFEA] disabled:opacity-60"
                           >
-                            {isCancelled && (
-                              <option value="cancelled">
-                                Cancelled
+                            {isFinalStatus && (
+                              <option value={order.status || ""}>
+                                {statusLabel(order.status)}
                               </option>
                             )}
-                            {ORDER_STATUSES.map((status) => (
-                              <option key={status} value={status}>
-                                {statusLabel(status)}
-                              </option>
-                            ))}
+
+                            {!isFinalStatus &&
+                              ORDER_STATUSES.map((status) => (
+                                <option key={status} value={status}>
+                                  {statusLabel(status)}
+                                </option>
+                              ))}
                           </select>
+
+                          {isFinalStatus && (
+                            <p className="mt-2 text-xs text-[#A28A72]">
+                              Final order status cannot be changed.
+                            </p>
+                          )}
                         </div>
 
                         <div>
@@ -557,7 +569,7 @@ export default function AdminOrdersPage() {
                       </div>
 
                       <div className="mt-5 flex flex-wrap gap-3">
-                        {!isCancelled && !isDelivered && (
+                        {!isFinalStatus && (
                           <button
                             type="button"
                             disabled={isUpdating}
