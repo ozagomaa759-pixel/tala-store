@@ -94,6 +94,97 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Order ID is required.");
     }
 
+    const supabase = createAdminClient();
+
+    // Cancellation must use the atomic database function.
+    if (body.status === "cancelled") {
+      const { error } = await supabase.rpc(
+        "cancel_tala_order",
+        { p_order_id: body.id }
+      );
+
+      if (error) {
+        console.error("Cancel order:", error.message);
+
+        return errorResponse(
+          error.message.includes("ORDER_NOT_FOUND")
+            ? "Order not found."
+            : error.message.includes("DELIVERED_ORDER_CANNOT_BE_CANCELLED")
+              ? "Delivered orders cannot be cancelled."
+              : "Could not cancel order.",
+          error.message.includes("ORDER_NOT_FOUND") ? 404 : 400
+        );
+      }
+
+      const extraUpdates: {
+        payment_status?: string;
+        notes?: string | null;
+        updated_at?: string;
+      } = {};
+
+      if (body.payment_status !== undefined) {
+        if (
+          typeof body.payment_status !== "string" ||
+          !body.payment_status.trim()
+        ) {
+          return errorResponse("Invalid payment status.");
+        }
+
+        extraUpdates.payment_status = body.payment_status.trim();
+      }
+
+      if (body.notes !== undefined) {
+        if (
+          body.notes !== null &&
+          typeof body.notes !== "string"
+        ) {
+          return errorResponse("Invalid order notes.");
+        }
+
+        extraUpdates.notes = body.notes;
+      }
+
+      if (Object.keys(extraUpdates).length > 0) {
+        extraUpdates.updated_at = new Date().toISOString();
+
+        const { error: extraError } = await supabase
+          .from("orders")
+          .update(extraUpdates)
+          .eq("id", body.id);
+
+        if (extraError) {
+          console.error(
+            "Cancelled order extra update:",
+            extraError.message
+          );
+
+          return errorResponse(
+            "Order cancelled, but extra fields could not be updated.",
+            500
+          );
+        }
+      }
+
+      const { data: order, error: fetchError } = await supabase
+        .from("orders")
+        .select("*, order_items(*)")
+        .eq("id", body.id)
+        .single();
+
+      if (fetchError) {
+        return errorResponse(
+          "Order cancelled, but could not reload it.",
+          500
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        order,
+        message: "Order cancelled and stock restored successfully.",
+      });
+    }
+
     const updates: {
       status?: string;
       payment_status?: string;
@@ -140,22 +231,8 @@ export async function PATCH(request: NextRequest) {
 
     updates.updated_at = new Date().toISOString();
 
-    const supabase = createAdminClient();
-
-    const ordersTable = supabase.from("orders") as unknown as {
-      update: (values: typeof updates) => {
-        eq: (column: string, value: string) => {
-          select: () => {
-            single: () => Promise<{
-              data: unknown;
-              error: { message: string } | null;
-            }>;
-          };
-        };
-      };
-    };
-
-    const { data, error } = await ordersTable
+    const { data, error } = await supabase
+      .from("orders")
       .update(updates)
       .eq("id", body.id)
       .select()
