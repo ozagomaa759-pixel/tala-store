@@ -230,13 +230,21 @@ export default function CheckoutPage() {
             We look forward to delivering your order.
           </p>
 
+          {/* Back to Home */}
           <Link
             href="/"
             scroll={true}
-            className="mt-10 inline-flex min-h-[58px] items-center justify-center gap-3 bg-[#332A23] px-10 py-5 text-[10px] font-medium uppercase tracking-[0.22em] text-white transition duration-300 hover:bg-[#59483A]"
+            className="mt-10 inline-flex min-h-[58px] items-center justify-center gap-4 bg-[#332A23] px-10 py-5 text-[10px] font-medium uppercase tracking-[0.22em] !text-[#F7F4EE] transition duration-300 hover:bg-[#59483A]"
           >
-            Back to Home
-            <ArrowRight size={15} />
+            <span className="!text-[#F7F4EE]">
+              Back to Home
+            </span>
+
+            <ArrowRight
+              size={17}
+              strokeWidth={1.8}
+              className="!text-[#F7F4EE]"
+            />
           </Link>
 
           <p className="mt-6 text-[9px] uppercase tracking-[0.3em] text-[#A99B8B]">
