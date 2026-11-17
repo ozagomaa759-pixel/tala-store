@@ -18,6 +18,8 @@ import {
   CalendarDays,
   CreditCard,
   Loader2,
+  Trash2,
+  XCircle,
 } from "lucide-react";
 
 type OrderItem = {
@@ -58,7 +60,6 @@ const ORDER_STATUSES = [
   "processing",
   "shipped",
   "delivered",
-  "cancelled",
 ];
 
 const PAYMENT_STATUSES = [
@@ -105,6 +106,8 @@ function formatAddress(value: unknown): string {
 
 function statusLabel(value: string | null) {
   if (!value) return "Unknown";
+
+  if (value === "shipped") return "With Delivery";
 
   return value
     .replaceAll("_", " ")
@@ -190,6 +193,14 @@ export default function AdminOrdersPage() {
       payment_status?: string;
     }
   ) {
+    if (changes.status === "cancelled") {
+      const confirmed = window.confirm(
+        "Are you sure you want to cancel this order? Its reserved stock will be restored to inventory."
+      );
+
+      if (!confirmed) return;
+    }
+
     setUpdatingOrder(id);
     setError("");
 
@@ -224,10 +235,53 @@ export default function AdminOrdersPage() {
     }
   }
 
+  async function deleteOrder(order: Order) {
+    const confirmed = window.confirm(
+      `Permanently delete order ${order.order_number || order.id}?\n\nIf this order has not been delivered or cancelled, its stock will be restored first. This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setUpdatingOrder(order.id);
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/orders", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: order.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Could not delete order");
+      }
+
+      setOrders((current) =>
+        current.filter((item) => item.id !== order.id)
+      );
+
+      if (expandedOrder === order.id) {
+        setExpandedOrder(null);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Delete failed"
+      );
+    } finally {
+      setUpdatingOrder(null);
+    }
+  }
+
   const totalOrders = orders.length;
+
   const newOrders = orders.filter(
     (order) => order.status === "new"
   ).length;
+
   const deliveredOrders = orders.filter(
     (order) => order.status === "delivered"
   ).length;
@@ -326,7 +380,7 @@ export default function AdminOrdersPage() {
               className="h-12 border border-[#E5DACE] bg-white px-3 text-sm outline-none"
             >
               <option value="">All order statuses</option>
-              {ORDER_STATUSES.map((status) => (
+              {[...ORDER_STATUSES, "cancelled"].map((status) => (
                 <option key={status} value={status}>
                   {statusLabel(status)}
                 </option>
@@ -387,6 +441,11 @@ export default function AdminOrdersPage() {
               {orders.map((order) => {
                 const isExpanded = expandedOrder === order.id;
                 const isUpdating = updatingOrder === order.id;
+
+                const isCancelled = order.status === "cancelled";
+                const isDelivered =
+                  order.status === "delivered" ||
+                  order.status === "completed";
 
                 return (
                   <article
@@ -452,7 +511,7 @@ export default function AdminOrdersPage() {
                           </label>
                           <select
                             value={order.status || "new"}
-                            disabled={isUpdating}
+                            disabled={isUpdating || isCancelled}
                             onChange={(event) =>
                               void updateOrder(order.id, {
                                 status: event.target.value,
@@ -460,6 +519,11 @@ export default function AdminOrdersPage() {
                             }
                             className="mt-2 h-11 w-full border border-[#E5DACE] bg-white px-3 text-sm outline-none disabled:opacity-50"
                           >
+                            {isCancelled && (
+                              <option value="cancelled">
+                                Cancelled
+                              </option>
+                            )}
                             {ORDER_STATUSES.map((status) => (
                               <option key={status} value={status}>
                                 {statusLabel(status)}
@@ -490,6 +554,42 @@ export default function AdminOrdersPage() {
                             ))}
                           </select>
                         </div>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        {!isCancelled && !isDelivered && (
+                          <button
+                            type="button"
+                            disabled={isUpdating}
+                            onClick={() =>
+                              void updateOrder(order.id, {
+                                status: "cancelled",
+                              })
+                            }
+                            className="inline-flex min-h-11 items-center justify-center gap-2 border border-red-200 px-4 text-xs uppercase tracking-wider text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                          >
+                            {isUpdating ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <XCircle size={15} />
+                            )}
+                            Cancel Order
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={isUpdating}
+                          onClick={() => void deleteOrder(order)}
+                          className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#DCCFC1] px-4 text-xs uppercase tracking-wider text-[#77695D] transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                        >
+                          {isUpdating ? (
+                            <Loader2 size={15} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={15} />
+                          )}
+                          Delete Order
+                        </button>
                       </div>
 
                       {isUpdating && (
