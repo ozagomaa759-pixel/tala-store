@@ -96,9 +96,47 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Cancellation must use the atomic database function.
+    // Validate all supplied fields before changing the order.
+    if (body.status !== undefined) {
+      if (
+        typeof body.status !== "string" ||
+        !body.status.trim()
+      ) {
+        return errorResponse("Invalid order status.");
+      }
+    }
+
+    if (body.payment_status !== undefined) {
+      if (
+        typeof body.payment_status !== "string" ||
+        !body.payment_status.trim()
+      ) {
+        return errorResponse("Invalid payment status.");
+      }
+    }
+
+    if (body.notes !== undefined) {
+      if (
+        body.notes !== null &&
+        typeof body.notes !== "string"
+      ) {
+        return errorResponse("Invalid order notes.");
+      }
+    }
+
+    // Cancellation uses the atomic database function.
     if (body.status === "cancelled") {
-      const { error } = await supabase.rpc(
+      const rpcClient = supabase as unknown as {
+        rpc: (
+          functionName: string,
+          params: { p_order_id: string }
+        ) => Promise<{
+          data: unknown;
+          error: { message: string } | null;
+        }>;
+      };
+
+      const { error } = await rpcClient.rpc(
         "cancel_tala_order",
         { p_order_id: body.id }
       );
@@ -106,14 +144,22 @@ export async function PATCH(request: NextRequest) {
       if (error) {
         console.error("Cancel order:", error.message);
 
-        return errorResponse(
-          error.message.includes("ORDER_NOT_FOUND")
-            ? "Order not found."
-            : error.message.includes("DELIVERED_ORDER_CANNOT_BE_CANCELLED")
-              ? "Delivered orders cannot be cancelled."
-              : "Could not cancel order.",
-          error.message.includes("ORDER_NOT_FOUND") ? 404 : 400
-        );
+        if (error.message.includes("ORDER_NOT_FOUND")) {
+          return errorResponse("Order not found.", 404);
+        }
+
+        if (
+          error.message.includes(
+            "DELIVERED_ORDER_CANNOT_BE_CANCELLED"
+          )
+        ) {
+          return errorResponse(
+            "Delivered orders cannot be cancelled.",
+            400
+          );
+        }
+
+        return errorResponse("Could not cancel order.", 400);
       }
 
       const extraUpdates: {
@@ -123,25 +169,12 @@ export async function PATCH(request: NextRequest) {
       } = {};
 
       if (body.payment_status !== undefined) {
-        if (
-          typeof body.payment_status !== "string" ||
-          !body.payment_status.trim()
-        ) {
-          return errorResponse("Invalid payment status.");
-        }
-
-        extraUpdates.payment_status = body.payment_status.trim();
+        extraUpdates.payment_status =
+          (body.payment_status as string).trim();
       }
 
       if (body.notes !== undefined) {
-        if (
-          body.notes !== null &&
-          typeof body.notes !== "string"
-        ) {
-          return errorResponse("Invalid order notes.");
-        }
-
-        extraUpdates.notes = body.notes;
+        extraUpdates.notes = body.notes as string | null;
       }
 
       if (Object.keys(extraUpdates).length > 0) {
@@ -193,36 +226,16 @@ export async function PATCH(request: NextRequest) {
     } = {};
 
     if (body.status !== undefined) {
-      if (
-        typeof body.status !== "string" ||
-        !body.status.trim()
-      ) {
-        return errorResponse("Invalid order status.");
-      }
-
-      updates.status = body.status.trim();
+      updates.status = (body.status as string).trim();
     }
 
     if (body.payment_status !== undefined) {
-      if (
-        typeof body.payment_status !== "string" ||
-        !body.payment_status.trim()
-      ) {
-        return errorResponse("Invalid payment status.");
-      }
-
-      updates.payment_status = body.payment_status.trim();
+      updates.payment_status =
+        (body.payment_status as string).trim();
     }
 
     if (body.notes !== undefined) {
-      if (
-        body.notes !== null &&
-        typeof body.notes !== "string"
-      ) {
-        return errorResponse("Invalid order notes.");
-      }
-
-      updates.notes = body.notes;
+      updates.notes = body.notes as string | null;
     }
 
     if (Object.keys(updates).length === 0) {
