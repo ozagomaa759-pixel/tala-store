@@ -145,21 +145,21 @@ export async function POST(request: NextRequest) {
       return errorResponse("Invalid active status");
     }
 
+    const insertData = {
+      title,
+      subtitle,
+      description,
+      image_url: imageUrl,
+      mobile_image_url: mobileImageUrl,
+      button_text: buttonText || "Discover Collection",
+      button_link: buttonLink.trim(),
+      is_active: isActive,
+      sort_order: sortOrder,
+    };
+
     const { data, error } = await db
       .from("hero_slides")
-      .insert([
-        {
-          title,
-          subtitle,
-          description,
-          image_url: imageUrl,
-          mobile_image_url: mobileImageUrl,
-          button_text: buttonText || "Discover Collection",
-          button_link: buttonLink.trim(),
-          is_active: isActive,
-          sort_order: sortOrder,
-        },
-      ])
+      .insert([insertData] as never[])
       .select("*")
       .single();
 
