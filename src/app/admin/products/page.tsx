@@ -24,6 +24,7 @@ import {
   Pencil,
   Trash2,
   Star,
+  Archive,
 } from "lucide-react";
 
 type Category = {
@@ -260,7 +261,6 @@ export default function AdminProductsPage() {
     body.append("file", file);
     body.append("productId", productId);
 
-    // Correct upload API route
     const response = await fetch("/api/admin/products/upload", {
       method: "POST",
       body,
@@ -352,7 +352,6 @@ export default function AdminProductsPage() {
         : [];
 
       setVariants(loadedVariants);
-
       setShowForm(true);
 
       window.scrollTo({
@@ -776,9 +775,176 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function deleteProduct(product: Product) {
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete "${product.name}"? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setNotice(null);
+    setSaving(true);
+
+    try {
+      const response = await fetch(
+        `/api/admin/products?id=${encodeURIComponent(product.id)}`,
+        { method: "DELETE" }
+      );
+
+      const data = await readJson(response);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.error || "Could not delete product.");
+      }
+
+      setNotice({
+        type: "success",
+        text: `"${product.name}" was deleted successfully.`,
+      });
+
+      await loadData();
+    } catch (error) {
+      setNotice({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Could not delete product.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const publishedProducts = filteredProducts.filter(
+    (product) => product.status === "published"
+  );
+
+  const draftProducts = filteredProducts.filter(
+    (product) => product.status === "draft"
+  );
+
+  const archivedProducts = filteredProducts.filter(
+    (product) => product.status === "archived"
+  );
+
+  function ProductImage({ product }: { product: Product }) {
+    const image = product.main_image || product.images?.[0];
+
+    return (
+      <div className="h-20 w-16 shrink-0 overflow-hidden bg-[#F1ECE5]">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={product.name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-[#B5A493]">
+            <ImagePlus size={20} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function ProductRow({
+    product,
+    section,
+  }: {
+    product: Product;
+    section: "published" | "draft" | "archived";
+  }) {
+    return (
+      <div
+        key={product.id}
+        className="flex flex-wrap items-center gap-4 p-4 sm:px-7"
+      >
+        <ProductImage product={product} />
+
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm">{product.name}</h3>
+
+          <p className="mt-1 text-xs text-[#8A7969]">
+            EGP {Number(product.price || 0).toLocaleString("en-EG")}
+          </p>
+
+          <p className="mt-1 text-[10px] uppercase tracking-wider text-[#9B8A7A]">
+            {section === "published"
+              ? "Published · Visible in store"
+              : section === "draft"
+                ? "Draft · Hidden from store"
+                : "Archived"}
+          </p>
+        </div>
+
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void openEditForm(product)}
+            className="inline-flex items-center gap-2 border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
+          >
+            <Pencil size={13} />
+            Edit
+          </button>
+
+          {section === "published" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void toggleProductStatus(product)}
+              className="border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
+            >
+              Move to Draft
+            </button>
+          )}
+
+          {section === "draft" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void toggleProductStatus(product)}
+              className="border border-[#53684B] bg-[#53684B] px-4 py-2 text-[10px] uppercase tracking-wider text-white disabled:opacity-50"
+            >
+              Publish
+            </button>
+          )}
+
+          {section === "archived" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() =>
+                void toggleProductStatus({
+                  ...product,
+                  status: "draft",
+                })
+              }
+              className="border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
+            >
+              Move to Draft
+            </button>
+          )}
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void deleteProduct(product)}
+            className="inline-flex items-center gap-2 border border-[#D8B9AE] px-3 py-2 text-[10px] uppercase tracking-wider text-[#8A3E2D] disabled:opacity-50"
+          >
+            <Trash2 size={13} />
+            Delete
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#F8F5F0] px-5 py-12 text-[#332A23] sm:px-6 sm:py-16">
@@ -794,13 +960,16 @@ export default function AdminProductsPage() {
         <div className="mt-10 flex flex-wrap items-end justify-between gap-5">
           <div className="flex items-center gap-4">
             <Package size={34} strokeWidth={1} />
+
             <div>
               <p className="text-[10px] uppercase tracking-[0.3em] text-[#A28A72]">
                 TALA Administration
               </p>
+
               <h1 className="mt-2 text-4xl font-light sm:text-5xl">
                 Products
               </h1>
+
               <p className="mt-2 text-sm text-[#77695D]">
                 Manage your collection, product photos, sizes, and stock.
               </p>
@@ -847,11 +1016,15 @@ export default function AdminProductsPage() {
             <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
-                  {editingProductId ? "Edit collection item" : "New collection item"}
+                  {editingProductId
+                    ? "Edit collection item"
+                    : "New collection item"}
                 </p>
+
                 <h2 className="mt-2 text-2xl font-light">
                   {editingProductId ? "Edit product" : "Add a product"}
                 </h2>
+
                 <p className="mt-2 text-xs leading-6 text-[#77695D]">
                   {editingProductId
                     ? "Update product information, photos, sizes, and stock."
@@ -869,6 +1042,7 @@ export default function AdminProductsPage() {
             <div className="grid gap-6 sm:grid-cols-2">
               <label className={labelClass}>
                 Product name *
+
                 <input
                   className={inputClass}
                   value={name}
@@ -880,6 +1054,7 @@ export default function AdminProductsPage() {
 
               <label className={labelClass}>
                 Category *
+
                 <select
                   className={inputClass}
                   value={categoryId}
@@ -887,6 +1062,7 @@ export default function AdminProductsPage() {
                   required
                 >
                   <option value="">Choose category</option>
+
                   {activeCategories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
@@ -897,6 +1073,7 @@ export default function AdminProductsPage() {
 
               <label className={labelClass}>
                 Price *
+
                 <input
                   className={inputClass}
                   type="number"
@@ -910,6 +1087,7 @@ export default function AdminProductsPage() {
 
               <label className={labelClass}>
                 Compare-at price
+
                 <input
                   className={inputClass}
                   type="number"
@@ -923,19 +1101,23 @@ export default function AdminProductsPage() {
 
               <label className={labelClass}>
                 Store status *
+
                 <select
                   className={inputClass}
                   value={status}
                   onChange={(event) => setStatus(event.target.value)}
                 >
                   <option value="draft">Draft — hidden from store</option>
-                  <option value="published">Published — visible in store</option>
+                  <option value="published">
+                    Published — visible in store
+                  </option>
                   <option value="archived">Archived</option>
                 </select>
               </label>
 
               <label className={labelClass}>
                 Description
+
                 <textarea
                   className={`${inputClass} min-h-28 resize-y`}
                   value={description}
@@ -949,6 +1131,7 @@ export default function AdminProductsPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-light">Product photos *</h3>
+
                   <p className="mt-1 text-xs text-[#8A7969]">
                     JPG, PNG, WEBP, or AVIF · up to 5 MB per image
                   </p>
@@ -973,7 +1156,7 @@ export default function AdminProductsPage() {
                 />
               </div>
 
-              {(imageUrls.length > 0 || previews.length > 0) ? (
+              {imageUrls.length > 0 || previews.length > 0 ? (
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {imageUrls.map((url) => (
                     <div
@@ -1045,6 +1228,7 @@ export default function AdminProductsPage() {
                   className="mt-5 flex min-h-36 w-full flex-col items-center justify-center border border-dashed border-[#CDBEAE] bg-[#FBF9F6] text-[#8A7969]"
                 >
                   <Upload size={22} strokeWidth={1.3} />
+
                   <span className="mt-3 text-xs">
                     Tap to select product photos
                   </span>
@@ -1052,8 +1236,9 @@ export default function AdminProductsPage() {
               )}
 
               <p className="mt-3 text-xs text-[#8A7969]">
-                The selected cover photo will appear in the product list and store.
-                If no cover is selected, the first available photo will be used.
+                The selected cover photo will appear in the product list and
+                store. If no cover is selected, the first available photo will
+                be used.
               </p>
             </div>
 
@@ -1063,6 +1248,7 @@ export default function AdminProductsPage() {
                   <h3 className="text-lg font-light">
                     Sizes, color & stock
                   </h3>
+
                   <p className="mt-1 text-xs text-[#8A7969]">
                     Manage each size and its stock quantity separately.
                   </p>
@@ -1077,6 +1263,7 @@ export default function AdminProductsPage() {
                     <Plus size={15} />
                     Add size
                   </button>
+
                   <button
                     type="button"
                     onClick={() => addVariant("One Size")}
@@ -1101,6 +1288,7 @@ export default function AdminProductsPage() {
                   >
                     <label className={labelClass}>
                       Size
+
                       <input
                         className={inputClass}
                         value={variant.size}
@@ -1113,6 +1301,7 @@ export default function AdminProductsPage() {
 
                     <label className={labelClass}>
                       Color name
+
                       <input
                         className={inputClass}
                         value={variant.color}
@@ -1125,6 +1314,7 @@ export default function AdminProductsPage() {
 
                     <label className={labelClass}>
                       Stock quantity
+
                       <input
                         className={inputClass}
                         type="number"
@@ -1146,6 +1336,7 @@ export default function AdminProductsPage() {
                     <div className="flex items-end justify-between gap-3">
                       <label className={labelClass}>
                         Color code
+
                         <input
                           className={`${inputClass} h-12 p-1`}
                           type="color"
@@ -1234,124 +1425,182 @@ export default function AdminProductsPage() {
           </form>
         )}
 
-        <section className="mt-9 border border-[#E5DACE] bg-white/70">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E5DACE] p-5 sm:px-7">
-            <div>
-              <h2 className="text-xl font-light">Your products</h2>
-              <p className="mt-1 text-xs text-[#8A7969]">
-                {products.length} product{products.length === 1 ? "" : "s"} in the database
-              </p>
-            </div>
+        {/* Search and refresh */}
+        <div className="mt-9 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
+              Product management
+            </p>
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center border border-[#E5DACE] bg-white px-3">
-                <Search size={15} className="text-[#9B8A7A}" />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search products"
-                  className="w-36 bg-transparent px-2 py-2.5 text-xs outline-none sm:w-48"
-                />
-              </div>
+            <h2 className="mt-2 text-2xl font-light">
+              Your Collection
+            </h2>
 
-              <button
-                type="button"
-                onClick={() => void loadData()}
-                aria-label="Refresh products"
-                className="border border-[#E5DACE] p-2.5 text-[#77695D] hover:bg-white"
-              >
-                <RefreshCw size={15} />
-              </button>
-            </div>
+            <p className="mt-1 text-xs text-[#8A7969]">
+              {products.length} total product(s) in the database
+            </p>
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center gap-3 p-12 text-sm text-[#8A7969]">
-              <Loader2 size={18} className="animate-spin" />
-              Loading products...
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="p-12 text-center">
-              <ShoppingBag
-                size={30}
-                strokeWidth={1}
-                className="mx-auto text-[#B5A493]"
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border border-[#E5DACE] bg-white px-3">
+              <Search size={15} className="text-[#9B8A7A]" />
+
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search products"
+                className="w-36 bg-transparent px-2 py-2.5 text-xs outline-none sm:w-48"
               />
-              <p className="mt-4 text-sm text-[#77695D]">
-                {search
-                  ? "No products match your search."
-                  : "No products yet. Add your first TALA item above."}
-              </p>
             </div>
-          ) : (
-            <div className="divide-y divide-[#EDE5DC]">
-              {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex flex-wrap items-center gap-4 p-4 sm:px-7"
-                >
-                  <div className="h-20 w-16 shrink-0 overflow-hidden bg-[#F1ECE5]">
-                    {product.main_image || product.images?.[0] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={product.main_image || product.images?.[0] || ""}
-                        alt={product.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[#B5A493]">
-                        <ImagePlus size={20} />
-                      </div>
-                    )}
-                  </div>
 
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm">{product.name}</h3>
-                    <p className="mt-1 text-xs text-[#8A7969]">
-                      EGP {Number(product.price || 0).toLocaleString("en-EG")}
-                    </p>
-                    <p className="mt-1 text-[10px] uppercase tracking-wider text-[#9B8A7A]">
-                      {product.status}
-                    </p>
-                  </div>
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              aria-label="Refresh products"
+              className="border border-[#E5DACE] bg-white p-2.5 text-[#77695D] hover:bg-[#F8F5F0]"
+            >
+              <RefreshCw size={15} />
+            </button>
+          </div>
+        </div>
 
-                  <span
-                    className={`shrink-0 border px-2.5 py-1 text-[9px] uppercase tracking-wider ${
-                      product.status === "published"
-                        ? "border-[#C4D0BE] text-[#53684B]"
-                        : "border-[#D9CCBE] text-[#8A7969]"
-                    }`}
-                  >
-                    {product.status}
-                  </span>
+        {loading ? (
+          <div className="mt-7 flex items-center justify-center gap-3 border border-[#E5DACE] bg-white/70 p-12 text-sm text-[#8A7969]">
+            <Loader2 size={18} className="animate-spin" />
+            Loading products...
+          </div>
+        ) : (
+          <div className="mt-7 space-y-7">
+            {/* Published products */}
+            <section className="border border-[#E5DACE] bg-white/70">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
+                <div>
+                  <h2 className="text-xl font-light">
+                    Published Products
+                  </h2>
 
-                  <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={() => void openEditForm(product)}
-                      className="inline-flex items-center gap-2 border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
-                    >
-                      <Pencil size={13} />
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={() => void toggleProductStatus(product)}
-                      className="border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
-                    >
-                      {product.status === "published"
-                        ? "Move to Draft"
-                        : "Publish"}
-                    </button>
-                  </div>
+                  <p className="mt-1 text-xs text-[#8A7969]">
+                    Products currently visible in your store
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+
+                <span className="border border-[#C4D0BE] px-3 py-1.5 text-xs text-[#53684B]">
+                  {publishedProducts.length} Published
+                </span>
+              </div>
+
+              {publishedProducts.length === 0 ? (
+                <div className="p-10 text-center">
+                  <ShoppingBag
+                    size={28}
+                    strokeWidth={1}
+                    className="mx-auto text-[#B5A493]"
+                  />
+
+                  <p className="mt-3 text-sm text-[#8A7969]">
+                    {search
+                      ? "No published products match your search."
+                      : "No published products yet."}
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#EDE5DC]">
+                  {publishedProducts.map((product) => (
+                    <ProductRow
+                      key={product.id}
+                      product={product}
+                      section="published"
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Draft products */}
+            <section className="border border-[#D9CCBE] bg-white/70">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Archive size={19} strokeWidth={1.4} />
+
+                    <h2 className="text-xl font-light">
+                      Draft Products
+                    </h2>
+                  </div>
+
+                  <p className="mt-1 text-xs text-[#8A7969]">
+                    Private products that are not visible to customers
+                  </p>
+                </div>
+
+                <span className="border border-[#D9CCBE] px-3 py-1.5 text-xs text-[#8A7969]">
+                  {draftProducts.length} Draft
+                </span>
+              </div>
+
+              {draftProducts.length === 0 ? (
+                <div className="p-10 text-center">
+                  <Package
+                    size={28}
+                    strokeWidth={1}
+                    className="mx-auto text-[#B5A493]"
+                  />
+
+                  <p className="mt-3 text-sm text-[#8A7969]">
+                    {search
+                      ? "No draft products match your search."
+                      : "No draft products yet."}
+                  </p>
+
+                  <p className="mt-1 text-xs text-[#A28A72]">
+                    New products saved as Draft will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#EDE5DC]">
+                  {draftProducts.map((product) => (
+                    <ProductRow
+                      key={product.id}
+                      product={product}
+                      section="draft"
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Archived products */}
+            {archivedProducts.length > 0 && (
+              <section className="border border-[#E5DACE] bg-white/70">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
+                  <div>
+                    <h2 className="text-xl font-light">
+                      Archived Products
+                    </h2>
+
+                    <p className="mt-1 text-xs text-[#8A7969]">
+                      Products saved in the archived state
+                    </p>
+                  </div>
+
+                  <span className="border border-[#D9CCBE] px-3 py-1.5 text-xs text-[#8A7969]">
+                    {archivedProducts.length} Archived
+                  </span>
+                </div>
+
+                <div className="divide-y divide-[#EDE5DC]">
+                  {archivedProducts.map((product) => (
+                    <ProductRow
+                      key={product.id}
+                      product={product}
+                      section="archived"
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
 
         <Link
           href="/products"
