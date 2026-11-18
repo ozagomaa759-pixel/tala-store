@@ -28,6 +28,16 @@ type HeroSlide = {
   sort_order: number;
 };
 
+type HeroContent = {
+  title: string;
+  subtitle: string;
+  description: string;
+  image: string;
+  mobileImage: string | null;
+  buttonText: string;
+  buttonLink: string;
+};
+
 const categories = [
   {
     name: "Sets",
@@ -43,13 +53,14 @@ const categories = [
   },
 ];
 
-const fallbackHero = {
+const fallbackHero: HeroContent = {
   title: "TALA",
   subtitle: "THE ART OF EVERYDAY ELEGANCE",
   description:
     "Timeless pieces. Effortless confidence. A style that speaks without saying a word.",
   image:
     "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=2000&q=85",
+  mobileImage: null,
   buttonText: "EXPLORE COLLECTION",
   buttonLink: "/products",
 };
@@ -64,7 +75,7 @@ export default function HomePage() {
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
   const [heroIndex, setHeroIndex] = useState(0);
 
-  // Load active hero slides
+  // Load active hero slides from the public API
   useEffect(() => {
     let active = true;
 
@@ -155,7 +166,7 @@ export default function HomePage() {
 
   const activeHero = heroSlides[heroIndex];
 
-  const hero = activeHero
+  const hero: HeroContent = activeHero
     ? {
         title: activeHero.title?.trim() || "TALA",
         subtitle:
