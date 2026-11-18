@@ -53,18 +53,6 @@ const categories = [
   },
 ];
 
-const fallbackHero: HeroContent = {
-  title: "TALA",
-  subtitle: "THE ART OF EVERYDAY ELEGANCE",
-  description:
-    "Timeless pieces. Effortless confidence. A style that speaks without saying a word.",
-  image:
-    "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=2000&q=85",
-  mobileImage: null,
-  buttonText: "EXPLORE COLLECTION",
-  buttonLink: "/products",
-};
-
 export default function HomePage() {
   const cartCount = useCartCount();
 
@@ -73,9 +61,9 @@ export default function HomePage() {
   const [loadError, setLoadError] = useState(false);
 
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
+  const [heroLoaded, setHeroLoaded] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
 
-  // Load active hero slides from the public API
   useEffect(() => {
     let active = true;
 
@@ -91,16 +79,28 @@ export default function HomePage() {
 
         const result = await response.json();
 
-        if (
-          active &&
-          result.success &&
-          Array.isArray(result.slides)
-        ) {
-          setHeroSlides(result.slides);
+        if (active && result.success && Array.isArray(result.slides)) {
+          const validSlides = result.slides.filter(
+            (slide: HeroSlide) =>
+              slide &&
+              typeof slide.id === "string" &&
+              typeof slide.image_url === "string" &&
+              slide.image_url.trim() !== ""
+          );
+
+          setHeroSlides(validSlides);
           setHeroIndex(0);
         }
       } catch (error) {
         console.error("TALA hero loading error:", error);
+
+        if (active) {
+          setHeroSlides([]);
+        }
+      } finally {
+        if (active) {
+          setHeroLoaded(true);
+        }
       }
     }
 
@@ -111,18 +111,16 @@ export default function HomePage() {
     };
   }, []);
 
-  // Automatic hero slider
   useEffect(() => {
-    if (heroSlides.length <= 1) return;
+    if (!heroLoaded || heroSlides.length <= 1) return;
 
     const interval = window.setInterval(() => {
       setHeroIndex((current) => (current + 1) % heroSlides.length);
     }, 6000);
 
     return () => window.clearInterval(interval);
-  }, [heroSlides.length]);
+  }, [heroLoaded, heroSlides.length]);
 
-  // Load products
   useEffect(() => {
     let active = true;
 
@@ -166,7 +164,7 @@ export default function HomePage() {
 
   const activeHero = heroSlides[heroIndex];
 
-  const hero: HeroContent = activeHero
+  const hero: HeroContent | null = activeHero
     ? {
         title: activeHero.title?.trim() || "TALA",
         subtitle:
@@ -179,7 +177,7 @@ export default function HomePage() {
           activeHero.button_text?.trim() || "EXPLORE COLLECTION",
         buttonLink: activeHero.button_link || "/products",
       }
-    : fallbackHero;
+    : null;
 
   return (
     <main className="min-h-screen bg-[#f4f0e9] text-[#292521]">
@@ -212,86 +210,90 @@ export default function HomePage() {
         </Link>
       </header>
 
-      {/* HERO SLIDER */}
+      {/* HERO */}
       <section className="relative flex min-h-[780px] items-center overflow-hidden bg-[#82776c] md:min-h-[850px]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeHero?.id || "fallback-hero"}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
-            className="absolute inset-0"
-          >
-            <picture>
-              {hero.mobileImage && (
-                <source
-                  media="(max-width: 767px)"
-                  srcSet={hero.mobileImage}
-                />
-              )}
+        {hero && (
+          <>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={hero.image}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute inset-0"
+              >
+                <picture>
+                  {hero.mobileImage && (
+                    <source
+                      media="(max-width: 767px)"
+                      srcSet={hero.mobileImage}
+                    />
+                  )}
 
-              <img
-                src={hero.image}
-                alt={hero.title || "TALA fashion collection"}
-                className="h-full w-full object-cover object-center"
-                fetchPriority="high"
-              />
-            </picture>
+                  <img
+                    src={hero.image}
+                    alt={hero.title}
+                    className="h-full w-full object-cover object-center"
+                    fetchPriority="high"
+                  />
+                </picture>
 
-            <div className="absolute inset-0 bg-black/35" />
-          </motion.div>
-        </AnimatePresence>
+                <div className="absolute inset-0 bg-black/35" />
+              </motion.div>
+            </AnimatePresence>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${activeHero?.id || "fallback"}-content`}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.8 }}
-            className="relative z-10 mx-auto w-full px-7 pt-20 text-center text-white"
-          >
-            <p className="mb-6 text-[10px] tracking-[7px]">
-              {hero.subtitle}
-            </p>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${activeHero?.id}-content`}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.8 }}
+                className="relative z-10 mx-auto w-full px-7 pt-20 text-center text-white"
+              >
+                <p className="mb-6 text-[10px] tracking-[7px]">
+                  {hero.subtitle}
+                </p>
 
-            <h1 className="text-6xl font-light tracking-[9px] md:text-9xl">
-              {hero.title}
-            </h1>
+                <h1 className="text-6xl font-light tracking-[9px] md:text-9xl">
+                  {hero.title}
+                </h1>
 
-            {hero.description && (
-              <p className="mx-auto mt-7 max-w-md text-sm font-light leading-8 tracking-[2px]">
-                {hero.description}
-              </p>
+                {hero.description && (
+                  <p className="mx-auto mt-7 max-w-md text-sm font-light leading-8 tracking-[2px]">
+                    {hero.description}
+                  </p>
+                )}
+
+                <Link
+                  href={hero.buttonLink}
+                  className="mt-10 inline-flex items-center gap-5 border border-white px-9 py-4 text-[10px] tracking-[3px] transition hover:bg-white hover:text-black"
+                >
+                  {hero.buttonText} <ArrowRight size={15} />
+                </Link>
+              </motion.div>
+            </AnimatePresence>
+
+            {heroSlides.length > 1 && (
+              <div className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
+                {heroSlides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    onClick={() => setHeroIndex(index)}
+                    aria-label={`Go to slide ${index + 1}`}
+                    aria-current={heroIndex === index}
+                    className={`h-[3px] transition-all duration-500 ${
+                      heroIndex === index
+                        ? "w-9 bg-white"
+                        : "w-5 bg-white/50"
+                    }`}
+                  />
+                ))}
+              </div>
             )}
-
-            <Link
-              href={hero.buttonLink}
-              className="mt-10 inline-flex items-center gap-5 border border-white px-9 py-4 text-[10px] tracking-[3px] transition hover:bg-white hover:text-black"
-            >
-              {hero.buttonText} <ArrowRight size={15} />
-            </Link>
-          </motion.div>
-        </AnimatePresence>
-
-        {heroSlides.length > 1 && (
-          <div className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
-            {heroSlides.map((slide, index) => (
-              <button
-                key={slide.id}
-                type="button"
-                onClick={() => setHeroIndex(index)}
-                aria-label={`Go to slide ${index + 1}`}
-                aria-current={heroIndex === index}
-                className={`h-[3px] transition-all duration-500 ${
-                  heroIndex === index
-                    ? "w-9 bg-white"
-                    : "w-5 bg-white/50"
-                }`}
-              />
-            ))}
-          </div>
+          </>
         )}
 
         <div className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-white">
