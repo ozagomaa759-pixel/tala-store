@@ -16,26 +16,16 @@ import {
 } from "framer-motion";
 
 import {
-  ArrowDown,
-  ArrowDownUp,
-  ArrowLeft,
   ArrowRight,
-  ArrowUpDown,
   Check,
   CheckCircle2,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
   CircleHelp,
   Clock3,
-  Filter,
-  Grid2X2,
+   Grid2X2,
   Heart,
   Info,
-  LayoutGrid,
   List,
-  Loader2,
   Minus,
   Plus,
   Search,
@@ -69,14 +59,7 @@ import { getTalaProducts } from "@/lib/tala-products";
    TYPES
 --------------------------------------------------------- */
 
-type ProductCategory =
-  | "All"
-  | "Dresses"
-  | "Tops"
-  | "Bottoms"
-  | "Outerwear"
-  | "Sets"
-  | "Jackets";
+type ProductCategory = "All" | "Sets" | "Jackets";
 
 type SortOption =
   | "featured"
@@ -113,10 +96,6 @@ const FAVORITES_STORAGE_KEY = "tala-favorites";
 
 const CATEGORIES: ProductCategory[] = [
   "All",
-  "Dresses",
-  "Tops",
-  "Bottoms",
-  "Outerwear",
   "Sets",
   "Jackets",
 ];
@@ -558,6 +537,9 @@ function ProductRating({
   rating: number;
   reviews: number;
 }) {
+  // Never display a rating until real customer reviews exist.
+  if (reviews <= 0) return null;
+
   return (
     <div className="flex items-center gap-1.5">
       <Star
@@ -590,7 +572,7 @@ function ProductPrice({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm font-semibold tracking-wide text-[#40372F]">
+      <span className="text-[13px] font-medium tracking-[0.025em] text-[#302A24]">
         {formatPrice(price)}
       </span>
 
@@ -1067,7 +1049,7 @@ function ProductCard({
       onMouseLeave={() => setHovered(false)}
       className="group min-w-0"
     >
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#EAE3D9]">
+      <div className="relative aspect-[4/5] overflow-hidden bg-[#EAE3D9]">
         <Link
           href={`/products/${encodeURIComponent(product.slug || product.id)}`}
           aria-label={`View ${product.name}`}
@@ -1108,7 +1090,7 @@ function ProductCard({
           <ShoppingBag size={14} />
 
           {product.isAvailable
-            ? "Quick add"
+            ? "Add to bag"
             : "Unavailable"}
         </button>
       </div>
@@ -1127,7 +1109,7 @@ function ProductCard({
         </div>
 
         <Link href={`/products/${encodeURIComponent(product.slug || product.id)}`}>
-          <h3 className="truncate font-serif text-base text-[#40372F] transition-colors hover:text-[#9B8065] sm:text-lg">
+          <h3 className="truncate font-serif text-[17px] tracking-[0.005em] text-[#302A24] transition-colors hover:text-[#9B8065] sm:text-[19px]">
             {product.name}
           </h3>
         </Link>
@@ -1337,18 +1319,20 @@ function QuickViewInformation({
         {product.subtitle}
       </p>
 
-      <div className="mt-5 flex flex-wrap items-center gap-4">
-        <ProductRating
-          rating={product.rating}
-          reviews={product.reviews}
-        />
+      {product.reviews > 0 && (
+        <div className="mt-5 flex flex-wrap items-center gap-4">
+          <ProductRating
+            rating={product.rating}
+            reviews={product.reviews}
+          />
 
-        <span className="h-4 w-px bg-[#E5DACE]" />
+          <span className="h-4 w-px bg-[#E5DACE]" />
 
-        <span className="text-[10px] uppercase tracking-[0.12em] text-[#9B8C7D]">
-          {product.reviews} customer reviews
-        </span>
-      </div>
+          <span className="text-[10px] uppercase tracking-[0.12em] text-[#9B8C7D]">
+            {product.reviews} customer reviews
+          </span>
+        </div>
+      )}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <span className="text-xl font-semibold text-[#40372F]">
@@ -2101,14 +2085,14 @@ function MobileFilterDrawer({
                 </span>
 
                 <h2 className="mt-1 font-serif text-2xl text-[#40372F]">
-                  Filters
+                  Refine collection
                 </h2>
               </div>
 
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close filters"
+                aria-label="Close collection refinements"
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E5DACE] text-[#66584B] transition hover:bg-[#F0EAE2]"
               >
                 <X size={18} />
@@ -2347,9 +2331,9 @@ function MobileFilterButton({
       onClick={onClick}
       className="flex h-12 items-center justify-center gap-2 border border-[#E5DACE] bg-[#FBF9F5] px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#66584B] transition hover:border-[#9B8065] hover:bg-white lg:hidden"
     >
-      <Filter size={15} />
+      <SlidersHorizontal size={15} />
 
-      Filters
+      Refine
     </button>
   );
 }
@@ -2492,7 +2476,7 @@ function ActiveFiltersSummary({
   return (
     <div className="flex flex-wrap items-center gap-2 py-4">
       <span className="mr-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#A18F7D]">
-        Active filters:
+        Applied refinements:
       </span>
 
       {selectedCategory !== "All" && (
@@ -2556,16 +2540,22 @@ function ProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState<ProductCategory>("All");
-  useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const category = params.get("category")?.trim().toLowerCase();
+  const [pageCategory, setPageCategory] =
+    useState<ProductCategory>("All");
 
-  if (category === "sets") {
-    setSelectedCategory("Sets");
-  } else if (category === "jackets") {
-    setSelectedCategory("Jackets");
-  }
-}, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get("category")?.trim().toLowerCase();
+    const initialCategory: ProductCategory =
+      category === "sets"
+        ? "Sets"
+        : category === "jackets"
+          ? "Jackets"
+          : "All";
+
+    setPageCategory(initialCategory);
+    setSelectedCategory(initialCategory);
+  }, []);
 
   const [sortBy, setSortBy] =
     useState<SortOption>("featured");
@@ -3049,14 +3039,15 @@ const categoryCounts = useMemo(() => {
 
   const clearFilters = useCallback(() => {
     setSearch("");
-    setSelectedCategory("All");
+    // Keep the visitor inside the collection they opened (Sets or Jackets).
+    setSelectedCategory(pageCategory);
     setMaxPrice(PRICE_LIMIT);
     setOnlyFavorites(false);
     setNewOnly(false);
     setBestSellersOnly(false);
     setSortBy("featured");
     setCurrentPage(1);
-  }, []);
+  }, [pageCategory]);
 
   const activeFilterCount = [
     selectedCategory !== "All",
@@ -3093,7 +3084,7 @@ const categoryCounts = useMemo(() => {
   // ----------------------------------------
 
   return (
-    <main className="min-h-screen bg-[#F8F5F0] text-[#40372F]">
+    <main className="min-h-screen bg-[#F7F4EF] text-[#302A24]">
 
       {/* HEADER */}
 
@@ -3147,45 +3138,87 @@ const categoryCounts = useMemo(() => {
 
       {/* HERO */}
 
-      <section className="relative overflow-hidden border-b border-[#E6DED4]">
-        <div className="mx-auto max-w-[1500px] px-5 py-16 text-center md:px-10 md:py-24">
+      <section className="relative overflow-hidden border-b border-[#E6DED4] bg-[linear-gradient(180deg,#F9F7F3_0%,#F3EEE7_100%)]">
+        <div className="mx-auto max-w-[1500px] px-5 py-20 text-center md:px-10 md:py-28">
 
           <SectionEyebrow>
-            THE TALA COLLECTION
+            {selectedCategory === "All"
+              ? "THE TALA COLLECTION"
+              : `THE TALA ${selectedCategory.toUpperCase()} EDIT`}
           </SectionEyebrow>
 
           <motion.h1
             variants={pageVariants}
             initial="hidden"
             animate="visible"
-            className="mx-auto mt-5 max-w-4xl font-serif text-4xl leading-tight tracking-tight text-[#40372F] sm:text-5xl md:text-7xl"
+            className="mx-auto mt-5 max-w-4xl font-serif text-4xl leading-[1.08] tracking-[-0.035em] text-[#302A24] sm:text-5xl md:text-7xl"
           >
-            Discover your
-            <span className="block italic text-[#9B8469]">
-              next favorite.
+            {selectedCategory === "Sets"
+              ? "Effortlessly"
+              : selectedCategory === "Jackets"
+                ? "The finishing"
+                : "A study in"}
+            <span className="block italic font-normal text-[#9B8065]">
+              {selectedCategory === "Sets"
+                ? "put together."
+                : selectedCategory === "Jackets"
+                  ? "touch."
+                  : "quiet elegance."}
             </span>
           </motion.h1>
 
-          <p className="mx-auto mt-6 max-w-xl text-sm leading-7 text-[#81766A] md:text-base">
-            Thoughtfully selected pieces.
-            Timeless details. Effortless style.
-            Discover the latest collection from TALA.
+          <p className="mx-auto mt-7 max-w-[540px] text-[13px] leading-8 tracking-[0.015em] text-[#81766A] md:text-sm">
+            {selectedCategory === "Sets"
+              ? "Considered silhouettes, beautifully coordinated. Discover pieces made to bring ease and intention to the everyday."
+              : selectedCategory === "Jackets"
+                ? "Thoughtful layers with a confident point of view. Discover the pieces that complete a look, season after season."
+                : "A considered edit of modern essentials, timeless silhouettes and the little details that make a look your own."}
           </p>
 
-          <div className="mx-auto mt-8 h-px w-20 bg-[#B69B78]" />
+          <div className="mx-auto mt-9 flex items-center justify-center gap-4">
+            <span className="h-px w-10 bg-[#C9B8A4]" />
+            <span className="text-[9px] font-medium uppercase tracking-[0.32em] text-[#9B8065]">
+              Considered. Timeless. TALA.
+            </span>
+            <span className="h-px w-10 bg-[#C9B8A4]" />
+          </div>
+
+          <nav
+            aria-label="Shop TALA collections"
+            className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3"
+          >
+            {[
+              { label: "All pieces", href: "/products", category: "All" as const },
+              { label: "Sets", href: "/products?category=sets", category: "Sets" as const },
+              { label: "Jackets", href: "/products?category=jackets", category: "Jackets" as const },
+            ].map((item) => (
+              <Link
+                key={item.category}
+                href={item.href}
+                aria-current={selectedCategory === item.category ? "page" : undefined}
+                className={`border-b pb-2 text-[9px] font-medium uppercase tracking-[0.22em] transition-colors ${
+                  selectedCategory === item.category
+                    ? "border-[#8F7358] text-[#40372F]"
+                    : "border-transparent text-[#9A8C7D] hover:border-[#C9B8A4] hover:text-[#40372F]"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
 
         </div>
       </section>
 
       {/* PRODUCTS AREA */}
 
-      <section className="mx-auto max-w-[1500px] px-4 py-10 md:px-10 md:py-16">
+      <section className="mx-auto max-w-[1540px] px-4 py-12 md:px-10 md:py-20">
 
         <div className="flex flex-col gap-8 lg:flex-row">
 
           {/* DESKTOP FILTERS */}
 
-          <aside className="hidden w-[270px] shrink-0 lg:block">
+          <aside className="hidden w-[250px] shrink-0 lg:block xl:w-[270px]">
             <div className="sticky top-28">
               <ProductFilterSidebar
                 {...filterProps}
@@ -3219,7 +3252,7 @@ const categoryCounts = useMemo(() => {
               <div className="mb-6 flex flex-wrap items-center gap-2">
 
                 <span className="mr-1 text-xs uppercase tracking-wider text-[#8B7D70]">
-                  Active filters:
+                  Applied refinements:
                 </span>
 
                 {search.trim() && (
@@ -3344,8 +3377,7 @@ const categoryCounts = useMemo(() => {
             {/* RESULTS FOOTER */}
             <div className="mt-10 border-t border-[#E2D9CF] pt-6 text-center">
               <p className="text-xs tracking-wide text-[#8B7D70]">
-                Showing {visibleProducts.length} of{" "}
-                {filteredProducts.length} pieces
+                Showing {visibleProducts.length} of {filteredProducts.length} pieces
               </p>
             </div>
 
