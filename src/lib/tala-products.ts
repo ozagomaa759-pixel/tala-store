@@ -1,3 +1,4 @@
+
 import type { Product, ProductVariantStock } from "@/data/products";
 
 type ProductRow = {
@@ -39,30 +40,20 @@ type ProductsApiResponse = {
 const PLACEHOLDER_IMAGE =
   "https://placehold.co/600x800/F5F0E8/332A23?text=TALA";
 
-const ALLOWED_CATEGORIES = [
-  "Dresses",
-  "Tops",
-  "Bottoms",
-  "Outerwear",
-  "Sets",
-  "Jackets",
-] as const;
-
 function normalizeCategory(
   categoryName: string | undefined
-): Product["category"] {
-  const normalized = categoryName?.trim();
+): Product["category"] | null {
+  const normalized = categoryName?.trim().toLowerCase();
 
-  if (
-    normalized &&
-    ALLOWED_CATEGORIES.includes(
-      normalized as (typeof ALLOWED_CATEGORIES)[number]
-    )
-  ) {
-    return normalized as Product["category"];
+  if (normalized === "sets") {
+    return "Sets";
   }
 
-  return "Sets";
+  if (normalized === "jackets") {
+    return "Jackets";
+  }
+
+  return null;
 }
 
 function normalizeImages(
@@ -112,7 +103,10 @@ export async function getTalaProducts(): Promise<Product[]> {
     ])
   );
 
-  const variantsByProduct = new Map<string, ProductVariantStock[]>();
+  const variantsByProduct = new Map<
+    string,
+    ProductVariantStock[]
+  >();
 
   for (const variant of variants) {
     if (variant.is_active === false) continue;
@@ -125,7 +119,9 @@ export async function getTalaProducts(): Promise<Product[]> {
       size: variant.size ?? "",
       color: variant.color ?? "Default",
       color_code: variant.color_code ?? null,
-      stock_quantity: Number(variant.stock_quantity ?? 0),
+      stock_quantity: Number(
+        variant.stock_quantity ?? 0
+      ),
       price_override:
         variant.price_override == null
           ? null
@@ -133,10 +129,22 @@ export async function getTalaProducts(): Promise<Product[]> {
       is_active: true,
     });
 
-    variantsByProduct.set(variant.product_id, current);
+    variantsByProduct.set(
+      variant.product_id,
+      current
+    );
   }
 
-  return products.map((product): Product => {
+  return products.flatMap((product): Product[] => {
+    const category = normalizeCategory(
+      categoryMap.get(product.category_id ?? "")
+    );
+
+    // تجاهل المنتجات التي لا تنتمي إلى Sets أو Jackets
+    if (!category) {
+      return [];
+    }
+
     const productVariants =
       variantsByProduct.get(product.id) ?? [];
 
@@ -171,34 +179,40 @@ export async function getTalaProducts(): Promise<Product[]> {
       ).values(),
     ];
 
-    return {
-      id: product.id,
-      slug: product.slug,
-      variants: productVariants,
-      name: product.name,
-      subtitle: product.subtitle ?? "",
-      description: product.description ?? "",
-      price: Number(product.price) || 0,
-      oldPrice:
-        product.compare_at_price != null
-          ? Number(product.compare_at_price)
-          : undefined,
-      category: normalizeCategory(
-        categoryMap.get(product.category_id ?? "")
-      ),
-      image: images[0] ?? PLACEHOLDER_IMAGE,
-      images,
-      colors: uniqueColors,
-      sizes: uniqueSizes,
-      rating: 5,
-      reviews: 0,
-      isNew: Boolean(
-        product.is_new ?? product.is_new_arrival
-      ),
-      isBestSeller: Boolean(product.is_best_seller),
-      isFeatured: Boolean(product.is_featured),
-      isAvailable: availableVariants.length > 0,
-      tags: product.tags ?? [],
-    };
+    return [
+      {
+        id: product.id,
+        slug: product.slug,
+        variants: productVariants,
+        name: product.name,
+        subtitle: product.subtitle ?? "",
+        description: product.description ?? "",
+        price: Number(product.price) || 0,
+        oldPrice:
+          product.compare_at_price != null
+            ? Number(product.compare_at_price)
+            : undefined,
+        category,
+        image: images[0] ?? PLACEHOLDER_IMAGE,
+        images,
+        colors: uniqueColors,
+        sizes: uniqueSizes,
+        rating: 5,
+        reviews: 0,
+        isNew: Boolean(
+          product.is_new ?? product.is_new_arrival
+        ),
+        isBestSeller: Boolean(
+          product.is_best_seller
+        ),
+        isFeatured: Boolean(
+          product.is_featured
+        ),
+        isAvailable:
+          product.is_available !== false &&
+          availableVariants.length > 0,
+        tags: product.tags ?? [],
+      },
+    ];
   });
 }
