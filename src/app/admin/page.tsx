@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Tags,
+  Images,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -38,6 +39,12 @@ const sections = [
     description: "Monitor product stock and availability.",
     href: "/admin/inventory",
     icon: Boxes,
+  },
+  {
+    title: "Hero Management",
+    description: "Upload, edit and organize your homepage hero slides.",
+    href: "/admin/hero",
+    icon: Images,
   },
 ];
 
@@ -95,11 +102,11 @@ export default function AdminPage() {
 
         <p className="mt-6 max-w-xl text-sm leading-8 text-[#77695D]">
           Welcome to your TALA control center.
-          Manage products, categories, orders, and inventory
-          from one organized workspace.
+          Manage products, categories, orders, inventory
+          and homepage content from one organized workspace.
         </p>
 
-        <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {sections.map((section) => {
             const Icon = section.icon;
 
