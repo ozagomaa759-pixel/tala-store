@@ -1,6 +1,14 @@
+
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -11,6 +19,8 @@ import {
   X,
   RefreshCw,
   Check,
+  ImagePlus,
+  Upload,
 } from "lucide-react";
 
 type Category = {
@@ -57,8 +67,11 @@ export default function AdminCategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -99,6 +112,65 @@ export default function AdminCategoriesPage() {
     }));
   }
 
+  async function handleImageUpload(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    setError("");
+    setSuccess("");
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/avif",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError("Please choose a JPG, PNG, WEBP or AVIF image.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size must not exceed 5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("productId", "categories");
+
+      const response = await fetch("/api/admin/products/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success || !data.url) {
+        throw new Error(data.error || "Image upload failed.");
+      }
+
+      updateField("image_url", data.url);
+      setSuccess("Category image uploaded successfully.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Image upload failed."
+      );
+    } finally {
+      setUploadingImage(false);
+      event.target.value = "";
+    }
+  }
+
   function startEdit(category: Category) {
     setEditingId(category.id);
 
@@ -126,6 +198,8 @@ export default function AdminCategoriesPage() {
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (uploadingImage) return;
 
     setSaving(true);
     setError("");
@@ -380,28 +454,74 @@ export default function AdminCategoriesPage() {
                   type="number"
                   value={form.sort_order}
                   onChange={(event) =>
-                    updateField(
-                      "sort_order",
-                      Number(event.target.value)
-                    )
+                    updateField("sort_order", Number(event.target.value))
                   }
                   className="w-full rounded-xl border border-[#e2d9ce] px-4 py-3 outline-none focus:border-[#9b8874]"
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium">
-                  Image URL
-                </label>
+            <div>
+              <label className="mb-3 block text-sm font-medium">
+                Category Image
+              </label>
 
-                <input
-                  value={form.image_url}
-                  onChange={(event) =>
-                    updateField("image_url", event.target.value)
-                  }
-                  placeholder="https://..."
-                  className="w-full rounded-xl border border-[#e2d9ce] px-4 py-3 outline-none focus:border-[#9b8874]"
-                />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="h-36 w-32 overflow-hidden rounded-xl border border-[#e2d9ce] bg-[#f5f1eb]">
+                  {form.image_url ? (
+                    <img
+                      src={form.image_url}
+                      alt="Category preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-[#9b8874]">
+                      <ImagePlus size={28} />
+                      <span className="text-xs">No image</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="flex items-center gap-2 rounded-xl bg-[#76634f] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#5f4e3e] disabled:opacity-50"
+                  >
+                    {uploadingImage ? (
+                      <RefreshCw size={16} className="animate-spin" />
+                    ) : (
+                      <Upload size={16} />
+                    )}
+
+                    {uploadingImage ? "Uploading..." : "Choose Image"}
+                  </button>
+
+                  <p className="mt-3 text-xs leading-6 text-[#948578]">
+                    Choose an image from your phone.
+                    <br />
+                    JPG, PNG, WEBP or AVIF — maximum 5 MB.
+                  </p>
+
+                  {form.image_url && (
+                    <button
+                      type="button"
+                      onClick={() => updateField("image_url", "")}
+                      className="mt-2 text-xs text-red-600 underline"
+                    >
+                      Remove image
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -436,7 +556,7 @@ export default function AdminCategoriesPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || uploadingImage}
                 className="flex items-center gap-2 rounded-xl bg-[#76634f] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#5f4e3e] disabled:opacity-50"
               >
                 {saving ? (
@@ -444,6 +564,7 @@ export default function AdminCategoriesPage() {
                 ) : (
                   <Check size={16} />
                 )}
+
                 {saving
                   ? "Saving..."
                   : editingId
