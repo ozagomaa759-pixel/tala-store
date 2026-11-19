@@ -102,33 +102,39 @@ export default function HomePage() {
 
         const result = await response.json();
 
-        if (!active || !result.success || !Array.isArray(result.categories)) {
+        if (
+          !active ||
+          !result.success ||
+          !Array.isArray(result.categories)
+        ) {
           return;
         }
 
         const apiCategories = result.categories as ApiCategory[];
 
-        const updatedCategories = DEFAULT_CATEGORIES.map((defaultCategory) => {
-          const savedCategory = apiCategories.find(
-            (category) =>
-              category.name?.trim().toLowerCase() ===
-                defaultCategory.name.toLowerCase() ||
-              category.slug?.trim().toLowerCase() ===
-                defaultCategory.slug.toLowerCase()
-          );
+        const updatedCategories = DEFAULT_CATEGORIES.map(
+          (defaultCategory) => {
+            const savedCategory = apiCategories.find(
+              (category) =>
+                category.name?.trim().toLowerCase() ===
+                  defaultCategory.name.toLowerCase() ||
+                category.slug?.trim().toLowerCase() ===
+                  defaultCategory.slug.toLowerCase()
+            );
 
-          return {
-            ...defaultCategory,
-            id: savedCategory?.id,
-            slug: savedCategory?.slug || defaultCategory.slug,
-            subtitle:
-              savedCategory?.description?.trim() ||
-              defaultCategory.subtitle,
-            image:
-              savedCategory?.image_url?.trim() ||
-              defaultCategory.image,
-          };
-        });
+            return {
+              ...defaultCategory,
+              id: savedCategory?.id,
+              slug: savedCategory?.slug || defaultCategory.slug,
+              subtitle:
+                savedCategory?.description?.trim() ||
+                defaultCategory.subtitle,
+              image:
+                savedCategory?.image_url?.trim() ||
+                defaultCategory.image,
+            };
+          }
+        );
 
         setCategories(updatedCategories);
       } catch (error) {
@@ -160,13 +166,18 @@ export default function HomePage() {
         const result = await response.json();
 
         if (active && result.success && Array.isArray(result.slides)) {
-          const validSlides = result.slides.filter(
-            (slide: HeroSlide) =>
-              slide &&
-              typeof slide.id === "string" &&
-              typeof slide.image_url === "string" &&
-              slide.image_url.trim() !== ""
-          );
+          const validSlides = result.slides
+            .filter(
+              (slide: HeroSlide) =>
+                slide &&
+                typeof slide.id === "string" &&
+                typeof slide.image_url === "string" &&
+                slide.image_url.trim() !== ""
+            )
+            .sort(
+              (a: HeroSlide, b: HeroSlide) =>
+                a.sort_order - b.sort_order
+            );
 
           setHeroSlides(validSlides);
           setHeroIndex(0);
@@ -191,13 +202,31 @@ export default function HomePage() {
     };
   }, []);
 
+  // Preload the next hero image
+  useEffect(() => {
+    if (heroSlides.length <= 1) return;
+
+    const nextIndex = (heroIndex + 1) % heroSlides.length;
+    const nextSlide = heroSlides[nextIndex];
+
+    if (!nextSlide) return;
+
+    const desktopImage = new window.Image();
+    desktopImage.src = nextSlide.image_url;
+
+    if (nextSlide.mobile_image_url) {
+      const mobileImage = new window.Image();
+      mobileImage.src = nextSlide.mobile_image_url;
+    }
+  }, [heroIndex, heroSlides]);
+
   // Automatic hero slider
   useEffect(() => {
     if (!heroLoaded || heroSlides.length <= 1) return;
 
     const interval = window.setInterval(() => {
       setHeroIndex((current) => (current + 1) % heroSlides.length);
-    }, 6000);
+    }, 7000);
 
     return () => window.clearInterval(interval);
   }, [heroLoaded, heroSlides.length]);
@@ -263,25 +292,34 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#f4f0e9] text-[#292521]">
-      <div className="bg-[#292521] px-4 py-2 text-center text-[10px] tracking-[3px] text-white">
+      {/* ANNOUNCEMENT */}
+      <div className="relative z-30 bg-[#292521] px-4 py-2.5 text-center text-[9px] tracking-[3px] text-white sm:text-[10px]">
         DISCOVER THE NEW TALA COLLECTION
       </div>
 
-      <header className="absolute z-20 flex w-full items-center justify-between px-6 py-7 text-white md:px-14">
-        <button aria-label="Open menu">
-          <Menu size={23} strokeWidth={1.3} />
+      {/* HEADER */}
+      <header className="absolute left-0 top-[34px] z-30 flex w-full items-center justify-between px-5 py-7 text-white sm:px-8 md:px-14 md:py-9">
+        <button
+          type="button"
+          aria-label="Open menu"
+          className="transition-opacity hover:opacity-60"
+        >
+          <Menu size={23} strokeWidth={1.2} />
         </button>
 
-        <Link href="/" className="text-4xl font-light tracking-[12px]">
+        <Link
+          href="/"
+          className="text-3xl font-light tracking-[10px] sm:text-4xl sm:tracking-[13px]"
+        >
           TALA
         </Link>
 
         <Link
           href="/cart"
           aria-label={`Shopping bag, ${cartCount} items`}
-          className="relative inline-flex items-center justify-center"
+          className="relative inline-flex items-center justify-center transition-opacity hover:opacity-60"
         >
-          <ShoppingBag size={22} strokeWidth={1.3} />
+          <ShoppingBag size={22} strokeWidth={1.2} />
 
           <span
             className="absolute -right-3 -top-3 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-medium text-[#292521]"
@@ -292,95 +330,148 @@ export default function HomePage() {
         </Link>
       </header>
 
-      {/* HERO */}
-      <section className="relative flex min-h-[780px] items-center overflow-hidden bg-[#82776c] md:min-h-[850px]">
-        {hero && (
-          <>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={hero.image}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-                className="absolute inset-0"
-              >
-                <picture>
-                  {hero.mobileImage && (
-                    <source
-                      media="(max-width: 767px)"
-                      srcSet={hero.mobileImage}
-                    />
-                  )}
-
-                  <img
-                    src={hero.image}
-                    alt={hero.title}
-                    className="h-full w-full object-cover object-center"
-                    fetchPriority="high"
+      {/* ULTRA LUXURY EDITORIAL HERO */}
+      <section className="relative h-[calc(100svh-34px)] min-h-[650px] max-h-[1100px] overflow-hidden bg-[#75695e] text-white md:min-h-[720px]">
+        {/* Background */}
+        {hero ? (
+          <AnimatePresence mode="sync">
+            <motion.div
+              key={hero.image}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.4, ease: "easeInOut" }}
+              className="absolute inset-0"
+            >
+              <picture>
+                {hero.mobileImage && (
+                  <source
+                    media="(max-width: 767px)"
+                    srcSet={hero.mobileImage}
                   />
-                </picture>
+                )}
 
-                <div className="absolute inset-0 bg-black/35" />
-              </motion.div>
-            </AnimatePresence>
+                <img
+                  src={hero.image}
+                  alt={hero.title}
+                  className="h-full w-full object-cover object-center"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </picture>
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-[#817568] via-[#65594f] to-[#292521]" />
+        )}
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${activeHero?.id}-content`}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.8 }}
-                className="relative z-10 mx-auto w-full px-7 pt-20 text-center text-white"
-              >
-                <p className="mb-6 text-[10px] tracking-[7px]">
+        {/* Cinematic overlays */}
+        <div className="absolute inset-0 bg-black/10" />
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/20" />
+
+        <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
+
+        {/* Editorial content */}
+        {hero && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${activeHero?.id}-editorial`}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{
+                duration: 0.9,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="absolute inset-x-0 bottom-28 z-10 mx-auto w-full max-w-[1500px] px-7 sm:bottom-32 sm:px-12 md:bottom-[19%] md:px-20 lg:px-28"
+            >
+              <div className="max-w-3xl text-center md:text-left">
+                <p className="mb-6 text-[9px] uppercase tracking-[5px] text-white/85 sm:text-[10px] sm:tracking-[7px]">
                   {hero.subtitle}
                 </p>
 
-                <h1 className="text-6xl font-light tracking-[9px] md:text-9xl">
+                <h1 className="text-5xl font-light leading-[1.08] tracking-[7px] sm:text-7xl sm:tracking-[10px] md:text-8xl lg:text-[112px]">
                   {hero.title}
                 </h1>
 
                 {hero.description && (
-                  <p className="mx-auto mt-7 max-w-md text-sm font-light leading-8 tracking-[2px]">
+                  <p className="mx-auto mt-6 max-w-md text-xs font-light leading-7 tracking-[1.5px] text-white/90 sm:text-sm md:mx-0 md:mt-7">
                     {hero.description}
                   </p>
                 )}
 
                 <Link
                   href={hero.buttonLink}
-                  className="mt-10 inline-flex items-center gap-5 border border-white px-9 py-4 text-[10px] tracking-[3px] transition hover:bg-white hover:text-black"
+                  className="group mt-9 inline-flex min-h-12 items-center gap-6 border border-white/80 px-7 py-4 text-[9px] uppercase tracking-[3px] transition duration-500 hover:bg-white hover:text-[#292521] sm:px-9 sm:text-[10px]"
                 >
-                  {hero.buttonText} <ArrowRight size={15} />
-                </Link>
-              </motion.div>
-            </AnimatePresence>
+                  {hero.buttonText}
 
-            {heroSlides.length > 1 && (
-              <div className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
-                {heroSlides.map((slide, index) => (
-                  <button
-                    key={slide.id}
-                    type="button"
-                    onClick={() => setHeroIndex(index)}
-                    aria-label={`Go to slide ${index + 1}`}
-                    aria-current={heroIndex === index}
-                    className={`h-[3px] transition-all duration-500 ${
-                      heroIndex === index
-                        ? "w-9 bg-white"
-                        : "w-5 bg-white/50"
-                    }`}
+                  <ArrowRight
+                    size={15}
+                    strokeWidth={1.2}
+                    className="transition-transform duration-500 group-hover:translate-x-1"
                   />
-                ))}
+                </Link>
               </div>
-            )}
-          </>
+            </motion.div>
+          </AnimatePresence>
         )}
 
-        <div className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-white">
-          <ArrowDown size={20} strokeWidth={1} />
+        {/* Slide navigation */}
+        {heroSlides.length > 1 && (
+          <div className="absolute bottom-9 right-6 z-20 flex items-center gap-4 sm:bottom-12 sm:right-12 md:right-16">
+            <span className="text-[10px] tracking-[3px] text-white">
+              {String(heroIndex + 1).padStart(2, "0")}
+            </span>
+
+            <div className="flex items-center gap-2">
+              {heroSlides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => setHeroIndex(index)}
+                  aria-label={`Go to slide ${index + 1}`}
+                  aria-current={heroIndex === index}
+                  className={`h-[2px] transition-all duration-700 ${
+                    heroIndex === index
+                      ? "w-9 bg-white"
+                      : "w-4 bg-white/50 hover:bg-white/80"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <span className="text-[10px] tracking-[3px] text-white/65">
+              {String(heroSlides.length).padStart(2, "0")}
+            </span>
+          </div>
+        )}
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-9 left-6 z-20 flex items-center gap-3 text-white/80 sm:bottom-12 sm:left-12 md:left-16">
+          <ArrowDown size={16} strokeWidth={1} />
+
+          <span className="hidden text-[9px] uppercase tracking-[3px] sm:inline">
+            Discover
+          </span>
         </div>
+
+        {/* Loading indicator */}
+        {!heroLoaded && (
+          <div className="absolute inset-x-0 bottom-0 z-20 h-[2px] overflow-hidden bg-white/10">
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: "100%" }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              className="h-full w-1/3 bg-white/80"
+            />
+          </div>
+        )}
       </section>
 
       {/* CATEGORIES */}
@@ -416,7 +507,7 @@ export default function HomePage() {
                 loading="lazy"
               />
 
-              <div className="absolute inset-0 bg-black/20" />
+              <div className="absolute inset-0 bg-black/20 transition duration-500 group-hover:bg-black/30" />
 
               <div className="absolute bottom-9 left-0 w-full text-center text-white">
                 <h3 className="text-3xl font-light tracking-[4px]">
@@ -428,9 +519,7 @@ export default function HomePage() {
                 </p>
 
                 <Link
-                  href={`/products?category=${encodeURIComponent(
-                    category.slug
-                  )}`}
+                  href={`/products?category=${encodeURIComponent(category.slug)}`}
                   className="mt-5 inline-block border-b border-white pb-2 text-[10px] tracking-[3px]"
                 >
                   EXPLORE
