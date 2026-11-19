@@ -2556,6 +2556,16 @@ function ProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState<ProductCategory>("All");
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const category = params.get("category")?.trim().toLowerCase();
+
+  if (category === "sets") {
+    setSelectedCategory("Sets");
+  } else if (category === "jackets") {
+    setSelectedCategory("Jackets");
+  }
+}, []);
 
   const [sortBy, setSortBy] =
     useState<SortOption>("featured");
