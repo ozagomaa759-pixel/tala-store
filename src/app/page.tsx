@@ -38,15 +38,34 @@ type HeroContent = {
   buttonLink: string;
 };
 
-const categories = [
+type Category = {
+  id?: string;
+  name: string;
+  slug: string;
+  subtitle: string;
+  image: string;
+};
+
+type ApiCategory = {
+  id?: string;
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  image_url?: string | null;
+  sort_order?: number;
+};
+
+const DEFAULT_CATEGORIES: Category[] = [
   {
     name: "Sets",
+    slug: "sets",
     subtitle: "Effortless matching essentials",
     image:
       "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=900&q=85",
   },
   {
     name: "Jackets",
+    slug: "jackets",
     subtitle: "The finishing touch",
     image:
       "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=900&q=85",
@@ -60,10 +79,71 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
+  const [categories, setCategories] =
+    useState<Category[]>(DEFAULT_CATEGORIES);
+
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
   const [heroLoaded, setHeroLoaded] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
 
+  // Load categories and their uploaded images
+  useEffect(() => {
+    let active = true;
+
+    async function loadCategories() {
+      try {
+        const response = await fetch("/api/categories", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to load categories");
+        }
+
+        const result = await response.json();
+
+        if (!active || !result.success || !Array.isArray(result.categories)) {
+          return;
+        }
+
+        const apiCategories = result.categories as ApiCategory[];
+
+        const updatedCategories = DEFAULT_CATEGORIES.map((defaultCategory) => {
+          const savedCategory = apiCategories.find(
+            (category) =>
+              category.name?.trim().toLowerCase() ===
+                defaultCategory.name.toLowerCase() ||
+              category.slug?.trim().toLowerCase() ===
+                defaultCategory.slug.toLowerCase()
+          );
+
+          return {
+            ...defaultCategory,
+            id: savedCategory?.id,
+            slug: savedCategory?.slug || defaultCategory.slug,
+            subtitle:
+              savedCategory?.description?.trim() ||
+              defaultCategory.subtitle,
+            image:
+              savedCategory?.image_url?.trim() ||
+              defaultCategory.image,
+          };
+        });
+
+        setCategories(updatedCategories);
+      } catch (error) {
+        console.error("TALA categories loading error:", error);
+      }
+    }
+
+    loadCategories();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Load hero slides
   useEffect(() => {
     let active = true;
 
@@ -111,6 +191,7 @@ export default function HomePage() {
     };
   }, []);
 
+  // Automatic hero slider
   useEffect(() => {
     if (!heroLoaded || heroSlides.length <= 1) return;
 
@@ -121,6 +202,7 @@ export default function HomePage() {
     return () => window.clearInterval(interval);
   }, [heroLoaded, heroSlides.length]);
 
+  // Load products
   useEffect(() => {
     let active = true;
 
@@ -320,7 +402,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {categories.map((category, index) => (
             <motion.div
-              key={category.name}
+              key={category.slug}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -331,6 +413,7 @@ export default function HomePage() {
                 src={category.image}
                 alt={category.name}
                 className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                loading="lazy"
               />
 
               <div className="absolute inset-0 bg-black/20" />
@@ -345,7 +428,9 @@ export default function HomePage() {
                 </p>
 
                 <Link
-                  href="/categories"
+                  href={`/products?category=${encodeURIComponent(
+                    category.slug
+                  )}`}
                   className="mt-5 inline-block border-b border-white pb-2 text-[10px] tracking-[3px]"
                 >
                   EXPLORE
