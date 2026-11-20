@@ -214,12 +214,35 @@ export default function ContactPage() {
 
     setIsSubmitting(true);
 
-    // The form is validated locally.
-    // Connect an API or email service before enabling real message delivery.
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    try {
+      const payload = new FormData();
+      payload.append("name", form.name.trim());
+      payload.append("email", form.email.trim());
+      payload.append("phone", form.phone.trim());
+      payload.append("subject", form.subject);
+      payload.append("orderNumber", form.orderNumber.trim());
+      payload.append("message", form.message.trim());
+      if (attachment) payload.append("attachment", attachment);
 
-    setIsSubmitting(false);
-    setSubmitted(true);
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        body: payload,
+      });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || "We could not send your message. Please try again.");
+      }
+
+      setSubmitted(true);
+    } catch (error) {
+      setErrors((previous) => ({
+        ...previous,
+        message: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -527,8 +550,8 @@ export default function ContactPage() {
                     Thank you.
                   </h3>
                   <p className="mt-5 max-w-sm text-sm leading-7 text-[#82796d]">
-                    Your information passed the local form validation. This
-                    demo does not send your message to TALA yet.
+                    Your message has been received by TALA. Our team can review
+                    your inquiry and get back to you using the contact details provided.
                   </p>
                   <button
                     type="button"
@@ -795,8 +818,7 @@ export default function ContactPage() {
                       </button>
 
                       <p className="text-center text-[9px] leading-5 text-[#a69a8a]">
-                        Demo form: information is validated locally and is not
-                        transmitted or stored.
+                        Your message is securely submitted to TALA for review.
                       </p>
                     </div>
                   </form>
