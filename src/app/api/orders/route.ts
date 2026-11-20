@@ -89,6 +89,11 @@ export async function POST(request: NextRequest) {
 
     const rawCustomer = body.customer;
     const rawItems = body.items;
+    const couponCode = cleanString(body.couponCode).toUpperCase();
+
+    if (couponCode && couponCode !== "TALA10") {
+      return errorResponse("This coupon code is not valid.", 400);
+    }
 
     if (
       !isRecord(rawCustomer) ||
@@ -173,6 +178,7 @@ export async function POST(request: NextRequest) {
       {
         p_customer: customer,
         p_items: cleanItems,
+        p_coupon_code: couponCode || null,
       } as never
     );
 
@@ -201,7 +207,8 @@ export async function POST(request: NextRequest) {
       if (
         message.includes("CUSTOMER_DETAILS_REQUIRED") ||
         message.includes("EMPTY_ORDER") ||
-        message.includes("INVALID_QUANTITY")
+        message.includes("INVALID_QUANTITY") ||
+        message.includes("INVALID_COUPON")
       ) {
         return errorResponse(
           "Please check your order information.",
