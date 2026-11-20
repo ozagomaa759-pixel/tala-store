@@ -20,7 +20,19 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("categories")
-      .select("id, name, slug, description, image_url, sort_order")
+      .select(`
+        id,
+        name,
+        slug,
+        description,
+        image_url,
+        mobile_image_url,
+        eyebrow,
+        headline,
+        button_text,
+        button_link,
+        sort_order
+      `)
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
 
