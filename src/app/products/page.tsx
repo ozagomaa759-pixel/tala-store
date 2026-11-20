@@ -2546,6 +2546,8 @@ function ProductsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const category = params.get("category")?.trim().toLowerCase();
+    const initialSearch = params.get("q")?.trim() ?? "";
+
     const initialCategory: ProductCategory =
       category === "sets"
         ? "Sets"
@@ -2555,6 +2557,7 @@ function ProductsPage() {
 
     setPageCategory(initialCategory);
     setSelectedCategory(initialCategory);
+    setSearch(initialSearch);
   }, []);
 
   const [sortBy, setSortBy] =
