@@ -16,7 +16,10 @@ export async function GET() {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createClient(
+      supabaseUrl,
+      supabaseAnonKey
+    );
 
     const { data, error } = await supabase
       .from("categories")
@@ -27,13 +30,17 @@ export async function GET() {
         description,
         image_url,
         mobile_image_url,
-        eyebrow,
+        subtitle,
         headline,
         button_text,
         button_link,
+        overlay_opacity,
+        show_on_homepage,
+        is_active,
         sort_order
       `)
       .eq("is_active", true)
+      .eq("show_on_homepage", true)
       .order("sort_order", { ascending: true });
 
     if (error) {
@@ -46,7 +53,10 @@ export async function GET() {
     }
 
     return NextResponse.json(
-      { success: true, categories: data ?? [] },
+      {
+        success: true,
+        categories: data ?? [],
+      },
       {
         headers: {
           "Cache-Control": "no-store, max-age=0",
