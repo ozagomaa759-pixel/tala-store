@@ -25,6 +25,7 @@ import {
   Trash2,
   Star,
   Archive,
+  Sparkles,
 } from "lucide-react";
 
 type Category = {
@@ -106,7 +107,9 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editingProductId, setEditingProductId] = useState<string | null>(
+    null
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,6 +119,7 @@ export default function AdminProductsPage() {
   const [price, setPrice] = useState("");
   const [compareAtPrice, setCompareAtPrice] = useState("");
   const [status, setStatus] = useState("draft");
+  const [isBestSeller, setIsBestSeller] = useState(false);
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
@@ -192,6 +196,7 @@ export default function AdminProductsPage() {
     setPrice("");
     setCompareAtPrice("");
     setStatus("draft");
+    setIsBestSeller(false);
 
     setVariants(DEFAULT_VARIANTS.map((variant) => ({ ...variant })));
     setDeletedVariantIds([]);
@@ -229,6 +234,7 @@ export default function AdminProductsPage() {
         type: "error",
         text: "Use JPG, PNG, WEBP, or AVIF images only.",
       });
+      event.target.value = "";
       return;
     }
 
@@ -237,6 +243,7 @@ export default function AdminProductsPage() {
         type: "error",
         text: "Each image must be 5 MB or smaller.",
       });
+      event.target.value = "";
       return;
     }
 
@@ -270,7 +277,8 @@ export default function AdminProductsPage() {
 
     if (!response.ok || !data.success || !data.url) {
       throw new Error(
-        data.error || `Could not upload "${file.name}" (HTTP ${response.status}).`
+        data.error ||
+          `Could not upload "${file.name}" (HTTP ${response.status}).`
       );
     }
 
@@ -322,6 +330,7 @@ export default function AdminProductsPage() {
           : String(product.compare_at_price)
       );
       setStatus(product.status || "draft");
+      setIsBestSeller(Boolean(product.is_best_seller));
 
       setImageUrls(existingImages);
       setMainImage(
@@ -334,21 +343,23 @@ export default function AdminProductsPage() {
       setDeletedVariantIds([]);
 
       const loadedVariants: Variant[] = Array.isArray(data.variants)
-        ? data.variants.map((variant: {
-            id: string;
-            size: string | null;
-            color: string | null;
-            color_code: string | null;
-            stock_quantity: number;
-            is_active: boolean;
-          }) => ({
-            id: variant.id,
-            size: variant.size || "",
-            color: variant.color || "Black",
-            color_code: variant.color_code || "#222222",
-            stock_quantity: Number(variant.stock_quantity ?? 0),
-            is_active: variant.is_active !== false,
-          }))
+        ? data.variants.map(
+            (variant: {
+              id: string;
+              size: string | null;
+              color: string | null;
+              color_code: string | null;
+              stock_quantity: number;
+              is_active: boolean;
+            }) => ({
+              id: variant.id,
+              size: variant.size || "",
+              color: variant.color || "Black",
+              color_code: variant.color_code || "#222222",
+              stock_quantity: Number(variant.stock_quantity ?? 0),
+              is_active: variant.is_active !== false,
+            })
+          )
         : [];
 
       setVariants(loadedVariants);
@@ -403,9 +414,7 @@ export default function AdminProductsPage() {
       setDeletedVariantIds((current) => [...current, variant.id!]);
     }
 
-    setVariants((current) =>
-      current.filter((_, i) => i !== index)
-    );
+    setVariants((current) => current.filter((_, i) => i !== index));
   }
 
   function removeImage(url: string) {
@@ -531,7 +540,8 @@ export default function AdminProductsPage() {
     ) {
       setNotice({
         type: "error",
-        text: "Add at least one valid size and enter a stock quantity of zero or more.",
+        text:
+          "Add at least one valid size and enter a stock quantity of zero or more.",
       });
       return;
     }
@@ -549,7 +559,11 @@ export default function AdminProductsPage() {
       return;
     }
 
-    if (editingProductId && imageUrls.length === 0 && selectedFiles.length === 0) {
+    if (
+      editingProductId &&
+      imageUrls.length === 0 &&
+      selectedFiles.length === 0
+    ) {
       setNotice({
         type: "error",
         text: "A product must have at least one image.",
@@ -583,6 +597,7 @@ export default function AdminProductsPage() {
             price: numericPrice,
             compare_at_price: numericComparePrice,
             status,
+            is_best_seller: isBestSeller,
           }),
         });
 
@@ -608,7 +623,7 @@ export default function AdminProductsPage() {
             images: [],
             status,
             is_featured: false,
-            is_best_seller: false,
+            is_best_seller: isBestSeller,
             is_new_arrival: true,
             sort_order: 0,
           }),
@@ -700,8 +715,8 @@ export default function AdminProductsPage() {
       setNotice({
         type: "success",
         text: editingProductId
-          ? "Product, photos, sizes, and stock updated successfully."
-          : "Product, photos, sizes, and stock created successfully.",
+          ? "Product, photos, sizes, stock, and bestseller setting updated successfully."
+          : "Product, photos, sizes, stock, and bestseller setting created successfully.",
       });
 
       setShowForm(false);
@@ -775,6 +790,51 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function toggleBestSeller(product: Product) {
+    const nextValue = !product.is_best_seller;
+
+    setNotice(null);
+    setSaving(true);
+
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: product.id,
+          is_best_seller: nextValue,
+        }),
+      });
+
+      const data = await readJson(response);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(
+          data.error || "Could not update bestseller selection."
+        );
+      }
+
+      setNotice({
+        type: "success",
+        text: nextValue
+          ? `${product.name} is now marked as a Bestseller.`
+          : `${product.name} is no longer marked as a Bestseller.`,
+      });
+
+      await loadData();
+    } catch (error) {
+      setNotice({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Could not update bestseller selection.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function deleteProduct(product: Product) {
     const confirmed = window.confirm(
       `Are you sure you want to permanently delete "${product.name}"? This action cannot be undone.`
@@ -832,6 +892,10 @@ export default function AdminProductsPage() {
     (product) => product.status === "archived"
   );
 
+  const bestSellerCount = filteredProducts.filter(
+    (product) => product.is_best_seller
+  ).length;
+
   function ProductImage({ product }: { product: Product }) {
     const image = product.main_image || product.images?.[0];
 
@@ -868,7 +932,16 @@ export default function AdminProductsPage() {
         <ProductImage product={product} />
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm">{product.name}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-sm">{product.name}</h3>
+
+            {product.is_best_seller && (
+              <span className="inline-flex items-center gap-1 border border-[#D8C6A8] bg-[#F8F3E9] px-2 py-1 text-[9px] uppercase tracking-wider text-[#806744]">
+                <Star size={10} fill="currentColor" />
+                Bestseller
+              </span>
+            )}
+          </div>
 
           <p className="mt-1 text-xs text-[#8A7969]">
             EGP {Number(product.price || 0).toLocaleString("en-EG")}
@@ -884,6 +957,23 @@ export default function AdminProductsPage() {
         </div>
 
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void toggleBestSeller(product)}
+            className={`inline-flex items-center gap-2 border px-3 py-2 text-[10px] uppercase tracking-wider disabled:opacity-50 ${
+              product.is_best_seller
+                ? "border-[#D8C6A8] bg-[#F8F3E9] text-[#806744]"
+                : "border-[#BCA995] text-[#59483B]"
+            }`}
+          >
+            <Star
+              size={13}
+              fill={product.is_best_seller ? "currentColor" : "none"}
+            />
+            {product.is_best_seller ? "Remove Bestseller" : "Make Bestseller"}
+          </button>
+
           <button
             type="button"
             disabled={saving}
@@ -992,6 +1082,36 @@ export default function AdminProductsPage() {
             {showForm ? <X size={16} /> : <Plus size={16} />}
             {showForm ? "Close Form" : "Add Product"}
           </button>
+        </div>
+
+        <div className="mt-7 grid gap-3 sm:grid-cols-3">
+          <div className="border border-[#E5DACE] bg-white/80 p-4">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[#9B8A7A]">
+              Total products
+            </p>
+            <p className="mt-2 text-2xl font-light">
+              {products.length}
+            </p>
+          </div>
+
+          <div className="border border-[#E5DACE] bg-white/80 p-4">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[#9B8A7A]">
+              Published
+            </p>
+            <p className="mt-2 text-2xl font-light">
+              {products.filter((product) => product.status === "published").length}
+            </p>
+          </div>
+
+          <div className="border border-[#D8C6A8] bg-[#F8F3E9] p-4">
+            <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[#806744]">
+              <Star size={12} fill="currentColor" />
+              Bestsellers
+            </p>
+            <p className="mt-2 text-2xl font-light text-[#59483B]">
+              {bestSellerCount}
+            </p>
+          </div>
         </div>
 
         {notice && (
@@ -1125,6 +1245,48 @@ export default function AdminProductsPage() {
                   placeholder="Describe the fabric, fit, and details..."
                 />
               </label>
+            </div>
+
+            <div className="mt-7 border border-[#D8C6A8] bg-[#FBF8F1] p-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#F0E7D8] text-[#806744]">
+                    <Sparkles size={19} />
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-[#59483B]">
+                      Bestseller selection
+                    </p>
+                    <p className="mt-1 max-w-md text-xs leading-5 text-[#8A7969]">
+                      Highlight this product as one of TALA's bestsellers.
+                      You can change this setting whenever you want.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex cursor-pointer items-center gap-3">
+                  <span className="text-[10px] uppercase tracking-[0.15em] text-[#806744]">
+                    {isBestSeller ? "Selected" : "Not selected"}
+                  </span>
+
+                  <input
+                    type="checkbox"
+                    checked={isBestSeller}
+                    onChange={(event) =>
+                      setIsBestSeller(event.target.checked)
+                    }
+                    className="h-5 w-5 accent-[#806744]"
+                  />
+                </label>
+              </div>
+
+              {isBestSeller && (
+                <div className="mt-4 inline-flex items-center gap-2 border border-[#D8C6A8] bg-white px-3 py-2 text-[10px] uppercase tracking-wider text-[#806744]">
+                  <Star size={12} fill="currentColor" />
+                  This product is marked as a Bestseller
+                </div>
+              )}
             </div>
 
             <div className="mt-8 border-t border-[#E5DACE] pt-7">
@@ -1425,7 +1587,6 @@ export default function AdminProductsPage() {
           </form>
         )}
 
-        {/* Search and refresh */}
         <div className="mt-9 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
@@ -1471,7 +1632,6 @@ export default function AdminProductsPage() {
           </div>
         ) : (
           <div className="mt-7 space-y-7">
-            {/* Published products */}
             <section className="border border-[#E5DACE] bg-white/70">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
                 <div>
@@ -1516,7 +1676,6 @@ export default function AdminProductsPage() {
               )}
             </section>
 
-            {/* Draft products */}
             <section className="border border-[#D9CCBE] bg-white/70">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
                 <div>
@@ -1569,7 +1728,6 @@ export default function AdminProductsPage() {
               )}
             </section>
 
-            {/* Archived products */}
             {archivedProducts.length > 0 && (
               <section className="border border-[#E5DACE] bg-white/70">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
