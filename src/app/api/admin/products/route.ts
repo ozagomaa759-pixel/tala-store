@@ -4,11 +4,19 @@ import { requireAdmin } from "@/lib/supabase/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const ALLOWED_STATUSES = ["draft", "published", "archived"] as const;
 
+type ProductStatus = (typeof ALLOWED_STATUSES)[number];
+
+type ProductUpdate = Record<string, unknown>;
+
 function errorResponse(error: string, status = 400) {
-  return NextResponse.json({ success: false, error }, { status });
+  return NextResponse.json(
+    { success: false, error },
+    { status }
+  );
 }
 
 function makeSlug(value: string) {
@@ -29,15 +37,50 @@ function isValidPrice(value: unknown): value is number {
   );
 }
 
-function isValidStatus(
-  value: unknown
-): value is (typeof ALLOWED_STATUSES)[number] {
+function isValidStatus(value: unknown): value is ProductStatus {
   return (
     typeof value === "string" &&
-    ALLOWED_STATUSES.includes(
-      value as (typeof ALLOWED_STATUSES)[number]
-    )
+    ALLOWED_STATUSES.includes(value as ProductStatus)
   );
+}
+
+function isValidBoolean(value: unknown): value is boolean {
+  return typeof value === "boolean";
+}
+
+function isValidImageUrl(value: unknown): value is string {
+  if (typeof value !== "string" || !value.trim()) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function validateImages(value: unknown): string[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  if (value.length > 20) {
+    return null;
+  }
+
+  const images: string[] = [];
+
+  for (const image of value) {
+    if (!isValidImageUrl(image)) {
+      return null;
+    }
+
+    images.push(image);
+  }
+
+  return [...new Set(images)];
 }
 
 async function authorizeAdmin() {
@@ -50,6 +93,17 @@ async function authorizeAdmin() {
   return createAdminClient();
 }
 
+async function getProductCategory(
+  db: Awaited<ReturnType<typeof createAdminClient>>,
+  categoryId: string
+) {
+  return db
+    .from("categories")
+    .select("id")
+    .eq("id", categoryId)
+    .maybeSingle();
+}
+
 // GET: Fetch products
 export async function GET(request: NextRequest) {
   try {
@@ -60,6 +114,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+
     const search = searchParams.get("search");
     const categoryId = searchParams.get("category_id");
     const status = searchParams.get("status");
@@ -72,6 +127,7 @@ export async function GET(request: NextRequest) {
 
     if (search?.trim()) {
       const value = search.trim().replace(/[%]/g, "");
+
       query = query.or(
         `name.ilike.%${value}%,slug.ilike.%${value}%`
       );
@@ -81,7 +137,11 @@ export async function GET(request: NextRequest) {
       query = query.eq("category_id", categoryId);
     }
 
-    if (status && isValidStatus(status)) {
+    if (status) {
+      if (!isValidStatus(status)) {
+        return errorResponse("Invalid product status");
+      }
+
       query = query.eq("status", status);
     }
 
@@ -89,7 +149,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("GET products error:", error);
-      return errorResponse(error.message, 500);
+      return errorResponse("Could not load products", 500);
     }
 
     return NextResponse.json({
@@ -100,7 +160,9 @@ export async function GET(request: NextRequest) {
     console.error("GET products error:", error);
 
     return errorResponse(
-      error instanceof Error ? error.message : "Internal server error",
+      error instanceof Error
+        ? error.message
+        : "Internal server error",
       500
     );
   }
@@ -117,11 +179,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return errorResponse("Invalid request body");
+    }
+
     const name =
       typeof body.name === "string" ? body.name.trim() : "";
 
-    if (!name) {
-      return errorResponse("Product name is required");
+    if (!name || name.length > 160) {
+      return errorResponse("Product name is required (maximum 160 characters)");
     }
 
     const price = Number(body.price);
@@ -150,7 +216,9 @@ export async function POST(request: NextRequest) {
       compareAtPrice !== null &&
       (!isValidPrice(compareAtPrice) || compareAtPrice < price)
     ) {
-      return errorResponse("Invalid compare-at price");
+      return errorResponse(
+        "Compare-at price must be greater than or equal to product price"
+      );
     }
 
     const status =
@@ -167,11 +235,60 @@ export async function POST(request: NextRequest) {
       return errorResponse("A product category is required");
     }
 
-    const images = Array.isArray(body.images)
-      ? body.images.filter(
-          (image: unknown) => typeof image === "string"
-        )
-      : [];
+    const { data: category, error: categoryError } =
+      await getProductCategory(db, body.category_id);
+
+    if (categoryError || !category) {
+      return errorResponse("The selected category does not exist");
+    }
+
+    const images =
+      body.images === undefined ? [] : validateImages(body.images);
+
+    if (images === null) {
+      return errorResponse("Invalid product images");
+    }
+
+    const mainImage =
+      body.main_image === null ||
+      body.main_image === undefined ||
+      body.main_image === ""
+        ? null
+        : isValidImageUrl(body.main_image)
+          ? body.main_image
+          : undefined;
+
+    if (mainImage === undefined) {
+      return errorResponse("Invalid main image URL");
+    }
+
+    if (
+      body.is_featured !== undefined &&
+      !isValidBoolean(body.is_featured)
+    ) {
+      return errorResponse("Invalid is_featured value");
+    }
+
+    if (
+      body.is_best_seller !== undefined &&
+      !isValidBoolean(body.is_best_seller)
+    ) {
+      return errorResponse("Invalid is_best_seller value");
+    }
+
+    if (
+      body.is_new_arrival !== undefined &&
+      !isValidBoolean(body.is_new_arrival)
+    ) {
+      return errorResponse("Invalid is_new_arrival value");
+    }
+
+    const sortOrder =
+      body.sort_order === undefined ? 0 : Number(body.sort_order);
+
+    if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+      return errorResponse("Invalid sort order");
+    }
 
     const productData = {
       name,
@@ -183,18 +300,13 @@ export async function POST(request: NextRequest) {
           : null,
       price,
       compare_at_price: compareAtPrice,
-      main_image:
-        typeof body.main_image === "string" && body.main_image
-          ? body.main_image
-          : null,
+      main_image: mainImage,
       images,
       status,
       is_featured: body.is_featured === true,
       is_best_seller: body.is_best_seller === true,
       is_new_arrival: body.is_new_arrival === true,
-      sort_order: Number.isInteger(Number(body.sort_order))
-        ? Number(body.sort_order)
-        : 0,
+      sort_order: sortOrder,
     };
 
     const { data, error } = await db
@@ -219,7 +331,9 @@ export async function POST(request: NextRequest) {
     console.error("POST product error:", error);
 
     return errorResponse(
-      error instanceof Error ? error.message : "Internal server error",
+      error instanceof Error
+        ? error.message
+        : "Internal server error",
       500
     );
   }
@@ -236,18 +350,23 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
 
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return errorResponse("Invalid request body");
+    }
+
     if (typeof body.id !== "string" || !body.id.trim()) {
       return errorResponse("Product ID is required");
     }
 
-    const updates: Record<string, unknown> = {
+    const updates: ProductUpdate = {
       updated_at: new Date().toISOString(),
     };
 
     if (body.name !== undefined) {
       if (
         typeof body.name !== "string" ||
-        !body.name.trim()
+        !body.name.trim() ||
+        body.name.trim().length > 160
       ) {
         return errorResponse("Invalid product name");
       }
@@ -263,7 +382,13 @@ export async function PATCH(request: NextRequest) {
         return errorResponse("Invalid product slug");
       }
 
-      updates.slug = makeSlug(body.slug);
+      const slug = makeSlug(body.slug);
+
+      if (!slug) {
+        return errorResponse("Invalid product slug");
+      }
+
+      updates.slug = slug;
     }
 
     if (body.price !== undefined) {
@@ -293,30 +418,56 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const allowedFields = [
-      "category_id",
-      "description",
-      "main_image",
-      "is_featured",
-      "is_best_seller",
-      "is_new_arrival",
-      "sort_order",
-    ] as const;
+    if (body.category_id !== undefined) {
+      if (
+        typeof body.category_id !== "string" ||
+        !body.category_id.trim()
+      ) {
+        return errorResponse("Invalid category");
+      }
 
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updates[field] = body[field];
+      const { data: category, error: categoryError } =
+        await getProductCategory(db, body.category_id);
+
+      if (categoryError || !category) {
+        return errorResponse("The selected category does not exist");
+      }
+
+      updates.category_id = body.category_id;
+    }
+
+    if (body.description !== undefined) {
+      if (
+        body.description !== null &&
+        typeof body.description !== "string"
+      ) {
+        return errorResponse("Invalid product description");
+      }
+
+      updates.description =
+        typeof body.description === "string"
+          ? body.description.trim() || null
+          : null;
+    }
+
+    if (body.main_image !== undefined) {
+      if (body.main_image === null || body.main_image === "") {
+        updates.main_image = null;
+      } else if (isValidImageUrl(body.main_image)) {
+        updates.main_image = body.main_image;
+      } else {
+        return errorResponse("Invalid main image URL");
       }
     }
 
     if (body.images !== undefined) {
-      if (!Array.isArray(body.images)) {
-        return errorResponse("Images must be an array");
+      const images = validateImages(body.images);
+
+      if (images === null) {
+        return errorResponse("Invalid product images");
       }
 
-      updates.images = body.images.filter(
-        (image: unknown) => typeof image === "string"
-      );
+      updates.images = images;
     }
 
     if (body.status !== undefined) {
@@ -327,17 +478,34 @@ export async function PATCH(request: NextRequest) {
       updates.status = body.status;
     }
 
-    for (const field of [
+    if (body.sort_order !== undefined) {
+      const sortOrder = Number(body.sort_order);
+
+      if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+        return errorResponse("Invalid sort order");
+      }
+
+      updates.sort_order = sortOrder;
+    }
+
+    const booleanFields = [
       "is_featured",
       "is_best_seller",
       "is_new_arrival",
-    ] as const) {
-      if (
-        body[field] !== undefined &&
-        typeof body[field] !== "boolean"
-      ) {
-        return errorResponse(`Invalid ${field} value`);
+    ] as const;
+
+    for (const field of booleanFields) {
+      if (body[field] !== undefined) {
+        if (!isValidBoolean(body[field])) {
+          return errorResponse(`Invalid ${field} value`);
+        }
+
+        updates[field] = body[field];
       }
+    }
+
+    if (Object.keys(updates).length === 1) {
+      return errorResponse("No valid product changes were provided");
     }
 
     const { data, error } = await db
@@ -345,11 +513,15 @@ export async function PATCH(request: NextRequest) {
       .update(updates as never)
       .eq("id", body.id)
       .select("*")
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("PATCH product error:", error);
       return errorResponse(error.message, 500);
+    }
+
+    if (!data) {
+      return errorResponse("Product not found", 404);
     }
 
     return NextResponse.json({
@@ -360,7 +532,9 @@ export async function PATCH(request: NextRequest) {
     console.error("PATCH product error:", error);
 
     return errorResponse(
-      error instanceof Error ? error.message : "Internal server error",
+      error instanceof Error
+        ? error.message
+        : "Internal server error",
       500
     );
   }
@@ -378,18 +552,24 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
-    if (!id) {
+    if (!id?.trim()) {
       return errorResponse("Product ID is required");
     }
 
-    const { error } = await db
+    const { data, error } = await db
       .from("products")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       console.error("DELETE product error:", error);
       return errorResponse(error.message, 500);
+    }
+
+    if (!data) {
+      return errorResponse("Product not found", 404);
     }
 
     return NextResponse.json({
@@ -400,7 +580,9 @@ export async function DELETE(request: NextRequest) {
     console.error("DELETE product error:", error);
 
     return errorResponse(
-      error instanceof Error ? error.message : "Internal server error",
+      error instanceof Error
+        ? error.message
+        : "Internal server error",
       500
     );
   }
