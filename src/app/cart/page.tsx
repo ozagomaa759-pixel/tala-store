@@ -56,6 +56,12 @@ export default function CartPage() {
 
     syncCart();
 
+    const savedCoupon = window.localStorage.getItem("tala-coupon-code") || "";
+    if (savedCoupon === "TALA10") {
+      setCoupon(savedCoupon);
+      setCouponApplied(true);
+    }
+
     window.addEventListener("tala-cart-updated", syncCart);
     window.addEventListener("storage", syncCart);
 
@@ -114,6 +120,7 @@ export default function CartPage() {
     clearStoredCart();
     setItems([]);
     setCouponApplied(false);
+    window.localStorage.removeItem("tala-coupon-code");
     setCoupon("");
     setCouponError("");
     setShowClearConfirm(false);
@@ -129,10 +136,12 @@ export default function CartPage() {
     }
 
     if (coupon.trim().toUpperCase() === "TALA10") {
+      window.localStorage.setItem("tala-coupon-code", "TALA10");
       setCouponApplied(true);
       setCouponError("");
       setNotice("Coupon applied successfully!");
     } else {
+      window.localStorage.removeItem("tala-coupon-code");
       setCouponApplied(false);
       setCouponError("This coupon code is not valid.");
     }
