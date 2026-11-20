@@ -1259,7 +1259,7 @@ export default function AdminProductsPage() {
                       Bestseller selection
                     </p>
                     <p className="mt-1 max-w-md text-xs leading-5 text-[#8A7969]">
-                      Highlight this product as one of TALA's bestsellers.
+                      Highlight this product as one of TALA&apos;s bestsellers.
                       You can change this setting whenever you want.
                     </p>
                   </div>
