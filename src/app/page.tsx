@@ -1,12 +1,12 @@
-“use client”;
+"use client";
 
-import { useEffect, useState } from “react”;
+import { useEffect, useState } from "react";
 import {
 AnimatePresence,
 motion,
 useReducedMotion,
-} from “framer-motion”;
-import Link from “next/link”;
+} from "framer-motion";
+import Link from "next/link";
 import {
 ArrowDown,
 ArrowRight,
@@ -14,11 +14,11 @@ Instagram,
 Menu,
 ShoppingBag,
 X,
-} from “lucide-react”;
+} from "lucide-react";
 
-import { useCartCount } from “@/lib/tala-cart”;
-import { getTalaProducts } from “@/lib/tala-products”;
-import type { Product } from “@/data/products”;
+import { useCartCount } from "@/lib/tala-cart";
+import { getTalaProducts } from "@/lib/tala-products";
+import type { Product } from "@/data/products";
 
 type HeroSlide = {
 id: string;
@@ -91,14 +91,14 @@ ease: EASE,
 };
 
 const FALLBACK_HERO: HeroContent = {
-id: “tala-default-hero”,
-title: “TALA”,
-subtitle: “THE ART OF EVERYDAY ELEGANCE”,
-description: “”,
-image: “”,
+id: "tala-default-hero",
+title: "TALA",
+subtitle: "THE ART OF EVERYDAY ELEGANCE",
+description: "",
+image: "",
 mobileImage: null,
-buttonText: “EXPLORE COLLECTION”,
-buttonLink: “/products”,
+buttonText: "EXPLORE COLLECTION",
+buttonLink: "/products",
 };
 
 export default function HomePage() {
@@ -121,16 +121,16 @@ const activeHero = heroSlides[heroIndex];
 const hero: HeroContent | null = activeHero
 ? {
 id: activeHero.id,
-title: activeHero.title?.trim() || “TALA”,
+title: activeHero.title?.trim() || "TALA",
 subtitle:
 activeHero.subtitle?.trim() ||
-“THE ART OF EVERYDAY ELEGANCE”,
-description: activeHero.description?.trim() || “”,
+"THE ART OF EVERYDAY ELEGANCE",
+description: activeHero.description?.trim() || "",
 image: activeHero.image_url,
 mobileImage: activeHero.mobile_image_url,
 buttonText:
-activeHero.button_text?.trim() || “EXPLORE COLLECTION”,
-buttonLink: activeHero.button_link || “/products”,
+activeHero.button_text?.trim() || "EXPLORE COLLECTION",
+buttonLink: activeHero.button_link || "/products",
 }
 : heroLoaded
 ? FALLBACK_HERO
