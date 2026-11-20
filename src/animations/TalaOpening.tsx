@@ -36,7 +36,7 @@ export default function TalaOpening() {
         } catch {
           // Opening experience still works without storage.
         }
-      }, reducedMotion ? 300 : 2600);
+      }, reducedMotion ? 300 : 1600);
 
       return () => window.clearTimeout(timer);
     } catch {
