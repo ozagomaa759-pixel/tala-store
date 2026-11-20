@@ -52,7 +52,7 @@ export default function AnimationProvider({
           reducedMotion
             ? { duration: 0 }
             : {
-                duration: 0.65,
+                duration: 0.4,
                 ease: TALA_EASE,
               }
         }
