@@ -4,6 +4,7 @@ import "./globals.css";
 import "./tala-pages.css";
 
 import AnimationProvider from "@/animations/AnimationProvider";
+import TalaOpening from "@/animations/TalaOpening";
 
 export const metadata: Metadata = {
   title: {
@@ -33,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <TalaOpening />
         <AnimationProvider>
           {children}
         </AnimationProvider>
