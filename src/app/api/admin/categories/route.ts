@@ -25,11 +25,22 @@ function makeSlug(value: string) {
 async function getAdminDatabase() {
   const auth = await requireAdmin();
 
-  if (!auth.authorized) {
-    return null;
-  }
+  if (!auth.authorized) return null;
 
   return createAdminClient();
+}
+
+function optionalText(value: unknown, fallback = "") {
+  return typeof value === "string" ? value.trim() : fallback;
+}
+
+function validOpacity(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 100
+  );
 }
 
 export async function GET() {
@@ -46,9 +57,7 @@ export async function GET() {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
 
-    if (error) {
-      return errorResponse(error.message, 500);
-    }
+    if (error) return errorResponse(error.message, 500);
 
     return NextResponse.json({
       success: true,
@@ -72,37 +81,42 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const name =
-      typeof body.name === "string" ? body.name.trim() : "";
+    const name = optionalText(body.name);
 
     if (!name) {
       return errorResponse("Category name is required");
     }
 
-    const slug =
-      typeof body.slug === "string" && body.slug.trim()
-        ? makeSlug(body.slug)
-        : makeSlug(name);
+    const slug = makeSlug(
+      optionalText(body.slug) || name
+    );
 
     if (!slug) {
       return errorResponse("A valid category slug is required");
     }
 
+    const opacity = validOpacity(body.overlay_opacity)
+      ? body.overlay_opacity
+      : 20;
+
     const category = {
       name,
       slug,
-      description:
-        typeof body.description === "string"
-          ? body.description
-          : "",
-      image_url:
-        typeof body.image_url === "string" && body.image_url.trim()
-          ? body.image_url.trim()
-          : null,
+      description: optionalText(body.description),
+      image_url: optionalText(body.image_url) || null,
+      mobile_image_url: optionalText(body.mobile_image_url) || null,
+      subtitle: optionalText(body.subtitle),
+      headline: optionalText(body.headline),
+      button_text: optionalText(body.button_text, "EXPLORE"),
+      button_link: optionalText(body.button_link) || `/products?category=${slug}`,
+      overlay_opacity: opacity,
+      show_on_homepage: body.show_on_homepage !== false,
       is_active: body.is_active !== false,
-      sort_order: Number.isInteger(body.sort_order)
-        ? body.sort_order
-        : 0,
+      sort_order:
+        typeof body.sort_order === "number" &&
+        Number.isInteger(body.sort_order)
+          ? body.sort_order
+          : 0,
     };
 
     const { data, error } = await supabase
@@ -111,9 +125,7 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) {
-      return errorResponse(error.message, 400);
-    }
+    if (error) return errorResponse(error.message, 400);
 
     return NextResponse.json(
       { success: true, category: data },
@@ -144,13 +156,9 @@ export async function PATCH(request: NextRequest) {
     const updates: Record<string, unknown> = {};
 
     if (body.name !== undefined) {
-      if (
-        typeof body.name !== "string" ||
-        !body.name.trim()
-      ) {
+      if (typeof body.name !== "string" || !body.name.trim()) {
         return errorResponse("Invalid category name");
       }
-
       updates.name = body.name.trim();
     }
 
@@ -161,41 +169,49 @@ export async function PATCH(request: NextRequest) {
 
       const slug = makeSlug(body.slug);
 
-      if (!slug) {
-        return errorResponse("Invalid category slug");
-      }
+      if (!slug) return errorResponse("Invalid category slug");
 
       updates.slug = slug;
     }
 
-    if (body.description !== undefined) {
-      if (
-        body.description !== null &&
-        typeof body.description !== "string"
-      ) {
-        return errorResponse("Invalid description");
+    const textFields = [
+      "description",
+      "subtitle",
+      "headline",
+      "button_text",
+      "button_link",
+      "image_url",
+      "mobile_image_url",
+    ] as const;
+
+    for (const field of textFields) {
+      if (body[field] !== undefined) {
+        if (
+          body[field] !== null &&
+          typeof body[field] !== "string"
+        ) {
+          return errorResponse(`Invalid ${field}`);
+        }
+
+        updates[field] =
+          typeof body[field] === "string"
+            ? body[field].trim() || null
+            : null;
       }
-
-      updates.description = body.description;
-    }
-
-    if (body.image_url !== undefined) {
-      if (
-        body.image_url !== null &&
-        typeof body.image_url !== "string"
-      ) {
-        return errorResponse("Invalid image URL");
-      }
-
-      updates.image_url = body.image_url;
     }
 
     if (body.is_active !== undefined) {
       if (typeof body.is_active !== "boolean") {
         return errorResponse("Invalid active status");
       }
-
       updates.is_active = body.is_active;
+    }
+
+    if (body.show_on_homepage !== undefined) {
+      if (typeof body.show_on_homepage !== "boolean") {
+        return errorResponse("Invalid homepage visibility");
+      }
+      updates.show_on_homepage = body.show_on_homepage;
     }
 
     if (body.sort_order !== undefined) {
@@ -205,8 +221,14 @@ export async function PATCH(request: NextRequest) {
       ) {
         return errorResponse("Invalid sort order");
       }
-
       updates.sort_order = body.sort_order;
+    }
+
+    if (body.overlay_opacity !== undefined) {
+      if (!validOpacity(body.overlay_opacity)) {
+        return errorResponse("Overlay opacity must be between 0 and 100");
+      }
+      updates.overlay_opacity = body.overlay_opacity;
     }
 
     updates.updated_at = new Date().toISOString();
@@ -218,9 +240,7 @@ export async function PATCH(request: NextRequest) {
       .select()
       .single();
 
-    if (error) {
-      return errorResponse(error.message, 400);
-    }
+    if (error) return errorResponse(error.message, 400);
 
     if (!data) {
       return errorResponse("Category not found", 404);
@@ -248,7 +268,7 @@ export async function DELETE(request: NextRequest) {
 
     const id = request.nextUrl.searchParams.get("id");
 
-    if (!id || !id.trim()) {
+    if (!id?.trim()) {
       return errorResponse("Category ID is required");
     }
 
@@ -257,9 +277,7 @@ export async function DELETE(request: NextRequest) {
       .delete()
       .eq("id", id);
 
-    if (error) {
-      return errorResponse(error.message, 400);
-    }
+    if (error) return errorResponse(error.message, 400);
 
     return NextResponse.json({
       success: true,
