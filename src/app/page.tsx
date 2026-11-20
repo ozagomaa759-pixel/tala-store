@@ -10,6 +10,7 @@ import {
   Instagram,
   Menu,
   ShoppingBag,
+  X,
 } from "lucide-react";
 
 import { useCartCount } from "@/lib/tala-cart";
@@ -39,11 +40,18 @@ type HeroContent = {
 };
 
 type Category = {
-  id?: string;
+  id: string;
   name: string;
   slug: string;
+  description: string;
+  image_url: string | null;
+  mobile_image_url: string | null;
   subtitle: string;
-  image: string;
+  headline: string;
+  button_text: string;
+  button_link: string;
+  overlay_opacity: number;
+  sort_order: number;
 };
 
 type ApiCategory = {
@@ -52,25 +60,14 @@ type ApiCategory = {
   slug?: string;
   description?: string | null;
   image_url?: string | null;
+  mobile_image_url?: string | null;
+  subtitle?: string | null;
+  headline?: string | null;
+  button_text?: string | null;
+  button_link?: string | null;
+  overlay_opacity?: number | null;
   sort_order?: number;
 };
-
-const DEFAULT_CATEGORIES: Category[] = [
-  {
-    name: "Sets",
-    slug: "sets",
-    subtitle: "Effortless matching essentials",
-    image:
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=900&q=85",
-  },
-  {
-    name: "Jackets",
-    slug: "jackets",
-    subtitle: "The finishing touch",
-    image:
-      "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=900&q=85",
-  },
-];
 
 export default function HomePage() {
   const cartCount = useCartCount();
@@ -79,14 +76,14 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  const [categories, setCategories] =
-    useState<Category[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
   const [heroLoaded, setHeroLoaded] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
 
-  // Load categories and their uploaded images
+  // Load categories from Collection Studio
   useEffect(() => {
     let active = true;
 
@@ -110,31 +107,37 @@ export default function HomePage() {
           return;
         }
 
-        const apiCategories = result.categories as ApiCategory[];
-
-        const updatedCategories = DEFAULT_CATEGORIES.map(
-          (defaultCategory) => {
-            const savedCategory = apiCategories.find(
-              (category) =>
-                category.name?.trim().toLowerCase() ===
-                  defaultCategory.name.toLowerCase() ||
-                category.slug?.trim().toLowerCase() ===
-                  defaultCategory.slug.toLowerCase()
-            );
-
-            return {
-              ...defaultCategory,
-              id: savedCategory?.id,
-              slug: savedCategory?.slug || defaultCategory.slug,
-              subtitle:
-                savedCategory?.description?.trim() ||
-                defaultCategory.subtitle,
-              image:
-                savedCategory?.image_url?.trim() ||
-                defaultCategory.image,
-            };
-          }
-        );
+        const updatedCategories: Category[] = (
+          result.categories as ApiCategory[]
+        )
+          .filter(
+            (category) =>
+              typeof category.id === "string" &&
+              typeof category.name === "string" &&
+              typeof category.slug === "string"
+          )
+          .map((category) => ({
+            id: category.id!,
+            name: category.name!,
+            slug: category.slug!,
+            description: category.description?.trim() || "",
+            image_url: category.image_url?.trim() || null,
+            mobile_image_url:
+              category.mobile_image_url?.trim() || null,
+            subtitle: category.subtitle?.trim() || "",
+            headline: category.headline?.trim() || "",
+            button_text:
+              category.button_text?.trim() || "EXPLORE",
+            button_link:
+              category.button_link?.trim() ||
+              `/products?category=${encodeURIComponent(category.slug!)}`,
+            overlay_opacity:
+              typeof category.overlay_opacity === "number"
+                ? Math.min(100, Math.max(0, category.overlay_opacity))
+                : 20,
+            sort_order: category.sort_order ?? 0,
+          }))
+          .sort((a, b) => a.sort_order - b.sort_order);
 
         setCategories(updatedCategories);
       } catch (error) {
@@ -293,18 +296,24 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#f4f0e9] text-[#292521]">
       {/* ANNOUNCEMENT */}
-      <div className="relative z-30 bg-[#292521] px-4 py-2.5 text-center text-[9px] tracking-[3px] text-white sm:text-[10px]">
+      <div className="relative z-40 bg-[#292521] px-4 py-2.5 text-center text-[9px] tracking-[3px] text-white sm:text-[10px]">
         DISCOVER THE NEW TALA COLLECTION
       </div>
 
       {/* HEADER */}
-      <header className="absolute left-0 top-[34px] z-30 flex w-full items-center justify-between px-5 py-7 text-white sm:px-8 md:px-14 md:py-9">
+      <header className="absolute left-0 top-[34px] z-40 flex w-full items-center justify-between px-5 py-7 text-white sm:px-8 md:px-14 md:py-9">
         <button
           type="button"
-          aria-label="Open menu"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((current) => !current)}
           className="transition-opacity hover:opacity-60"
         >
-          <Menu size={23} strokeWidth={1.2} />
+          {menuOpen ? (
+            <X size={23} strokeWidth={1.2} />
+          ) : (
+            <Menu size={23} strokeWidth={1.2} />
+          )}
         </button>
 
         <Link
@@ -330,9 +339,58 @@ export default function HomePage() {
         </Link>
       </header>
 
-      {/* ULTRA LUXURY EDITORIAL HERO */}
+      {/* NAVIGATION MENU */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-x-0 top-0 z-30 bg-[#f4f0e9] px-8 pb-12 pt-28 text-[#292521] shadow-xl"
+          >
+            <nav className="mx-auto flex max-w-5xl flex-col">
+              <Link
+                href="/products"
+                onClick={() => setMenuOpen(false)}
+                className="border-b border-[#d9d0c5] py-5 text-2xl font-light tracking-[3px]"
+              >
+                ALL COLLECTIONS
+              </Link>
+
+              {categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={category.button_link}
+                  onClick={() => setMenuOpen(false)}
+                  className="border-b border-[#d9d0c5] py-5 text-2xl font-light tracking-[3px]"
+                >
+                  {category.name}
+                </Link>
+              ))}
+
+              <Link
+                href="/about"
+                onClick={() => setMenuOpen(false)}
+                className="border-b border-[#d9d0c5] py-5 text-2xl font-light tracking-[3px]"
+              >
+                OUR STORY
+              </Link>
+
+              <Link
+                href="/contact"
+                onClick={() => setMenuOpen(false)}
+                className="py-5 text-2xl font-light tracking-[3px]"
+              >
+                CONTACT
+              </Link>
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* EDITORIAL HERO */}
       <section className="relative h-[calc(100svh-34px)] min-h-[650px] max-h-[1100px] overflow-hidden bg-[#75695e] text-white md:min-h-[720px]">
-        {/* Background */}
         {hero ? (
           <AnimatePresence mode="sync">
             <motion.div
@@ -365,14 +423,10 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#817568] via-[#65594f] to-[#292521]" />
         )}
 
-        {/* Cinematic overlays */}
         <div className="absolute inset-0 bg-black/10" />
-
         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/20" />
-
         <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
 
-        {/* Editorial content */}
         {hero && (
           <AnimatePresence mode="wait">
             <motion.div
@@ -418,7 +472,6 @@ export default function HomePage() {
           </AnimatePresence>
         )}
 
-        {/* Slide navigation */}
         {heroSlides.length > 1 && (
           <div className="absolute bottom-9 right-6 z-20 flex items-center gap-4 sm:bottom-12 sm:right-12 md:right-16">
             <span className="text-[10px] tracking-[3px] text-white">
@@ -448,16 +501,13 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Scroll indicator */}
         <div className="absolute bottom-9 left-6 z-20 flex items-center gap-3 text-white/80 sm:bottom-12 sm:left-12 md:left-16">
           <ArrowDown size={16} strokeWidth={1} />
-
           <span className="hidden text-[9px] uppercase tracking-[3px] sm:inline">
             Discover
           </span>
         </div>
 
-        {/* Loading indicator */}
         {!heroLoaded && (
           <div className="absolute inset-x-0 bottom-0 z-20 h-[2px] overflow-hidden bg-white/10">
             <motion.div
@@ -474,61 +524,95 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* CATEGORIES */}
-      <section className="px-5 py-24 md:px-14 md:py-32">
-        <div className="mb-14 text-center">
-          <p className="mb-4 text-[10px] tracking-[5px] text-[#a18b70]">
-            CURATED FOR YOU
-          </p>
+      {/* COLLECTION STUDIO */}
+      {categories.length > 0 && (
+        <section className="px-5 py-24 md:px-14 md:py-32">
+          <div className="mb-14 text-center">
+            <p className="mb-4 text-[10px] tracking-[5px] text-[#a18b70]">
+              CURATED FOR YOU
+            </p>
 
-          <h2 className="text-4xl font-light tracking-[5px] md:text-6xl">
-            Discover TALA
-          </h2>
+            <h2 className="text-4xl font-light tracking-[5px] md:text-6xl">
+              Discover TALA
+            </h2>
 
-          <p className="mt-5 text-sm text-[#77716a]">
-            Explore our world of timeless fashion.
-          </p>
-        </div>
+            <p className="mt-5 text-sm text-[#77716a]">
+              Explore our world of timeless fashion.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {categories.map((category, index) => (
-            <motion.div
-              key={category.slug}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.15 }}
-              className="group relative h-[470px] overflow-hidden bg-[#ded5c9]"
-            >
-              <img
-                src={category.image}
-                alt={category.name}
-                className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                loading="lazy"
-              />
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {categories.map((category, index) => (
+              <motion.div
+                key={category.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.12, duration: 0.7 }}
+                className="group relative h-[470px] overflow-hidden bg-[#ded5c9] md:h-[560px]"
+              >
+                {category.image_url && (
+                  <picture>
+                    {category.mobile_image_url && (
+                      <source
+                        media="(max-width: 767px)"
+                        srcSet={category.mobile_image_url}
+                      />
+                    )}
 
-              <div className="absolute inset-0 bg-black/20 transition duration-500 group-hover:bg-black/30" />
+                    <img
+                      src={category.image_url}
+                      alt={category.name}
+                      className="h-full w-full object-cover transition duration-1000 group-hover:scale-[1.04]"
+                      loading="lazy"
+                    />
+                  </picture>
+                )}
 
-              <div className="absolute bottom-9 left-0 w-full text-center text-white">
-                <h3 className="text-3xl font-light tracking-[4px]">
-                  {category.name}
-                </h3>
+                <div
+                  className="absolute inset-0 transition duration-700 group-hover:bg-black/10"
+                  style={{
+                    backgroundColor: `rgba(0, 0, 0, ${
+                      category.overlay_opacity / 100
+                    })`,
+                  }}
+                />
 
-                <p className="mt-3 text-xs tracking-widest">
-                  {category.subtitle}
-                </p>
+                <div className="absolute inset-x-0 bottom-0 px-6 pb-12 pt-20 text-center text-white">
+                  {category.subtitle && (
+                    <p className="mb-4 text-[9px] uppercase tracking-[4px] text-white/85">
+                      {category.subtitle}
+                    </p>
+                  )}
 
-                <Link
-                  href={`/products?category=${encodeURIComponent(category.slug)}`}
-                  className="mt-5 inline-block border-b border-white pb-2 text-[10px] tracking-[3px]"
-                >
-                  EXPLORE
-                </Link>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+                  <h3 className="text-3xl font-light tracking-[4px] sm:text-4xl">
+                    {category.headline || category.name}
+                  </h3>
+
+                  {category.description && (
+                    <p className="mx-auto mt-4 max-w-sm text-xs leading-6 tracking-wide text-white/90">
+                      {category.description}
+                    </p>
+                  )}
+
+                  <Link
+                    href={category.button_link}
+                    className="group/button mt-7 inline-flex items-center gap-4 border-b border-white/80 pb-2 text-[10px] tracking-[3px] transition-opacity hover:opacity-70"
+                  >
+                    {category.button_text}
+
+                    <ArrowRight
+                      size={14}
+                      strokeWidth={1.2}
+                      className="transition-transform duration-300 group-hover/button:translate-x-1"
+                    />
+                  </Link>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* NEW ARRIVALS */}
       <section className="bg-[#e9e2d8] px-5 py-24 md:px-14">
@@ -572,7 +656,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-7">
             {displayedProducts.map((product) => (
               <Link
-                href="/products"
+                href={`/products/${encodeURIComponent(String(product.id))}`}
                 key={product.id}
                 className="group"
               >
