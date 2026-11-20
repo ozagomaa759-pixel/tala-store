@@ -63,11 +63,16 @@ function normalizeCategory(
 ): Product["category"] | null {
   const normalized = categoryName?.trim().toLowerCase();
 
-  if (normalized === "sets") {
+  if (!normalized) return null;
+
+  if (normalized === "sets" || normalized === "set") {
     return "Sets";
   }
 
-  if (normalized === "jackets") {
+  if (
+    normalized === "jackets" ||
+    normalized === "jacket"
+  ) {
     return "Jackets";
   }
 
@@ -83,10 +88,37 @@ function normalizeImages(
     ...(Array.isArray(images) ? images : []),
   ].filter(
     (image): image is string =>
-      typeof image === "string" && image.trim().length > 0
+      typeof image === "string" &&
+      image.trim().length > 0
   );
 
   return [...new Set(allImages)];
+}
+
+function normalizePrice(value: number | string | null | undefined): number {
+  const price = Number(value ?? 0);
+
+  return Number.isFinite(price) && price >= 0 ? price : 0;
+}
+
+function normalizeVariant(
+  variant: VariantRow
+): ProductVariantStock {
+  return {
+    id: variant.id,
+    size: variant.size ?? "",
+    color: variant.color ?? "Default",
+    color_code: variant.color_code ?? null,
+    stock_quantity: Math.max(
+      0,
+      Number(variant.stock_quantity ?? 0)
+    ),
+    price_override:
+      variant.price_override == null
+        ? null
+        : normalizePrice(variant.price_override),
+    is_active: variant.is_active !== false,
+  };
 }
 
 export async function getTalaProducts(): Promise<Product[]> {
@@ -132,20 +164,7 @@ export async function getTalaProducts(): Promise<Product[]> {
     const current =
       variantsByProduct.get(variant.product_id) ?? [];
 
-    current.push({
-      id: variant.id,
-      size: variant.size ?? "",
-      color: variant.color ?? "Default",
-      color_code: variant.color_code ?? null,
-      stock_quantity: Number(
-        variant.stock_quantity ?? 0
-      ),
-      price_override:
-        variant.price_override == null
-          ? null
-          : Number(variant.price_override),
-      is_active: true,
-    });
+    current.push(normalizeVariant(variant));
 
     variantsByProduct.set(
       variant.product_id,
@@ -153,20 +172,24 @@ export async function getTalaProducts(): Promise<Product[]> {
     );
   }
 
-  return products.flatMap((product): Product[] => {
-    const category = normalizeCategory(
-      categoryMap.get(product.category_id ?? "")
+  return products.map((product): Product => {
+    const categoryName = categoryMap.get(
+      product.category_id ?? ""
     );
 
-    // تجاهل المنتجات التي لا تنتمي إلى Sets أو Jackets
-    if (!category) {
-      return [];
-    }
+    const category =
+      normalizeCategory(categoryName) ?? "Sets";
 
     const productVariants =
       variantsByProduct.get(product.id) ?? [];
 
-    const availableVariants = productVariants.filter(
+    // نعرض كل المقاسات والألوان النشطة،
+    // حتى لو المخزون الخاص بها أصبح صفراً.
+    const activeVariants = productVariants.filter(
+      (variant) => variant.is_active
+    );
+
+    const availableVariants = activeVariants.filter(
       (variant) => variant.stock_quantity > 0
     );
 
@@ -177,7 +200,7 @@ export async function getTalaProducts(): Promise<Product[]> {
 
     const uniqueSizes = [
       ...new Set(
-        availableVariants
+        activeVariants
           .map((variant) => variant.size.trim())
           .filter(Boolean)
       ),
@@ -185,50 +208,70 @@ export async function getTalaProducts(): Promise<Product[]> {
 
     const uniqueColors = [
       ...new Map(
-        availableVariants
+        activeVariants
           .filter((variant) => variant.color.trim())
           .map((variant) => [
             variant.color.trim(),
             {
               name: variant.color.trim(),
-              value: variant.color_code || "#D8C8B8",
+              value:
+                variant.color_code || "#D8C8B8",
             },
           ])
       ).values(),
     ];
 
     const isNewArrival =
-      Boolean(product.is_new ?? product.is_new_arrival) &&
+      Boolean(product.is_new) ||
+      Boolean(product.is_new_arrival);
+
+    const isNew =
+      isNewArrival &&
       isWithinNewArrivalPeriod(product.created_at);
 
-    return [
-      {
-        id: product.id,
-        slug: product.slug,
-        variants: productVariants,
-        name: product.name,
-        subtitle: product.subtitle ?? "",
-        description: product.description ?? "",
-        price: Number(product.price) || 0,
-        oldPrice:
-          product.compare_at_price != null
-            ? Number(product.compare_at_price)
-            : undefined,
-        category,
-        image: images[0] ?? PLACEHOLDER_IMAGE,
-        images,
-        colors: uniqueColors,
-        sizes: uniqueSizes,
-        rating: 5,
-        reviews: 0,
-        isNew: isNewArrival,
-        isBestSeller: Boolean(product.is_best_seller),
-        isFeatured: Boolean(product.is_featured),
-        isAvailable:
-          product.is_available !== false &&
-          availableVariants.length > 0,
-        tags: product.tags ?? [],
-      },
-    ];
+    const price = normalizePrice(product.price);
+
+    const oldPrice =
+      product.compare_at_price != null
+        ? normalizePrice(product.compare_at_price)
+        : undefined;
+
+    const hasStock = availableVariants.length > 0;
+
+    return {
+      id: product.id,
+      slug: product.slug,
+
+      variants: productVariants,
+
+      name: product.name,
+      subtitle: product.subtitle ?? "",
+      description: product.description ?? "",
+
+      price,
+      oldPrice,
+
+      category,
+
+      image: images[0] ?? PLACEHOLDER_IMAGE,
+      images,
+
+      colors: uniqueColors,
+      sizes: uniqueSizes,
+
+      rating: 5,
+      reviews: 0,
+
+      isNew,
+      isBestSeller: Boolean(product.is_best_seller),
+      isFeatured: Boolean(product.is_featured),
+
+      // المنتج يظل ظاهراً حتى لو نفد المخزون.
+      // هذه القيمة تتحكم في إمكانية الشراء.
+      isAvailable:
+        product.is_available !== false && hasStock,
+
+      tags: product.tags ?? [],
+    };
   });
 }
