@@ -12,6 +12,7 @@ type ProductRow = {
   main_image?: string | null;
   images?: string[] | null;
   category_id?: string | null;
+  created_at?: string | null;
   is_new?: boolean | null;
   is_new_arrival?: boolean | null;
   is_best_seller?: boolean | null;
@@ -39,6 +40,23 @@ type ProductsApiResponse = {
 
 const PLACEHOLDER_IMAGE =
   "https://placehold.co/600x800/F5F0E8/332A23?text=TALA";
+
+const NEW_ARRIVAL_DAYS = 15;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+function isWithinNewArrivalPeriod(
+  createdAt: string | null | undefined
+): boolean {
+  if (!createdAt) return false;
+
+  const createdTime = new Date(createdAt).getTime();
+
+  if (!Number.isFinite(createdTime)) return false;
+
+  const age = Date.now() - createdTime;
+
+  return age >= 0 && age < NEW_ARRIVAL_DAYS * DAY_IN_MS;
+}
 
 function normalizeCategory(
   categoryName: string | undefined
@@ -179,6 +197,10 @@ export async function getTalaProducts(): Promise<Product[]> {
       ).values(),
     ];
 
+    const isNewArrival =
+      Boolean(product.is_new ?? product.is_new_arrival) &&
+      isWithinNewArrivalPeriod(product.created_at);
+
     return [
       {
         id: product.id,
@@ -199,15 +221,9 @@ export async function getTalaProducts(): Promise<Product[]> {
         sizes: uniqueSizes,
         rating: 5,
         reviews: 0,
-        isNew: Boolean(
-          product.is_new ?? product.is_new_arrival
-        ),
-        isBestSeller: Boolean(
-          product.is_best_seller
-        ),
-        isFeatured: Boolean(
-          product.is_featured
-        ),
+        isNew: isNewArrival,
+        isBestSeller: Boolean(product.is_best_seller),
+        isFeatured: Boolean(product.is_featured),
         isAvailable:
           product.is_available !== false &&
           availableVariants.length > 0,
