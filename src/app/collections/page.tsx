@@ -1,81 +1,118 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Layers3, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 
 const collections = [
   {
-    name: "The New Edit",
-    description: "Discover the latest pieces from TALA.",
-    category: "new-arrivals",
+    number: "01",
+    name: "Sets",
+    description: "A considered selection of coordinated pieces, designed to feel effortlessly complete.",
+    href: "/products?category=sets",
+    eyebrow: "THE COORDINATED EDIT",
   },
   {
-    name: "Everyday Essentials",
-    description: "Timeless styles for everyday moments.",
-    category: "essentials",
+    number: "02",
+    name: "Jackets",
+    description: "Distinctive outer layers that bring quiet character to every look.",
+    href: "/products?category=jackets",
+    eyebrow: "THE OUTERWEAR EDIT",
   },
   {
-    name: "Elegant Moments",
-    description: "Pieces made for your special occasions.",
-    category: "elegant",
+    number: "03",
+    name: "All Collection",
+    description: "Explore every piece currently available in the TALA collection.",
+    href: "/products",
+    eyebrow: "THE COMPLETE COLLECTION",
   },
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.12, delayChildren: 0.08 },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.65, ease: "easeOut" as const },
+  },
+};
+
 export default function CollectionsPage() {
   return (
-    <main className="min-h-screen bg-[#F8F5F0] text-[#332A23]">
-      <section className="mx-auto max-w-7xl px-6 py-20">
-        <div className="mb-14 text-center">
-          <Sparkles
-            size={25}
-            className="mx-auto mb-5 text-[#A58B68]"
-          />
-
-          <p className="mb-4 text-xs uppercase tracking-[0.4em] text-[#A58B68]">
-            Curated for you
+    <main className="min-h-screen overflow-hidden bg-[#F8F5F0] text-[#332A23]">
+      <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="mb-14 text-center sm:mb-20"
+        >
+          <Sparkles size={22} className="mx-auto mb-6 text-[#A58B68]" strokeWidth={1.2} />
+          <p className="mb-4 text-[10px] uppercase tracking-[0.42em] text-[#A58B68]">
+            TALA — A curated wardrobe
           </p>
-
-          <h1 className="text-4xl font-light md:text-6xl">
-            TALA Collections
+          <h1 className="font-serif text-4xl font-light tracking-[0.04em] sm:text-6xl">
+            The Collections
           </h1>
-
-          <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-[#81766B]">
-            Explore thoughtfully curated collections
-            designed to bring elegance to every moment.
+          <p className="mx-auto mt-6 max-w-xl text-sm leading-8 text-[#81766B]">
+            Discover the pieces that define TALA. Thoughtfully selected,
+            beautifully considered, and made to become part of your story.
           </p>
-        </div>
+          <div className="mx-auto mt-8 h-px w-16 bg-[#B9A58D]" />
+        </motion.div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {collections.map((collection, index) => (
-            <article
-              key={collection.category}
-              className="group flex min-h-80 flex-col justify-between border border-[#E5DDD2] bg-white/60 p-8 transition duration-500 hover:-translate-y-2 hover:bg-white hover:shadow-xl"
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid gap-5 md:grid-cols-3 md:gap-6"
+        >
+          {collections.map((collection) => (
+            <motion.article
+              key={collection.name}
+              variants={cardVariants}
+              whileHover={{ y: -7 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="group relative flex min-h-[330px] flex-col justify-between overflow-hidden border border-[#E5DDD2] bg-white/55 p-8 transition-colors duration-500 hover:bg-white sm:min-h-[390px] sm:p-10"
             >
-              <span className="text-sm tracking-[0.3em] text-[#B7A58E]">
-                0{index + 1}
-              </span>
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full border border-[#E9E0D5] transition-transform duration-700 group-hover:scale-125" />
+              <div className="relative flex items-center justify-between">
+                <span className="font-serif text-3xl font-light text-[#B7A58E]">
+                  {collection.number}
+                </span>
+                <Layers3 size={18} strokeWidth={1.2} className="text-[#A58B68] transition-transform duration-500 group-hover:rotate-6" />
+              </div>
 
-              <div>
-                <h2 className="text-2xl font-light">
+              <div className="relative mt-16">
+                <p className="mb-4 text-[9px] font-medium uppercase tracking-[0.3em] text-[#A58B68]">
+                  {collection.eyebrow}
+                </p>
+                <h2 className="font-serif text-3xl font-light tracking-wide text-[#40372F] sm:text-4xl">
                   {collection.name}
                 </h2>
-
-                <p className="mt-4 text-sm leading-7 text-[#81766B]">
+                <p className="mt-5 max-w-xs text-sm leading-7 text-[#81766B]">
                   {collection.description}
                 </p>
-
                 <Link
-                  href={`/products?collection=${collection.category}`}
-                  className="mt-8 inline-flex items-center gap-3 text-xs uppercase tracking-[0.2em]"
+                  href={collection.href}
+                  className="mt-9 inline-flex items-center gap-3 border-b border-[#B9A58D] pb-2 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#5E5044] transition-all duration-300 hover:gap-5 hover:border-[#40372F]"
+                  aria-label={`Explore ${collection.name}`}
                 >
-                  Explore Collection
-                  <ArrowRight
-                    size={16}
-                    className="transition-transform group-hover:translate-x-2"
-                  />
+                  Explore collection
+                  <ArrowRight size={14} strokeWidth={1.5} />
                 </Link>
               </div>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </section>
     </main>
   );
