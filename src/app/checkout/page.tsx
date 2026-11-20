@@ -29,6 +29,7 @@ const formatPrice = (price: number) =>
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
 
   const [customer, setCustomer] = useState({
     fullName: "",
@@ -52,6 +53,7 @@ export default function CheckoutPage() {
     };
 
     syncCart();
+    setCouponCode(window.localStorage.getItem("tala-coupon-code") || "");
 
     window.addEventListener("tala-cart-updated", syncCart);
     window.addEventListener("storage", syncCart);
@@ -77,7 +79,8 @@ export default function CheckoutPage() {
       ? 0
       : DELIVERY_FEE;
 
-  const total = subtotal + deliveryFee;
+  const discount = couponCode === "TALA10" ? Math.round(subtotal * 0.1 * 100) / 100 : 0;
+  const total = Math.max(0, subtotal - discount + deliveryFee);
 
   const updateField = (
     field: keyof typeof customer,
@@ -135,6 +138,7 @@ export default function CheckoutPage() {
             city: customer.city.trim(),
             address: customer.address.trim(),
           },
+          couponCode,
           items: latestCart.map((item) => ({
             productId: item.productId,
             size: item.size,
@@ -157,6 +161,8 @@ export default function CheckoutPage() {
       }
 
       clearCart();
+      window.localStorage.removeItem("tala-coupon-code");
+      setCouponCode("");
       setCart([]);
 
       setSuccessOrder({
@@ -482,6 +488,13 @@ export default function CheckoutPage() {
                     {formatPrice(subtotal)}
                   </span>
                 </div>
+
+                {discount > 0 && (
+                  <div className="flex justify-between text-[#76695D]">
+                    <span>Discount (TALA10)</span>
+                    <span className="tabular-nums">-{formatPrice(discount)}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between text-[#76695D]">
                   <span>Delivery</span>
