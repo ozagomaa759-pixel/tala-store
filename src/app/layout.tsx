@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./tala-pages.css";
 
+import AnimationProvider from "@/animations/AnimationProvider";
+
 export const metadata: Metadata = {
   title: {
     default: "TALA | Luxury Fashion",
@@ -30,7 +32,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AnimationProvider>
+          {children}
+        </AnimationProvider>
+      </body>
     </html>
   );
 }
