@@ -1,4 +1,3 @@
-
 import type { Product, ProductVariantStock } from "@/data/products";
 
 type ProductRow = {
@@ -172,13 +171,21 @@ export async function getTalaProducts(): Promise<Product[]> {
     );
   }
 
-  return products.map((product): Product => {
+  return products.flatMap((product): Product[] => {
     const categoryName = categoryMap.get(
       product.category_id ?? ""
     );
 
-    const category =
-      normalizeCategory(categoryName) ?? "Sets";
+    // لا ننسب المنتج تلقائياً إلى Sets إذا كان القسم
+    // مفقوداً أو غير معروف؛ هذا يمنع ظهوره في قسم خاطئ.
+    const category = normalizeCategory(categoryName);
+
+    if (!category) {
+      console.warn(
+        `TALA: Product "${product.name}" was skipped because its category is not Sets or Jackets.`
+      );
+      return [];
+    }
 
     const productVariants =
       variantsByProduct.get(product.id) ?? [];
@@ -238,7 +245,7 @@ export async function getTalaProducts(): Promise<Product[]> {
 
     const hasStock = availableVariants.length > 0;
 
-    return {
+    return [{
       id: product.id,
       slug: product.slug,
 
@@ -272,6 +279,6 @@ export async function getTalaProducts(): Promise<Product[]> {
         product.is_available !== false && hasStock,
 
       tags: product.tags ?? [],
-    };
+    }];
   });
 }
