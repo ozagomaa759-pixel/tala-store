@@ -1,0 +1,486 @@
+
+"use client";
+
+import {
+  motion,
+  useReducedMotion,
+  type Variants,
+} from "framer-motion";
+import type { ReactNode } from "react";
+
+import {
+  TALA_EASE,
+  TALA_TRANSITIONS,
+  titleReveal,
+  subtitleReveal,
+  imageReveal,
+  imageZoom,
+  staggerContainer,
+  staggerItem,
+  luxuryButton,
+  gentleFloat,
+  slowFloat,
+  ambientPulse,
+} from "./tala-motion";
+
+// ============================================
+// TYPES
+// ============================================
+
+type BaseProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+type DelayProps = BaseProps & {
+  delay?: number;
+};
+
+type StaggerProps = BaseProps & {
+  stagger?: number;
+  delay?: number;
+};
+
+// ============================================
+// 01 — CINEMATIC HERO
+// ============================================
+
+export function CinematicHero({
+  children,
+  className,
+}: BaseProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.section
+      className={className}
+      initial={
+        reduced
+          ? false
+          : {
+              opacity: 0,
+              scale: 1.025,
+            }
+      }
+      animate={{
+        opacity: 1,
+        scale: 1,
+      }}
+      transition={
+        reduced
+          ? { duration: 0 }
+          : {
+              duration: 1.4,
+              ease: TALA_EASE,
+            }
+      }
+    >
+      {children}
+    </motion.section>
+  );
+}
+
+// ============================================
+// 02 — EDITORIAL TITLE
+// ============================================
+
+export function EditorialTitle({
+  children,
+  className,
+  delay = 0,
+}: DelayProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      variants={titleReveal}
+      initial={reduced ? false : "initial"}
+      animate="animate"
+      transition={{
+        ...TALA_TRANSITIONS.cinematic,
+        delay: reduced ? 0 : delay,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 03 — EDITORIAL SUBTITLE
+// ============================================
+
+export function EditorialSubtitle({
+  children,
+  className,
+  delay = 0,
+}: DelayProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      initial={
+        reduced
+          ? false
+          : {
+              opacity: 0,
+              y: 15,
+              letterSpacing: "0.25em",
+            }
+      }
+      animate={{
+        opacity: 1,
+        y: 0,
+        letterSpacing: "0.12em",
+      }}
+      transition={{
+        duration: reduced ? 0 : 0.9,
+        delay: reduced ? 0 : delay,
+        ease: TALA_EASE,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 04 — CINEMATIC IMAGE
+// ============================================
+
+export function CinematicImage({
+  children,
+  className,
+  delay = 0,
+}: DelayProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      variants={imageReveal}
+      initial={reduced ? false : "initial"}
+      whileInView="animate"
+      viewport={{
+        once: true,
+        amount: 0.2,
+      }}
+      transition={{
+        ...TALA_TRANSITIONS.image,
+        delay: reduced ? 0 : delay,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 05 — IMAGE HOVER
+// ============================================
+
+export function ImageHover({
+  children,
+  className,
+}: BaseProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      initial="initial"
+      whileHover={reduced ? undefined : "hover"}
+      variants={imageZoom}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 06 — STAGGERED EDITORIAL GROUP
+// ============================================
+
+export function EditorialGroup({
+  children,
+  className,
+  stagger = 0.14,
+  delay = 0.1,
+}: StaggerProps) {
+  const reduced = useReducedMotion();
+
+  const groupVariants: Variants = {
+    initial: {},
+    animate: {
+      transition: {
+        staggerChildren: reduced ? 0 : stagger,
+        delayChildren: reduced ? 0 : delay,
+      },
+    },
+  };
+
+  return (
+    <motion.div
+      className={className}
+      variants={groupVariants}
+      initial={reduced ? false : "initial"}
+      whileInView="animate"
+      viewport={{
+        once: true,
+        amount: 0.15,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 07 — EDITORIAL ITEM
+// ============================================
+
+export function EditorialItem({
+  children,
+  className,
+  delay = 0,
+}: DelayProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      variants={staggerItem}
+      initial={reduced ? false : "initial"}
+      animate="animate"
+      transition={{
+        delay: reduced ? 0 : delay,
+        ease: TALA_EASE,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 08 — LUXURY BUTTON
+// ============================================
+
+export function LuxuryButton({
+  children,
+  className,
+}: BaseProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      variants={luxuryButton}
+      initial="rest"
+      whileHover={reduced ? undefined : "hover"}
+      whileTap={reduced ? undefined : "tap"}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 09 — GENTLE FLOAT
+// ============================================
+
+export function GentleFloat({
+  children,
+  className,
+}: BaseProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      variants={gentleFloat}
+      initial={false}
+      animate={
+        reduced
+          ? { y: 0 }
+          : "animate"
+      }
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 10 — SLOW FLOAT
+// ============================================
+
+export function SlowFloat({
+  children,
+  className,
+}: BaseProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      variants={slowFloat}
+      initial={false}
+      animate={
+        reduced
+          ? { y: 0, rotate: 0 }
+          : "animate"
+      }
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 11 — AMBIENT PULSE
+// ============================================
+
+export function AmbientPulse({
+  children,
+  className,
+}: BaseProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      variants={ambientPulse}
+      initial={false}
+      animate={
+        reduced
+          ? { opacity: 1 }
+          : "animate"
+      }
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 12 — REVEAL ON SCROLL
+// ============================================
+
+export function RevealOnScroll({
+  children,
+  className,
+  delay = 0,
+}: DelayProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      initial={
+        reduced
+          ? false
+          : {
+              opacity: 0,
+              y: 45,
+            }
+      }
+      whileInView={{
+        opacity: 1,
+        y: 0,
+      }}
+      viewport={{
+        once: true,
+        amount: 0.15,
+      }}
+      transition={{
+        duration: reduced ? 0 : 0.95,
+        delay: reduced ? 0 : delay,
+        ease: TALA_EASE,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 13 — SOFT SCALE
+// ============================================
+
+export function SoftScale({
+  children,
+  className,
+}: BaseProps) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      initial={
+        reduced
+          ? false
+          : {
+              opacity: 0,
+              scale: 0.94,
+            }
+      }
+      whileInView={{
+        opacity: 1,
+        scale: 1,
+      }}
+      viewport={{
+        once: true,
+        amount: 0.2,
+      }}
+      transition={{
+        duration: reduced ? 0 : 1.1,
+        ease: TALA_EASE,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============================================
+// 14 — PREMIUM DIVIDER
+// ============================================
+
+export function PremiumDivider({
+  className,
+}: {
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      initial={
+        reduced
+          ? false
+          : {
+              scaleX: 0,
+              opacity: 0,
+            }
+      }
+      whileInView={{
+        scaleX: 1,
+        opacity: 1,
+      }}
+      viewport={{
+        once: true,
+      }}
+      transition={{
+        duration: reduced ? 0 : 1.2,
+        ease: TALA_EASE,
+      }}
+      style={{
+        transformOrigin: "left",
+      }}
+    />
+  );
+}
