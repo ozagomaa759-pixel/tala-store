@@ -12,6 +12,13 @@ const ALLOWED_COLLECTIONS = ["sets", "jackets"] as const;
 type ProductStatus = (typeof ALLOWED_STATUSES)[number];
 type ProductUpdate = Record<string, unknown>;
 
+type CategoryRow = {
+  id: string;
+  slug: string | null;
+  name: string | null;
+  is_active: boolean | null;
+};
+
 function errorResponse(error: string, status = 400) {
   return NextResponse.json(
     { success: false, error },
@@ -92,19 +99,22 @@ async function authorizeAdmin() {
 async function getProductCategory(
   db: Awaited<ReturnType<typeof createAdminClient>>,
   categoryId: string
-) {
-  return db
+): Promise<{ category: CategoryRow | null; error: string | null }> {
+  const { data, error } = await db
     .from("categories")
     .select("id, slug, name, is_active")
     .eq("id", categoryId)
     .maybeSingle();
+
+  return {
+    category: (data as CategoryRow | null) ?? null,
+    error: error?.message ?? null,
+  };
 }
 
-function isAllowedProductCategory(category: {
-  slug: string | null;
-  name: string | null;
-  is_active: boolean | null;
-} | null) {
+function isAllowedProductCategory(
+  category: CategoryRow | null
+): category is CategoryRow {
   if (!category || category.is_active !== true) {
     return false;
   }
@@ -249,13 +259,17 @@ export async function POST(request: NextRequest) {
       return errorResponse("A product category is required");
     }
 
-    const { data: category, error: categoryError } =
-      await getProductCategory(db, body.category_id.trim());
+    const categoryResult = await getProductCategory(
+      db,
+      body.category_id.trim()
+    );
 
-    if (categoryError) {
-      console.error("Product category lookup error:", categoryError);
+    if (categoryResult.error) {
+      console.error("Product category lookup error:", categoryResult.error);
       return errorResponse("Could not verify the selected category", 500);
     }
+
+    const category = categoryResult.category;
 
     if (!isAllowedProductCategory(category)) {
       return errorResponse(
@@ -342,10 +356,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      {
-        success: true,
-        product: data,
-      },
+      { success: true, product: data },
       { status: 201 }
     );
   } catch (error) {
@@ -396,10 +407,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.slug !== undefined) {
-      if (
-        typeof body.slug !== "string" ||
-        !body.slug.trim()
-      ) {
+      if (typeof body.slug !== "string" || !body.slug.trim()) {
         return errorResponse("Invalid product slug");
       }
 
@@ -447,13 +455,17 @@ export async function PATCH(request: NextRequest) {
         return errorResponse("Invalid category");
       }
 
-      const { data: category, error: categoryError } =
-        await getProductCategory(db, body.category_id.trim());
+      const categoryResult = await getProductCategory(
+        db,
+        body.category_id.trim()
+      );
 
-      if (categoryError) {
-        console.error("Product category lookup error:", categoryError);
+      if (categoryResult.error) {
+        console.error("Product category lookup error:", categoryResult.error);
         return errorResponse("Could not verify the selected category", 500);
       }
+
+      const category = categoryResult.category;
 
       if (!isAllowedProductCategory(category)) {
         return errorResponse(
