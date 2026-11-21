@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -327,11 +328,6 @@ export default function HomePage() {
 
   return (
     <main>
-      {/* ANNOUNCEMENT */}
-      <div className="announcement-bar">
-        DISCOVER THE NEW TALA COLLECTION
-      </div>
-
       {/* HEADER */}
       <header className="absolute left-0 top-[34px] z-40 flex w-full items-center justify-between px-5 py-7 text-white sm:px-8 md:px-14 md:py-9">
         <button
