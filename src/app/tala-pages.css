@@ -40,14 +40,53 @@ a.group [class*="bottom-3"][class*="right-3"][class*="opacity-0"] {
   transform: translateY(0) !important;
 }
 
-/* Keep keyboard navigation visible */
+/* =========================================
+   DARK CTA — TEXT AND ICON VISIBILITY
+   ========================================= */
+
+/* Dark TALA buttons must always have readable text */
+a[class*="bg-[#24221F]"],
+button[class*="bg-[#24221F]"],
+a[class*="bg-[#282821]"],
+button[class*="bg-[#282821]"] {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Keep every child readable, including labels and icons */
+a[class*="bg-[#24221F]"] *,
+button[class*="bg-[#24221F]"] *,
+a[class*="bg-[#282821]"] *,
+button[class*="bg-[#282821]"] * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Do not let disabled buttons lose their label */
+button:disabled {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+button:disabled * {
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* =========================================
+   KEYBOARD ACCESSIBILITY
+   ========================================= */
+
 a:focus-visible,
 button:focus-visible {
   outline: 2px solid #89965D;
   outline-offset: 4px;
 }
 
-/* Respect reduced-motion preferences */
+/* =========================================
+   REDUCED MOTION
+   ========================================= */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
