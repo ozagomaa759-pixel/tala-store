@@ -8,11 +8,9 @@ import {
 
 import type { VariantsDatabase } from "@/types/database";
 
-let adminClient:
-  | SupabaseClient<VariantsDatabase>
-  | null = null;
+let adminClient: SupabaseClient | null = null;
 
-export function createAdminClient(): SupabaseClient<VariantsDatabase> {
+export function createAdminClient(): SupabaseClient {
   if (adminClient) {
     return adminClient;
   }
@@ -26,7 +24,7 @@ export function createAdminClient(): SupabaseClient<VariantsDatabase> {
     );
   }
 
-  adminClient = createSupabaseClient<VariantsDatabase>(
+  adminClient = createSupabaseClient(
     supabaseUrl,
     serviceRoleKey,
     {
@@ -41,6 +39,6 @@ export function createAdminClient(): SupabaseClient<VariantsDatabase> {
   return adminClient;
 }
 
-export function createVariantsAdminClient() {
-  return createAdminClient();
+export function createVariantsAdminClient(): SupabaseClient<VariantsDatabase> {
+  return createAdminClient() as unknown as SupabaseClient<VariantsDatabase>;
 }
