@@ -2543,21 +2543,31 @@ function ProductsPage() {
   const [pageCategory, setPageCategory] =
     useState<ProductCategory>("All");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const category = params.get("category")?.trim().toLowerCase();
-    const initialSearch = params.get("q")?.trim() ?? "";
+    useEffect(() => {
+    const syncCollectionFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const category = params.get("category")?.trim().toLowerCase();
+      const initialSearch = params.get("q")?.trim() ?? "";
 
-    const initialCategory: ProductCategory =
-      category === "sets"
-        ? "Sets"
-        : category === "jackets"
-          ? "Jackets"
-          : "All";
+      const initialCategory: ProductCategory =
+        category === "sets"
+          ? "Sets"
+          : category === "jackets"
+            ? "Jackets"
+            : "All";
 
-    setPageCategory(initialCategory);
-    setSelectedCategory(initialCategory);
-    setSearch(initialSearch);
+      setPageCategory(initialCategory);
+      setSelectedCategory(initialCategory);
+      setSearch(initialSearch);
+      setCurrentPage(1);
+    };
+
+    syncCollectionFromUrl();
+    window.addEventListener("popstate", syncCollectionFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", syncCollectionFromUrl);
+    };
   }, []);
 
   const [sortBy, setSortBy] =
