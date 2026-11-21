@@ -70,6 +70,7 @@ type Analytics = {
     today: PeriodStats;
     week: PeriodStats;
     month: PeriodStats;
+    allTime: PeriodStats;
   };
   orders: {
     total: number;
@@ -436,7 +437,7 @@ export default function AdminOrdersPage() {
         </div>
 
         <section className="mt-10">
-          <div className="mb-5 flex items-center gap-3">
+          <div className="mb-5 flex flex-wrap items-center gap-3">
             <TrendingUp size={20} strokeWidth={1.5} />
             <h2 className="text-xl font-light">
               Sales Overview
@@ -446,7 +447,14 @@ export default function AdminOrdersPage() {
             </span>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <SalesCard
+              title="Total Revenue"
+              stats={analytics?.sales.allTime ?? null}
+              icon={<ShoppingBag size={21} />}
+              loading={analyticsLoading}
+            />
+
             <SalesCard
               title="Today's Sales"
               stats={analytics?.sales.today ?? null}
