@@ -3203,48 +3203,29 @@ const categoryCounts = useMemo(() => {
             <span className="h-px w-10 bg-[#C9B8A4]" />
           </div>
 
-                    <nav
-            aria-label="Shop TALA collections"
-            className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3"
-          >
-            {[
-              { label: "All pieces", category: "All" as const },
-              { label: "Sets", category: "Sets" as const },
-              { label: "Jackets", category: "Jackets" as const },
-            ].map((item) => (
-              <button
-                key={item.category}
-                type="button"
-                aria-current={selectedCategory === item.category ? "page" : undefined}
-                onClick={() => {
-                  const url = new URL(window.location.href);
-
-                  if (item.category === "All") {
-                    url.searchParams.delete("category");
-                  } else {
-                    url.searchParams.set("category", item.category.toLowerCase());
-                  }
-
-                  window.history.pushState(
-                    {},
-                    "",
-                    `${url.pathname}${url.search}${url.hash}`
-                  );
-
-                  setPageCategory(item.category);
-                  setSelectedCategory(item.category);
-                  setCurrentPage(1);
-                }}
-                className={`border-b pb-1 text-[7px] font-medium uppercase tracking-[0.12em] transition-colors ${
-  selectedCategory === item.category
-    ? "border-[#8F7358] text-[#40372F]"
-    : "border-transparent text-[#9A8C7D] hover:border-[#C9B8A4] hover:text-[#40372F]"
-}`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+         <nav
+  aria-label="Shop TALA collections"
+  className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3"
+>
+  {[
+    { label: "All pieces", category: "All" as const },
+    { label: "Sets", category: "Sets" as const },
+    { label: "Jackets", category: "Jackets" as const },
+  ].map((item) => (
+    <button
+      key={item.category}
+      type="button"
+      onClick={() => setSelectedCategory(item.category)}
+      className={`border-b pb-1 text-[7px] font-medium uppercase tracking-[0.12em] transition-colors ${
+        selectedCategory === item.category
+          ? "border-[#8F7358] text-[#40372F]"
+          : "border-transparent text-[#9A8C7D] hover:border-[#C9B8A4] hover:text-[#40372F]"
+      }`}
+    >
+      {item.label}
+    </button>
+  ))}
+</nav> 
 
         </div>
       </section>
