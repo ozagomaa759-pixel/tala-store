@@ -3310,7 +3310,7 @@ const categoryCounts = useMemo(() => {
                   <ActiveFilterChip
                     label={selectedCategory}
                     onRemove={() => handleCategoryChange("All")}
-                    }
+                    
                   />
                 )}
 
