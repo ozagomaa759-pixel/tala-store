@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/supabase/require-admin";
@@ -85,6 +86,14 @@ export async function POST(request: NextRequest) {
 
     if (!isRecord(body)) {
       return errorResponse("Invalid order information.", 400);
+    }
+
+    // The customer must explicitly accept the order policy.
+    if (body.policyAccepted !== true) {
+      return errorResponse(
+        "Please accept the TALA order policy before placing your order.",
+        400
+      );
     }
 
     const rawCustomer = body.customer;
