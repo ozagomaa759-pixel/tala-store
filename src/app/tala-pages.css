@@ -1,7 +1,7 @@
 
 /* =========================================
-   TALA — LEGACY TOKEN COMPATIBILITY
-   One unified design system
+   TALA — GLOBAL PAGE STYLES
+   Luxury storefront compatibility
    ========================================= */
 
 :root {
@@ -31,8 +31,49 @@
 }
 
 /* =========================================
-   PRODUCT CARDS — ALWAYS VISIBLE ACTION
-   Fixes hover-only indicators on touch devices
+   BUTTONS & LINKS — TEXT VISIBILITY
+   Preserve each element's intended text color
+   ========================================= */
+
+button,
+a {
+  -webkit-text-size-adjust: 100%;
+  text-decoration-skip-ink: auto;
+}
+
+/* Prevent invisible text caused by inherited
+   WebKit text-fill color on interactive elements */
+
+button,
+button *,
+a,
+a * {
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Keep labels and icons visible */
+button,
+a {
+  visibility: visible;
+}
+
+button > *,
+a > * {
+  visibility: visible;
+}
+
+/* Prevent disabled buttons from hiding their labels */
+button:disabled {
+  cursor: not-allowed;
+}
+
+button:disabled,
+button:disabled * {
+  -webkit-text-fill-color: currentColor;
+}
+
+/* =========================================
+   PRODUCT CARDS — TOUCH VISIBILITY
    ========================================= */
 
 a.group [class*="bottom-3"][class*="right-3"][class*="opacity-0"] {
@@ -41,10 +82,9 @@ a.group [class*="bottom-3"][class*="right-3"][class*="opacity-0"] {
 }
 
 /* =========================================
-   DARK CTA — TEXT AND ICON VISIBILITY
+   DARK TALA CALL-TO-ACTION BUTTONS
    ========================================= */
 
-/* Dark TALA buttons must always have readable text */
 a[class*="bg-[#24221F]"],
 button[class*="bg-[#24221F]"],
 a[class*="bg-[#282821]"],
@@ -53,23 +93,10 @@ button[class*="bg-[#282821]"] {
   -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Keep every child readable, including labels and icons */
 a[class*="bg-[#24221F]"] *,
 button[class*="bg-[#24221F]"] *,
 a[class*="bg-[#282821]"] *,
 button[class*="bg-[#282821]"] * {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-
-/* Do not let disabled buttons lose their label */
-button:disabled {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-
-button:disabled * {
-  color: inherit !important;
   -webkit-text-fill-color: currentColor !important;
 }
 
