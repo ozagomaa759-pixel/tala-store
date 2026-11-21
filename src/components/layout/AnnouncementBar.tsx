@@ -1,22 +1,48 @@
 
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+"use client";
 
-export default function AnnouncementBar() {
+import { usePathname } from "next/navigation";
+
+const messages = [
+  "THE ART OF EVERYDAY ELEGANCE",
+  "A QUIETER KIND OF ELEGANCE",
+  "TALA LUXURY FASHION",
+  "DISCOVER THE COLLECTION",
+];
+
+function MessageGroup({ duplicate = false }: { duplicate?: boolean }) {
   return (
-    <div className="relative flex min-h-[34px] w-full items-center justify-center bg-[#e9e3da] px-4 py-2 text-center text-[#39352f]">
-      <Link
-        href="/products"
-        className="group inline-flex items-center justify-center gap-2 text-[9px] font-medium uppercase tracking-[0.18em] transition-opacity hover:opacity-65 sm:text-[10px]"
-      >
-        <span>Discover the TALA collection</span>
-        <ArrowRight
-          size={12}
-          strokeWidth={1.5}
-          className="transition-transform duration-300 group-hover:translate-x-1"
-        />
-      </Link>
+    <div
+      className="tala-marquee-group"
+      aria-hidden={duplicate || undefined}
+    >
+      {messages.map((message) => (
+        <span className="tala-marquee-item" key={message}>
+          {message}
+          <span className="tala-marquee-star" aria-hidden="true">
+            ✦
+          </span>
+        </span>
+      ))}
     </div>
   );
 }
 
+export default function AnnouncementBar() {
+  const pathname = usePathname();
+
+  if (pathname.startsWith("/admin")) return null;
+
+  return (
+    <div
+      className="tala-announcement"
+      role="region"
+      aria-label="TALA announcements"
+    >
+      <div className="tala-marquee-track">
+        <MessageGroup />
+        <MessageGroup duplicate />
+      </div>
+    </div>
+  );
+}
