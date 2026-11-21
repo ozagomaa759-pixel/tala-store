@@ -193,7 +193,7 @@ export default function PrivacyPage() {
         </div>
 
         <p className="mt-8 text-[10px] leading-6 text-[#9A9186]">
-          This policy describes TALA's current website and
+          This policy describes TALA&apos;s current website and
           ordering practices. It should be reviewed and
           updated whenever our services or data practices
           change. Applicable privacy and consumer protection
