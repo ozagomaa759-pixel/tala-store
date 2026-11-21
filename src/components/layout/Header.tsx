@@ -25,6 +25,15 @@ const navigation = [
   { label: "All Collection", href: "/collections/all-pieces" },
 ];
 
+const THEME = {
+  page: "#B8AA98",
+  surface: "#A99A88",
+  ink: "#292923",
+  muted: "#625B50",
+  lime: "#D8ED83",
+  line: "rgba(41,41,35,0.18)",
+};
+
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
@@ -50,10 +59,7 @@ export default function Header() {
     if (!mobileMenuOpen && !searchOpen) return;
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMobileMenuOpen(false);
-        setSearchOpen(false);
-      }
+      if (event.key === "Escape") closePanels();
     };
 
     window.addEventListener("keydown", closeOnEscape);
@@ -95,10 +101,15 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-[80] w-full border-b border-[#24221F]/10 bg-[#F5F1EB]/95 text-[#24221F] backdrop-blur-xl">
+    <header
+      className="sticky top-0 z-[80] w-full border-b text-[#292923] backdrop-blur-xl"
+      style={{
+        backgroundColor: "rgba(184,170,152,0.96)",
+        borderColor: THEME.line,
+      }}
+    >
       <div className="mx-auto grid h-[72px] max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-8 lg:h-[84px] lg:px-10 xl:px-14">
-
-        {/* MOBILE MENU BUTTON */}
+        {/* Mobile menu */}
         <div className="flex items-center lg:hidden">
           <button
             type="button"
@@ -109,7 +120,7 @@ export default function Header() {
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileMenuOpen}
             aria-controls="tala-mobile-menu"
-            className="flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:bg-[#24221F]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89965D]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:bg-[#292923]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#59633D]"
           >
             {mobileMenuOpen ? (
               <X size={23} strokeWidth={1.5} />
@@ -119,7 +130,7 @@ export default function Header() {
           </button>
         </div>
 
-        {/* DESKTOP NAVIGATION */}
+        {/* Desktop navigation */}
         <nav
           aria-label="Main navigation"
           className="hidden min-w-0 items-center gap-4 lg:flex xl:gap-7"
@@ -129,10 +140,10 @@ export default function Header() {
               key={item.href}
               href={item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
-              className={`group relative whitespace-nowrap py-3 text-[9px] font-semibold uppercase tracking-[0.12em] transition-colors xl:text-[10px] ${
+              className={`group relative whitespace-nowrap py-3 text-[9px] font-bold uppercase tracking-[0.12em] transition-colors xl:text-[10px] ${
                 isActive(item.href)
-                  ? "text-[#24221F]"
-                  : "text-[#77716A] hover:text-[#24221F]"
+                  ? "text-[#292923]"
+                  : "text-[#625B50] hover:text-[#292923]"
               }`}
             >
               {item.label}
@@ -148,22 +159,22 @@ export default function Header() {
           ))}
         </nav>
 
-        {/* BRAND */}
+        {/* Brand */}
         <Link
           href="/"
           aria-label="TALA Home"
           className="relative z-10 text-center"
         >
-          <span className="block font-serif text-[28px] font-medium leading-none tracking-[0.2em] sm:text-[35px]">
+          <span className="block font-serif text-[28px] font-medium leading-none tracking-[0.2em] text-[#292923] sm:text-[35px]">
             TALA
           </span>
 
-          <span className="mt-1.5 block text-[7px] font-medium tracking-[0.32em] text-[#77716A] sm:tracking-[0.38em]">
+          <span className="mt-1.5 block text-[7px] font-semibold tracking-[0.32em] text-[#625B50] sm:tracking-[0.38em]">
             LUXURY FASHION
           </span>
         </Link>
 
-        {/* HEADER ACTIONS */}
+        {/* Header actions */}
         <div className="flex items-center justify-end gap-1 sm:gap-3">
           <button
             type="button"
@@ -171,7 +182,7 @@ export default function Header() {
             aria-label={searchOpen ? "Close search" : "Search products"}
             aria-expanded={searchOpen}
             aria-controls="tala-search-panel"
-            className="flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:bg-[#24221F]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89965D]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:bg-[#292923]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#59633D]"
           >
             {searchOpen ? (
               <X size={20} strokeWidth={1.5} />
@@ -183,12 +194,12 @@ export default function Header() {
           <Link
             href="/cart"
             aria-label={`Shopping bag, ${cartCount} items`}
-            className="relative flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:bg-[#24221F]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89965D]"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:bg-[#292923]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#59633D]"
           >
             <ShoppingBag size={21} strokeWidth={1.5} />
 
             {cartCount > 0 && (
-              <span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#D8ED83] px-1 text-[9px] font-bold text-[#24221F]">
+              <span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#D8ED83] px-1 text-[9px] font-bold text-[#292923]">
                 {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
@@ -196,7 +207,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* BACKDROP — BELOW HEADER */}
+      {/* Backdrop */}
       {(searchOpen || mobileMenuOpen) && (
         <button
           type="button"
@@ -206,21 +217,25 @@ export default function Header() {
         />
       )}
 
-      {/* SEARCH PANEL */}
+      {/* Search panel */}
       {searchOpen && (
         <div
           id="tala-search-panel"
-          className="absolute left-0 top-full z-[70] w-full border-t border-[#24221F]/10 bg-[#F5F1EB] px-5 py-6 shadow-xl sm:px-10"
+          className="absolute left-0 top-full z-[70] w-full border-t px-5 py-6 shadow-xl sm:px-10"
+          style={{
+            backgroundColor: THEME.page,
+            borderColor: THEME.line,
+          }}
         >
           <form
             onSubmit={handleSearch}
             role="search"
-            className="mx-auto flex max-w-[850px] items-center gap-3 border-b border-[#24221F]/30 pb-3"
+            className="mx-auto flex max-w-[850px] items-center gap-3 border-b border-[#292923]/35 pb-3"
           >
             <Search
               size={19}
               strokeWidth={1.5}
-              className="shrink-0 text-[#77716A]"
+              className="shrink-0 text-[#625B50]"
             />
 
             <input
@@ -231,7 +246,7 @@ export default function Header() {
               placeholder="Find your next favourite..."
               aria-label="Search TALA products"
               autoFocus
-              className="min-w-0 w-full bg-transparent py-2 text-sm text-[#24221F] outline-none placeholder:text-[#999188]"
+              className="min-w-0 w-full bg-transparent py-2 text-sm text-[#292923] outline-none placeholder:text-[#625B50]"
             />
 
             {searchQuery && (
@@ -239,7 +254,7 @@ export default function Header() {
                 type="button"
                 onClick={() => setSearchQuery("")}
                 aria-label="Clear search"
-                className="flex h-9 w-9 shrink-0 items-center justify-center text-[#77716A] transition-colors hover:text-[#24221F]"
+                className="flex h-9 w-9 shrink-0 items-center justify-center text-[#625B50] transition-colors hover:text-[#292923]"
               >
                 <X size={17} />
               </button>
@@ -248,31 +263,35 @@ export default function Header() {
             <button
               type="submit"
               disabled={!searchQuery.trim()}
-              className="flex min-h-11 shrink-0 items-center justify-center gap-2 bg-[#D8ED83] px-4 text-[9px] font-bold uppercase tracking-[0.15em] text-[#24221F] transition-colors hover:bg-[#C9E16C] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-11 shrink-0 items-center justify-center gap-2 bg-[#D8ED83] px-4 text-[9px] font-bold uppercase tracking-[0.15em] text-[#292923] transition-colors hover:bg-[#C9DE72] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Search
               <ArrowRight size={14} />
             </button>
           </form>
 
-          <p className="mx-auto mt-4 max-w-[850px] text-[8px] uppercase tracking-[0.2em] text-[#999188]">
+          <p className="mx-auto mt-4 max-w-[850px] text-[8px] uppercase tracking-[0.2em] text-[#625B50]">
             SEARCH THE TALA COLLECTION
           </p>
         </div>
       )}
 
-      {/* MOBILE NAVIGATION */}
+      {/* Mobile navigation */}
       {mobileMenuOpen && (
         <div
           id="tala-mobile-menu"
-          className="absolute left-0 top-full z-[70] max-h-[calc(100dvh-72px)] w-full overflow-y-auto border-t border-[#24221F]/10 bg-[#F5F1EB] px-6 pb-10 pt-8 shadow-xl lg:hidden"
+          className="absolute left-0 top-full z-[70] max-h-[calc(100dvh-72px)] w-full overflow-y-auto border-t px-6 pb-10 pt-8 shadow-xl lg:hidden"
+          style={{
+            backgroundColor: THEME.page,
+            borderColor: THEME.line,
+          }}
         >
           <div className="mb-8 flex items-center justify-between">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[#77716A]">
+            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#625B50]">
               YOUR NEXT TALA FIND
             </p>
 
-            <span className="rounded-full bg-[#D8ED83] px-3 py-1.5 text-[8px] font-bold uppercase tracking-wider text-[#24221F]">
+            <span className="rounded-full bg-[#D8ED83] px-3 py-1.5 text-[8px] font-bold uppercase tracking-wider text-[#292923]">
               Explore
             </span>
           </div>
@@ -284,18 +303,18 @@ export default function Header() {
                 href={item.href}
                 onClick={closePanels}
                 aria-current={isActive(item.href) ? "page" : undefined}
-                className="group flex min-h-[65px] items-center justify-between border-b border-[#24221F]/10 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#89965D]"
+                className="group flex min-h-[65px] items-center justify-between border-b border-[#292923]/15 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#59633D]"
               >
                 <div className="flex items-center gap-4">
-                  <span className="text-[9px] tabular-nums text-[#999188]">
+                  <span className="text-[9px] tabular-nums text-[#625B50]">
                     0{index + 1}
                   </span>
 
                   <span
                     className={`font-serif text-[27px] font-light tracking-wide ${
                       isActive(item.href)
-                        ? "text-[#89965D]"
-                        : "text-[#24221F]"
+                        ? "text-[#59633D]"
+                        : "text-[#292923]"
                     }`}
                   >
                     {item.label}
@@ -305,19 +324,19 @@ export default function Header() {
                 <ArrowUpRight
                   size={19}
                   strokeWidth={1.4}
-                  className="text-[#77716A] transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1"
+                  className="text-[#625B50] transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1"
                 />
               </Link>
             ))}
           </nav>
 
-          {/* SHOPPING BAG */}
+          {/* Shopping bag */}
           <Link
             href="/cart"
             onClick={closePanels}
-            className="mt-8 flex min-h-14 items-center justify-between bg-[#24221F] px-5 py-4 text-[#F5F1EB] transition-colors hover:bg-[#3A3832] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89965D]"
+            className="mt-8 flex min-h-14 items-center justify-between bg-[#292923] px-5 py-4 text-[#F0E7D9] transition-colors hover:bg-[#3A3A32] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#59633D]"
           >
-            <span className="text-[9px] font-semibold uppercase tracking-[0.2em]">
+            <span className="text-[9px] font-bold uppercase tracking-[0.2em]">
               View Shopping Bag
             </span>
 
@@ -327,14 +346,14 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* OFFICIAL INSTAGRAM */}
+          {/* Instagram */}
           <a
             href={INSTAGRAM_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 flex min-h-14 items-center justify-between border border-[#24221F]/15 px-5 py-4 transition-colors hover:border-[#89965D] hover:bg-[#D8ED83]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#89965D]"
+            className="mt-4 flex min-h-14 items-center justify-between border border-[#292923]/20 px-5 py-4 transition-colors hover:border-[#59633D] hover:bg-[#D8ED83]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#59633D]"
           >
-            <span className="flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.16em]">
+            <span className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-[0.16em]">
               <Instagram size={17} />
               @tala__luxury
             </span>
@@ -342,7 +361,7 @@ export default function Header() {
             <ArrowUpRight size={16} />
           </a>
 
-          <p className="mt-9 text-center text-[8px] tracking-[0.35em] text-[#999188]">
+          <p className="mt-9 text-center text-[8px] tracking-[0.35em] text-[#625B50]">
             TALA — LUXURY FASHION
           </p>
         </div>
