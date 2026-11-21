@@ -3108,7 +3108,7 @@ const categoryCounts = useMemo(() => {
 
   const filterProps: ProductFiltersProps = {
   selectedCategory,
-  onCategoryChange: setSelectedCategory,
+  onCategoryChange: handleCategoryChange,
   maxPrice,
   onMaxPriceChange: setMaxPrice,
   onlyFavorites,
