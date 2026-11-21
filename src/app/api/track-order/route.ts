@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       return errorResponse("Please check your order details and try again.", 400);
     }
 
-        const supabase = createAdminClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from("orders")
