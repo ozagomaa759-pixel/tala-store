@@ -3078,6 +3078,30 @@ const categoryCounts = useMemo(() => {
     search.trim().length > 0,
   ].filter(Boolean).length;
 
+  const handleCategoryChange = useCallback(
+    (category: ProductCategory) => {
+      setSelectedCategory(category);
+      setPageCategory(category);
+      setCurrentPage(1);
+
+      const params = new URLSearchParams(window.location.search);
+
+      if (category === "All") {
+        params.delete("category");
+      } else {
+        params.set("category", category.toLowerCase());
+      }
+
+      const query = params.toString();
+      const nextUrl = query
+        ? `/products?${query}`
+        : "/products";
+
+      window.history.pushState({}, "", nextUrl);
+    },
+    []
+  );
+
   // ----------------------------------------
   // FILTER COMPONENT PROPS
   // ----------------------------------------
