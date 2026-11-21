@@ -27,21 +27,47 @@ type Variant = {
   is_active: boolean;
 };
 
-async function getProduct(slug: string) {
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getProduct(identifier: string) {
   const supabase = await createClient();
 
-  const { data: product, error: productError } = await supabase
+  // First, look up the product using its slug.
+  const { data: slugProduct, error: slugError } = await supabase
     .from("products")
     .select(
       "id, name, slug, description, price, compare_at_price, main_image, images"
     )
-    .eq("slug", slug)
+    .eq("slug", identifier)
     .eq("status", "published")
     .maybeSingle();
 
-  if (productError) {
-    console.error("TALA product query error:", productError);
+  if (slugError) {
+    console.error("TALA product slug query error:", slugError);
     throw new Error("Could not load product.");
+  }
+
+  let product = slugProduct;
+
+  // If no slug matched, check whether the URL contains a UUID.
+  // This supports product links that use the database ID.
+  if (!product && UUID_REGEX.test(identifier)) {
+    const { data: idProduct, error: idError } = await supabase
+      .from("products")
+      .select(
+        "id, name, slug, description, price, compare_at_price, main_image, images"
+      )
+      .eq("id", identifier)
+      .eq("status", "published")
+      .maybeSingle();
+
+    if (idError) {
+      console.error("TALA product ID query error:", idError);
+      throw new Error("Could not load product.");
+    }
+
+    product = idProduct;
   }
 
   if (!product) {
