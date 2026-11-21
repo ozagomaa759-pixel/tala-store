@@ -79,3 +79,83 @@ img {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* TALA Luxury Announcement Marquee */
+.tala-announcement {
+  position: relative;
+  z-index: 60;
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  overflow: hidden;
+  background: #292521;
+  color: #fff;
+}
+
+.tala-marquee-track {
+  display: flex;
+  width: max-content;
+  min-width: max-content;
+  animation: tala-marquee-scroll 34s linear infinite;
+  will-change: transform;
+}
+
+.tala-announcement:hover .tala-marquee-track {
+  animation-play-state: paused;
+}
+
+.tala-marquee-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: clamp(28px, 5vw, 76px);
+  padding-inline: clamp(14px, 2.5vw, 36px);
+}
+
+.tala-marquee-item {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: clamp(28px, 5vw, 76px);
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  line-height: 1;
+}
+
+.tala-marquee-star {
+  color: #c9bba8;
+  font-size: 11px;
+}
+
+@keyframes tala-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 640px) {
+  .tala-announcement {
+    min-height: 32px;
+  }
+
+  .tala-marquee-item {
+    font-size: 8px;
+    letter-spacing: 0.18em;
+  }
+
+  .tala-marquee-track {
+    animation-duration: 28s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tala-marquee-track {
+    animation: none;
+  }
+}
