@@ -39,100 +39,25 @@ type Variant = {
   is_active: boolean;
 };
 
-type ColorTheme = {
-  page: string;
-  accent: string;
-  button: string;
-  buttonText: string;
-  border: string;
+const THEME = {
+  page: "#B8AA98",
+  surface: "#A99A88",
+  surfaceDark: "#998A78",
+  ink: "#292923",
+  muted: "#625B50",
+  lime: "#D8ED83",
+  border: "rgba(41,39,35,0.24)",
+  cream: "#E5D9C9",
 };
 
-function getColorTheme(color: string | null | undefined): ColorTheme {
-  const value = (color ?? "").toLowerCase();
+const priceFormat = new Intl.NumberFormat("en-EG", {
+  style: "currency",
+  currency: "EGP",
+  maximumFractionDigits: 0,
+});
 
-  if (value.includes("black")) {
-    return {
-      page: "#F1F0ED",
-      accent: "#373633",
-      button: "#292825",
-      buttonText: "#FFFFFF",
-      border: "#C8C5BE",
-    };
-  }
-
-  if (
-    value.includes("mint") ||
-    value.includes("sage") ||
-    value.includes("green")
-  ) {
-    return {
-      page: "#F1F4EF",
-      accent: "#758A72",
-      button: "#657B62",
-      buttonText: "#FFFFFF",
-      border: "#C8D3C4",
-    };
-  }
-
-  if (
-    value.includes("pink") ||
-    value.includes("blush") ||
-    value.includes("rose")
-  ) {
-    return {
-      page: "#F7F0EF",
-      accent: "#B7837D",
-      button: "#A97570",
-      buttonText: "#FFFFFF",
-      border: "#E2C9C5",
-    };
-  }
-
-  if (
-    value.includes("beige") ||
-    value.includes("cream") ||
-    value.includes("ivory")
-  ) {
-    return {
-      page: "#F6F2EB",
-      accent: "#A58B68",
-      button: "#8E7658",
-      buttonText: "#FFFFFF",
-      border: "#E2D8C9",
-    };
-  }
-
-  if (value.includes("white")) {
-    return {
-      page: "#F7F7F5",
-      accent: "#8A8982",
-      button: "#55544F",
-      buttonText: "#FFFFFF",
-      border: "#DADAD5",
-    };
-  }
-
-  if (
-    value.includes("brown") ||
-    value.includes("chocolate") ||
-    value.includes("camel")
-  ) {
-    return {
-      page: "#F4F0EB",
-      accent: "#92745D",
-      button: "#765B46",
-      buttonText: "#FFFFFF",
-      border: "#DCCFC2",
-    };
-  }
-
-  return {
-    page: "#FAF8F5",
-    accent: "#A58B68",
-    button: "#292521",
-    buttonText: "#FFFFFF",
-    border: "#E5DDD2",
-  };
+function formatPrice(price: number) {
+  return priceFormat.format(price);
 }
 
 export default function ProductDetails({
@@ -190,8 +115,6 @@ export default function ProductDetails({
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState("");
   const [isAdded, setIsAdded] = useState(false);
-
-  // Gallery controls
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
@@ -218,12 +141,6 @@ export default function ProductDetails({
 
   const selectedColor = selectedVariant?.color ?? null;
 
-  const colorTheme = useMemo(
-    () => getColorTheme(selectedColor),
-    [selectedColor]
-  );
-
-  // Images assigned to the selected color through product variants.
   const selectedColorImages = useMemo(
     () =>
       Array.from(
@@ -241,8 +158,6 @@ export default function ProductDetails({
     [activeVariants, selectedColor]
   );
 
-  // If color-specific images exist, show those only.
-  // Otherwise use the product's general gallery.
   const galleryImages = useMemo(() => {
     const source =
       selectedColorImages.length > 0
@@ -288,13 +203,8 @@ export default function ProductDetails({
   );
 
   const productUnavailable = activeVariants.length === 0;
-
   const selectedOptionUnavailable =
     !selectedVariant || availableStock <= 0;
-
-  function selectGalleryImage(image: string) {
-    setSelectedImage(image);
-  }
 
   function showNextImage() {
     if (galleryImages.length < 2) return;
@@ -316,9 +226,7 @@ export default function ProductDetails({
   }
 
   function openGallery() {
-    if (galleryImages.length > 0) {
-      setIsGalleryOpen(true);
-    }
+    if (galleryImages.length > 0) setIsGalleryOpen(true);
   }
 
   function closeGallery() {
@@ -326,22 +234,13 @@ export default function ProductDetails({
     setTouchStart(null);
   }
 
-  // Keyboard navigation while the full-screen gallery is open.
   useEffect(() => {
     if (!isGalleryOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeGallery();
-      }
-
-      if (event.key === "ArrowRight") {
-        showNextImage();
-      }
-
-      if (event.key === "ArrowLeft") {
-        showPreviousImage();
-      }
+      if (event.key === "Escape") closeGallery();
+      if (event.key === "ArrowRight") showNextImage();
+      if (event.key === "ArrowLeft") showPreviousImage();
     }
 
     document.addEventListener("keydown", handleKeyDown);
@@ -374,11 +273,8 @@ export default function ProductDetails({
     const distance = touchStart - touchEnd;
 
     if (Math.abs(distance) > 45) {
-      if (distance > 0) {
-        showNextImage();
-      } else {
-        showPreviousImage();
-      }
+      if (distance > 0) showNextImage();
+      else showPreviousImage();
     }
 
     setTouchStart(null);
@@ -405,16 +301,16 @@ export default function ProductDetails({
 
     setSelectedVariant(nextVariant);
 
-    const nextImage =
+    setSelectedImage(
       nextVariant?.image_url ||
-      (nextVariant?.color === selectedVariant?.color
-        ? selectedColorImages[0]
-        : "") ||
-      product.main_image ||
-      images[0] ||
-      "";
+        (nextVariant?.color === selectedVariant?.color
+          ? selectedColorImages[0]
+          : "") ||
+        product.main_image ||
+        images[0] ||
+        ""
+    );
 
-    setSelectedImage(nextImage);
     setQuantity(1);
     setMessage(
       nextVariant && Number(nextVariant.stock_quantity) <= 0
@@ -499,29 +395,21 @@ export default function ProductDetails({
     setMessage("Added to your bag successfully.");
   }
 
-  function formatPrice(price: number) {
-    return new Intl.NumberFormat("en-EG", {
-      style: "currency",
-      currency: "EGP",
-      maximumFractionDigits: 0,
-    }).format(price);
-  }
-
   return (
     <main
-      className="min-h-screen text-[#302A24] transition-colors duration-700"
-      style={{ backgroundColor: colorTheme.page }}
+      className="min-h-screen bg-[#B8AA98] text-[#292923]"
+      style={{ backgroundColor: THEME.page }}
     >
       {/* Announcement */}
-      <div className="bg-[#292521] px-4 py-2.5 text-center text-[9px] tracking-[0.25em] text-white">
+      <div className="bg-[#292923] px-4 py-2.5 text-center text-[9px] font-semibold tracking-[0.25em] text-[#D8ED83]">
         TALA LUXURY FASHION — A NEW WAY TO FEEL ELEGANT
       </div>
 
       {/* Header */}
-      <header className="relative flex h-[76px] items-center justify-between border-b border-[#EAE4DC] px-5 transition-colors duration-500 sm:px-10">
+      <header className="relative flex h-[76px] items-center justify-between border-b border-[#292923]/20 px-5 sm:px-10">
         <Link
           href="/collections"
-          className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-[#81766B] transition hover:text-[#292521]"
+          className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#625B50] transition hover:text-[#292923]"
         >
           <ArrowLeft size={15} strokeWidth={1.3} />
           Collections
@@ -529,7 +417,7 @@ export default function ProductDetails({
 
         <Link
           href="/"
-          className="absolute left-1/2 -translate-x-1/2 text-2xl font-light tracking-[0.4em]"
+          className="absolute left-1/2 -translate-x-1/2 font-serif text-2xl tracking-[0.4em] text-[#292923]"
         >
           TALA
         </Link>
@@ -537,37 +425,37 @@ export default function ProductDetails({
         <Link
           href="/cart"
           aria-label="Shopping bag"
-          className="relative"
+          className="text-[#292923] transition hover:text-[#59633D]"
         >
           <ShoppingBag size={21} strokeWidth={1.3} />
         </Link>
       </header>
 
       {/* Breadcrumb */}
-      <div className="mx-auto flex max-w-[1500px] items-center gap-2 px-5 py-5 text-[9px] uppercase tracking-[0.15em] text-[#9B9084] sm:px-10">
-        <Link href="/" className="transition hover:text-[#302A24]">
+      <div className="mx-auto flex max-w-[1500px] items-center gap-2 px-5 py-5 text-[9px] uppercase tracking-[0.15em] text-[#625B50] sm:px-10">
+        <Link href="/" className="transition hover:text-[#292923]">
           Home
         </Link>
         <ChevronRight size={12} />
         <Link
           href="/collections"
-          className="transition hover:text-[#302A24]"
+          className="transition hover:text-[#292923]"
         >
           Collections
         </Link>
         <ChevronRight size={12} />
-        <span className="max-w-[150px] truncate text-[#5D5146]">
+        <span className="max-w-[150px] truncate text-[#292923]">
           {product.name}
         </span>
       </div>
 
-      {/* Product */}
-      <section className="mx-auto max-w-[1500px] px-5 pb-20 transition-colors duration-700 sm:px-10 sm:pb-28">
+      {/* Product section */}
+      <section className="mx-auto max-w-[1500px] px-5 pb-20 sm:px-10 sm:pb-28">
         <div className="grid items-start gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:gap-20">
-          {/* Product Gallery */}
+          {/* Gallery */}
           <div className="min-w-0">
             <div
-              className="group relative overflow-hidden bg-[#EEE9E2]"
+              className="group relative overflow-hidden bg-[#A99A88]"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
@@ -585,23 +473,28 @@ export default function ProductDetails({
                     className="aspect-[4/5] w-full object-cover transition duration-700 group-hover:scale-[1.015]"
                   />
 
-                  <span className="absolute bottom-5 right-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/75 text-[#39342E] opacity-100 shadow-sm backdrop-blur-md transition group-hover:bg-white sm:opacity-0 sm:group-hover:opacity-100">
+                  <span className="absolute bottom-5 right-5 flex h-10 w-10 items-center justify-center rounded-full bg-[#D8ED83] text-[#292923] shadow-sm transition group-hover:bg-[#292923] group-hover:text-[#D8ED83]">
                     <ZoomIn size={17} strokeWidth={1.4} />
                   </span>
                 </button>
               ) : (
-                <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 text-sm text-[#897D70]">
+                <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 bg-[#A99A88] text-[#292923]/60">
                   <ImageIcon size={28} strokeWidth={1} />
-                  Image coming soon
+                  <span className="text-[9px] uppercase tracking-[0.2em]">
+                    Image coming soon
+                  </span>
+                  <span className="font-serif text-3xl tracking-[0.2em]">
+                    TALA
+                  </span>
                 </div>
               )}
 
-              <div className="pointer-events-none absolute bottom-5 left-5 text-[8px] uppercase tracking-[0.25em] text-white drop-shadow">
+              <div className="pointer-events-none absolute bottom-5 left-5 text-[8px] font-semibold uppercase tracking-[0.25em] text-white drop-shadow">
                 TALA — LUXURY FASHION
               </div>
 
               {selectedColor && (
-                <div className="absolute right-5 top-5 rounded-full border border-white/50 bg-white/75 px-4 py-2 text-[9px] uppercase tracking-[0.18em] text-[#403A33] backdrop-blur-sm">
+                <div className="absolute right-5 top-5 rounded-full border border-white/40 bg-[#292923]/75 px-4 py-2 text-[9px] uppercase tracking-[0.18em] text-[#F0E7D9] backdrop-blur-sm">
                   {selectedColor}
                 </div>
               )}
@@ -612,7 +505,7 @@ export default function ProductDetails({
                     type="button"
                     onClick={showPreviousImage}
                     aria-label="Previous product image"
-                    className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-white/75 text-[#39342E] opacity-100 shadow-sm backdrop-blur-md transition hover:bg-white sm:left-5 sm:opacity-0 sm:group-hover:opacity-100"
+                    className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#292923]/80 text-[#D8ED83] opacity-100 transition hover:bg-[#D8ED83] hover:text-[#292923] sm:left-5 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <ArrowLeft size={17} />
                   </button>
@@ -621,12 +514,12 @@ export default function ProductDetails({
                     type="button"
                     onClick={showNextImage}
                     aria-label="Next product image"
-                    className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-white/75 text-[#39342E] opacity-100 shadow-sm backdrop-blur-md transition hover:bg-white sm:right-5 sm:opacity-0 sm:group-hover:opacity-100"
+                    className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#292923]/80 text-[#D8ED83] opacity-100 transition hover:bg-[#D8ED83] hover:text-[#292923] sm:right-5 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <ArrowRight size={17} />
                   </button>
 
-                  <div className="absolute bottom-5 right-16 rounded-full bg-black/35 px-3 py-1.5 text-[9px] tracking-[0.15em] text-white backdrop-blur-sm">
+                  <div className="absolute bottom-5 right-16 rounded-full bg-[#292923]/75 px-3 py-1.5 text-[9px] tracking-[0.15em] text-white">
                     {currentImageIndex + 1} / {galleryImages.length}
                   </div>
                 </>
@@ -643,15 +536,15 @@ export default function ProductDetails({
                     <button
                       key={`${image}-${index}`}
                       type="button"
-                      onClick={() => selectGalleryImage(image)}
+                      onClick={() => setSelectedImage(image)}
                       aria-label={`View product image ${index + 1}`}
                       aria-pressed={isActive}
                       className="relative overflow-hidden border transition duration-300"
                       style={{
                         borderColor: isActive
-                          ? colorTheme.accent
+                          ? THEME.ink
                           : "transparent",
-                        opacity: isActive ? 1 : 0.62,
+                        opacity: isActive ? 1 : 0.65,
                       }}
                     >
                       <img
@@ -660,10 +553,7 @@ export default function ProductDetails({
                         className="aspect-[4/5] w-full object-cover transition duration-500 hover:scale-105"
                       />
                       {isActive && (
-                        <span
-                          className="absolute bottom-0 left-0 h-[2px] w-full"
-                          style={{ backgroundColor: colorTheme.accent }}
-                        />
+                        <span className="absolute bottom-0 left-0 h-[3px] w-full bg-[#D8ED83]" />
                       )}
                     </button>
                   );
@@ -671,17 +561,18 @@ export default function ProductDetails({
               </div>
             )}
 
-            <div className="mt-4 flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#9B9084]">
+            <div className="mt-4 flex items-center justify-between text-[9px] font-medium uppercase tracking-[0.16em] text-[#625B50]">
               <span>
                 {galleryImages.length > 0
                   ? `${galleryImages.length} product view${galleryImages.length === 1 ? "" : "s"}`
                   : "Product photography"}
               </span>
+
               {galleryImages.length > 1 && (
                 <button
                   type="button"
                   onClick={openGallery}
-                  className="flex items-center gap-2 transition hover:text-[#302A24]"
+                  className="flex items-center gap-2 transition hover:text-[#292923]"
                 >
                   <ZoomIn size={13} />
                   View gallery
@@ -690,42 +581,40 @@ export default function ProductDetails({
             </div>
           </div>
 
-          {/* Product Information */}
+          {/* Product information */}
           <div className="lg:sticky lg:top-10">
-            <div className="border-b border-[#E5DDD2] pb-7">
-              <p
-                className="mb-5 text-[9px] uppercase tracking-[0.35em] transition-colors duration-500"
-                style={{ color: colorTheme.accent }}
-              >
+            <div className="border-b border-[#292923]/25 pb-7">
+              <p className="mb-5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.35em] text-[#59633D]">
+                <span className="h-px w-7 bg-[#59633D]" />
                 TALA LUXURY FASHION
               </p>
 
-              <h1 className="font-serif text-3xl font-light leading-tight tracking-wide sm:text-4xl lg:text-5xl">
+              <h1 className="font-serif text-3xl font-normal leading-tight tracking-[-0.035em] text-[#292923] sm:text-4xl lg:text-5xl">
                 {product.name}
               </h1>
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <span className="text-lg tracking-wide">
+                <span className="text-lg font-semibold tracking-wide text-[#292923]">
                   {formatPrice(currentPrice)}
                 </span>
 
                 {product.compare_at_price &&
                   product.compare_at_price > currentPrice && (
-                    <span className="text-sm text-[#A69A90] line-through">
+                    <span className="text-sm text-[#625B50] line-through">
                       {formatPrice(product.compare_at_price)}
                     </span>
                   )}
               </div>
 
               {product.description && (
-                <p className="mt-7 whitespace-pre-line text-sm leading-8 text-[#81766B]">
+                <p className="mt-7 whitespace-pre-line text-sm leading-8 text-[#514A40]">
                   {product.description}
                 </p>
               )}
             </div>
 
             {productUnavailable ? (
-              <div className="mt-8 border border-[#DED2C5] bg-white/50 p-5 text-sm text-[#8A5145]">
+              <div className="mt-8 border border-[#292923]/25 bg-[#A99A88] p-5 text-sm text-[#292923]">
                 This product is currently unavailable.
               </div>
             ) : (
@@ -734,18 +623,15 @@ export default function ProductDetails({
                 {colors.length > 0 && (
                   <div className="mt-8">
                     <div className="mb-4 flex items-center justify-between">
-                      <h2 className="text-[10px] uppercase tracking-[0.2em]">
+                      <h2 className="text-[10px] font-bold uppercase tracking-[0.2em]">
                         Select Color
                       </h2>
-                      <span
-                        className="text-xs transition-colors duration-500"
-                        style={{ color: colorTheme.accent }}
-                      >
+                      <span className="text-xs text-[#59633D]">
                         {selectedVariant?.color ?? ""}
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2">
                       {colors.map((color) => {
                         const matching = activeVariants.filter(
                           (variant) => variant.color === color
@@ -779,22 +665,24 @@ export default function ProductDetails({
                             onClick={() => chooseColor(color)}
                             aria-label={`Select ${color}`}
                             aria-pressed={selected}
-                            className="group flex items-center gap-2 rounded-full border bg-white/40 px-3 py-2 text-xs transition-all duration-300 hover:bg-white/80"
+                            className="flex items-center gap-2 rounded-full border px-3 py-2 text-xs transition-all duration-300"
                             style={{
                               borderColor: selected
-                                ? colorTheme.accent
-                                : "#E5DDD2",
+                                ? THEME.ink
+                                : "rgba(41,39,35,0.25)",
+                              backgroundColor: selected
+                                ? "#D8ED83"
+                                : "#A99A88",
+                              color: THEME.ink,
                             }}
                           >
                             <span
-                              className="h-4 w-4 rounded-full border border-black/10"
+                              className="h-4 w-4 rounded-full border border-black/20"
                               style={{ backgroundColor: colorCode }}
                             />
-                            <span className="text-[#62584E]">
-                              {color}
-                            </span>
+                            <span>{color}</span>
                             {soldOut && (
-                              <span className="text-[9px] text-[#A66C60]">
+                              <span className="text-[9px] text-[#783F35]">
                                 Sold out
                               </span>
                             )}
@@ -809,14 +697,11 @@ export default function ProductDetails({
                 {sizes.length > 0 && (
                   <div className="mt-9">
                     <div className="mb-4 flex items-center justify-between">
-                      <h2 className="text-[10px] uppercase tracking-[0.2em]">
+                      <h2 className="text-[10px] font-bold uppercase tracking-[0.2em]">
                         Select Size
                       </h2>
-                      <span
-                        className="text-[10px] uppercase tracking-[0.12em] transition-colors duration-500"
-                        style={{ color: colorTheme.accent }}
-                      >
-                        Size selection
+                      <span className="text-[9px] uppercase tracking-[0.12em] text-[#625B50]">
+                        Choose your fit
                       </span>
                     </div>
 
@@ -849,20 +734,18 @@ export default function ProductDetails({
                             type="button"
                             onClick={() => chooseSize(size)}
                             aria-pressed={selected}
-                            className={`relative min-w-[58px] border px-4 py-3 text-[11px] tracking-wide transition-all duration-300 ${
-                              selected
-                                ? "text-white"
-                                : soldOut
-                                  ? "bg-[#F1EAE5] text-[#A58B80]"
-                                  : "bg-white/50 text-[#51473D] hover:bg-white"
-                            }`}
+                            className="relative min-w-[58px] border px-4 py-3 text-[11px] font-semibold tracking-wide transition-all duration-300"
                             style={{
                               borderColor: selected
-                                ? colorTheme.button
-                                : colorTheme.border,
+                                ? THEME.ink
+                                : "rgba(41,39,35,0.3)",
                               backgroundColor: selected
-                                ? colorTheme.button
-                                : undefined,
+                                ? THEME.ink
+                                : "#A99A88",
+                              color: selected
+                                ? THEME.lime
+                                : THEME.ink,
+                              opacity: soldOut ? 0.55 : 1,
                             }}
                           >
                             <span
@@ -880,11 +763,12 @@ export default function ProductDetails({
                 {/* Stock */}
                 <div className="mt-7 min-h-5">
                   {selectedOptionUnavailable ? (
-                    <p className="text-[10px] uppercase tracking-[0.15em] text-[#A45E51]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#783F35]">
                       This option is currently sold out
                     </p>
                   ) : (
-                    <p className="text-[10px] tracking-wide text-[#81766B]">
+                    <p className="flex items-center gap-2 text-[10px] tracking-wide text-[#59633D]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#59633D]" />
                       Available for purchase
                     </p>
                   )}
@@ -892,14 +776,11 @@ export default function ProductDetails({
 
                 {/* Quantity */}
                 <div className="mt-5">
-                  <h2 className="mb-4 text-[10px] uppercase tracking-[0.2em]">
+                  <h2 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em]">
                     Quantity
                   </h2>
 
-                  <div
-                    className="flex h-12 w-[145px] items-center justify-between border bg-white/50 transition-colors duration-500"
-                    style={{ borderColor: colorTheme.border }}
-                  >
+                  <div className="flex h-12 w-[145px] items-center justify-between border border-[#292923]/30 bg-[#A99A88]">
                     <button
                       type="button"
                       aria-label="Decrease quantity"
@@ -909,12 +790,12 @@ export default function ProductDetails({
                           Math.max(1, current - 1)
                         )
                       }
-                      className="flex h-full w-11 items-center justify-center text-[#75685B] transition hover:bg-[#EEE8DF] disabled:opacity-30"
+                      className="flex h-full w-11 items-center justify-center text-[#292923] transition hover:bg-[#D8ED83] disabled:opacity-30"
                     >
                       <Minus size={14} />
                     </button>
 
-                    <span className="text-xs tabular-nums">
+                    <span className="text-xs font-semibold tabular-nums">
                       {quantity}
                     </span>
 
@@ -931,25 +812,19 @@ export default function ProductDetails({
                           Math.min(availableStock, 10, current + 1)
                         )
                       }
-                      className="flex h-full w-11 items-center justify-center text-[#75685B] transition hover:bg-[#EEE8DF] disabled:opacity-30"
+                      className="flex h-full w-11 items-center justify-center text-[#292923] transition hover:bg-[#D8ED83] disabled:opacity-30"
                     >
                       <Plus size={14} />
                     </button>
                   </div>
                 </div>
 
-                {/* Add to Bag */}
+                {/* Add to bag */}
                 <button
                   type="button"
                   onClick={addProductToCart}
                   disabled={selectedOptionUnavailable}
-                  className="mt-8 flex min-h-[56px] w-full items-center justify-center gap-3 px-6 text-[10px] font-medium uppercase tracking-[0.25em] transition-all duration-500 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{
-                    backgroundColor: isAdded
-                      ? "#71836B"
-                      : colorTheme.button,
-                    color: colorTheme.buttonText,
-                  }}
+                  className="mt-8 flex min-h-[58px] w-full items-center justify-center gap-3 bg-[#292923] px-6 text-[10px] font-bold uppercase tracking-[0.22em] text-[#D8ED83] transition-all duration-300 hover:bg-[#D8ED83] hover:text-[#292923] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {selectedOptionUnavailable ? (
                     "Sold Out"
@@ -973,8 +848,8 @@ export default function ProductDetails({
                       message.includes("unavailable") ||
                       message.includes("sold out") ||
                       message.includes("Only")
-                        ? "text-[#A45E51]"
-                        : "text-[#71836B]"
+                        ? "text-[#783F35]"
+                        : "text-[#465638]"
                     }`}
                     role="status"
                     aria-live="polite"
@@ -985,33 +860,33 @@ export default function ProductDetails({
               </>
             )}
 
-            {/* Additional information */}
-            <div className="mt-9 border-t border-[#E5DDD2]">
-              <div className="flex items-center justify-between border-b border-[#E5DDD2] py-5">
-                <span className="text-[9px] uppercase tracking-[0.18em] text-[#62584E]">
+            {/* Details */}
+            <div className="mt-9 border-t border-[#292923]/25">
+              <div className="flex items-center justify-between border-b border-[#292923]/20 py-5">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#514A40]">
                   TALA Quality
                 </span>
-                <span className="font-serif text-sm text-[#A58B68]">
+                <span className="font-serif text-sm text-[#59633D]">
                   Thoughtfully selected
                 </span>
               </div>
 
-              <div className="flex items-center justify-between border-b border-[#E5DDD2] py-5">
-                <span className="text-[9px] uppercase tracking-[0.18em] text-[#62584E]">
+              <div className="flex items-center justify-between border-b border-[#292923]/20 py-5">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#514A40]">
                   Payment
                 </span>
-                <span className="text-[10px] text-[#81766B]">
+                <span className="text-[10px] text-[#514A40]">
                   Cash on Delivery
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-5">
-                <span className="text-[9px] uppercase tracking-[0.18em] text-[#62584E]">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#514A40]">
                   Need assistance?
                 </span>
                 <Link
                   href="/contact"
-                  className="flex items-center gap-2 text-[10px] text-[#81766B] transition hover:text-[#292521]"
+                  className="flex items-center gap-2 text-[10px] text-[#514A40] transition hover:text-[#292923]"
                 >
                   Contact TALA
                   <ArrowRight size={13} />
@@ -1021,7 +896,7 @@ export default function ProductDetails({
 
             <Link
               href="/collections"
-              className="mt-7 inline-flex items-center gap-3 text-[9px] uppercase tracking-[0.2em] text-[#81766B] transition hover:text-[#292521]"
+              className="mt-7 inline-flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#625B50] transition hover:text-[#292923]"
             >
               <ArrowLeft size={14} />
               Continue exploring
@@ -1030,18 +905,17 @@ export default function ProductDetails({
         </div>
       </section>
 
-      {/* Full-screen Gallery */}
+      {/* Full screen gallery */}
       {isGalleryOpen && galleryImages.length > 0 && (
         <div
-          className="fixed inset-0 z-[100] flex flex-col bg-[#171614]/[0.98] text-white"
+          className="fixed inset-0 z-[100] flex flex-col bg-[#171714]/[0.98] text-white"
           role="dialog"
           aria-modal="true"
           aria-label="Product image gallery"
         >
-          {/* Gallery top bar */}
           <div className="flex h-[68px] shrink-0 items-center justify-between border-b border-white/10 px-5 sm:px-8">
             <div>
-              <p className="text-[9px] uppercase tracking-[0.25em] text-white/50">
+              <p className="text-[9px] uppercase tracking-[0.25em] text-[#D8ED83]">
                 TALA — PRODUCT GALLERY
               </p>
               <p className="mt-1 max-w-[200px] truncate text-xs tracking-wide text-white/90">
@@ -1064,7 +938,6 @@ export default function ProductDetails({
             </div>
           </div>
 
-          {/* Main lightbox image */}
           <div
             className="relative flex min-h-0 flex-1 items-center justify-center px-3 py-5 sm:px-16"
             onTouchStart={handleTouchStart}
@@ -1097,7 +970,6 @@ export default function ProductDetails({
             </button>
           </div>
 
-          {/* Gallery thumbnails */}
           <div className="flex shrink-0 items-center justify-center gap-2 overflow-x-auto border-t border-white/10 px-4 py-4">
             {galleryImages.map((image, index) => {
               const isActive = currentImage === image;
@@ -1106,13 +978,13 @@ export default function ProductDetails({
                 <button
                   key={`${image}-${index}`}
                   type="button"
-                  onClick={() => selectGalleryImage(image)}
+                  onClick={() => setSelectedImage(image)}
                   aria-label={`Open image ${index + 1}`}
                   aria-pressed={isActive}
                   className="h-[58px] w-[46px] shrink-0 overflow-hidden border transition sm:h-[72px] sm:w-[56px]"
                   style={{
                     borderColor: isActive
-                      ? "#FFFFFF"
+                      ? THEME.lime
                       : "rgba(255,255,255,0.12)",
                     opacity: isActive ? 1 : 0.45,
                   }}
@@ -1134,16 +1006,27 @@ export default function ProductDetails({
       )}
 
       {/* Footer */}
-      <footer className="border-t border-[#E5DDD2] px-5 py-10 text-center">
+      <footer className="border-t border-[#292923]/25 bg-[#A99A88] px-5 py-10 text-center">
         <Link
           href="/"
-          className="text-xl font-light tracking-[0.38em]"
+          className="font-serif text-2xl tracking-[0.38em] text-[#292923]"
         >
           TALA
         </Link>
-        <p className="mt-4 text-[9px] tracking-[0.28em] text-[#A69A8D]">
+
+        <p className="mt-3 text-[9px] font-semibold tracking-[0.28em] text-[#625B50]">
           TALA LUXURY FASHION
         </p>
+
+        <div className="mx-auto mt-7 h-px max-w-5xl bg-[#292923]/20" />
+
+        <Link
+          href="/collections"
+          className="mt-6 inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#514A40] transition hover:text-[#292923]"
+        >
+          Discover more pieces
+          <ArrowRight size={13} />
+        </Link>
       </footer>
     </main>
   );
