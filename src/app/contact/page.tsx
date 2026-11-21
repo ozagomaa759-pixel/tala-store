@@ -1,106 +1,55 @@
+
 "use client";
 
-import { useState, type FormEvent, type ChangeEvent } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
-  Check,
-  CheckCircle2,
-  Clock,
   Instagram,
-  Mail,
-  MapPin,
   MessageCircle,
-  Phone,
-  Send,
   Sparkles,
   X,
   Menu,
-  Upload,
-  FileText,
-  Paperclip,
   ShieldCheck,
   Headphones,
-  ChevronDown,
-  AlertCircle,
-  RefreshCw,
+  Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-type ContactFormData = {
-  name: string;
-  email: string;
-  phone: string;
-  subject: string;
-  orderNumber: string;
-  message: string;
-};
-
-type FormErrors = Partial<Record<keyof ContactFormData, string>>;
-
-const INITIAL_FORM: ContactFormData = {
-  name: "",
-  email: "",
-  phone: "",
-  subject: "",
-  orderNumber: "",
-  message: "",
-};
+// Replace this URL with TALA's official Instagram profile when ready.
+const INSTAGRAM_URL = "https://www.instagram.com/";
 
 const CONTACT_DETAILS = [
   {
-    icon: Mail,
-    label: "Email",
-    value: "hello@tala.com",
-    href: "mailto:hello@tala.com",
-  },
-  {
-    icon: Phone,
-    label: "Phone",
-    value: "+20 100 000 0000",
-    href: "tel:+201000000000",
-  },
-  {
     icon: Instagram,
     label: "Instagram",
-    value: "@tala",
-    href: "https://instagram.com/",
+    value: "Connect with TALA",
+    description: "Our official social channel",
+    href: INSTAGRAM_URL,
   },
-];
-
-const SUBJECTS = [
-  "General Inquiry",
-  "Order Support",
-  "Shipping & Delivery",
-  "Returns & Exchanges",
-  "Product Information",
-  "Sizing & Fit",
-  "Partnership",
-  "Other",
 ];
 
 const FAQS = [
   {
     question: "How can I track my order?",
     answer:
-      "You can use our Track Order page to enter your order details. If you need additional help, contact our support team.",
+      "You can use our Track Order page to enter your order details. If you need additional help, contact our team through Instagram.",
   },
   {
     question: "Can I change or cancel my order?",
     answer:
-      "Contact us as soon as possible with your order number. Changes may depend on the order processing stage.",
+      "Contact us through Instagram as soon as possible and include your order number. Changes may depend on the order processing stage.",
   },
   {
     question: "How long does delivery take?",
     answer:
-      "Delivery times depend on your location and order availability. Our team can help you with the latest information.",
+      "Delivery times depend on your location and order availability. Our team can help you with the latest information through Instagram.",
   },
   {
     question: "How can I request a return?",
     answer:
-      "Visit our Returns page to review the return information and contact our team for assistance.",
+      "Visit our Returns page to review the return information. For additional assistance, you can reach our team through Instagram.",
   },
 ];
 
@@ -118,144 +67,65 @@ const stagger = {
   },
 };
 
-function validateForm(form: ContactFormData): FormErrors {
-  const errors: FormErrors = {};
+const TALA_PROMISES = [
+  {
+    number: "01",
+    title: "Personal attention",
+    description:
+      "Every inquiry deserves a thoughtful and helpful response.",
+  },
+  {
+    number: "02",
+    title: "Clear communication",
+    description:
+      "We believe in making information simple and accessible.",
+  },
+  {
+    number: "03",
+    title: "Considered experience",
+    description:
+      "From browsing to after-sales support, details matter.",
+  },
+];
 
-  if (!form.name.trim()) {
-    errors.name = "Please enter your name.";
-  }
-
-  if (!form.email.trim()) {
-    errors.email = "Please enter your email address.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = "Please enter a valid email address.";
-  }
-
-  if (!form.subject) {
-    errors.subject = "Please select a subject.";
-  }
-
-  if (!form.message.trim()) {
-    errors.message = "Please enter your message.";
-  } else if (form.message.trim().length < 10) {
-    errors.message = "Your message must be at least 10 characters.";
-  }
-
-  return errors;
-}
+const EXPERIENCE_HIGHLIGHTS = [
+  {
+    icon: ShieldCheck,
+    title: "Privacy first",
+    description:
+      "Only share the information needed to help with your inquiry.",
+  },
+  {
+    icon: MessageCircle,
+    title: "Easy communication",
+    description:
+      "Connect with TALA through our Instagram channel.",
+  },
+  {
+    icon: Sparkles,
+    title: "Thoughtful service",
+    description:
+      "A considered experience is at the heart of TALA.",
+  },
+  {
+    icon: Clock,
+    title: "Convenient access",
+    description:
+      "Explore our help information whenever you need it.",
+  },
+];
 
 export default function ContactPage() {
-  const [form, setForm] = useState<ContactFormData>(INITIAL_FORM);
-  const [errors, setErrors] = useState<FormErrors>({});
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [attachmentError, setAttachmentError] = useState("");
-  const [showOrderField, setShowOrderField] = useState(false);
-
-  const updateField = (
-    field: keyof ContactFormData,
-    value: string
-  ) => {
-    setForm((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-
-    setErrors((previous) => ({
-      ...previous,
-      [field]: undefined,
-    }));
-  };
-
-  const handleAttachment = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      setAttachment(null);
-      setAttachmentError("");
-      return;
-    }
-
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "application/pdf",
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      setAttachmentError("Please upload a JPG, PNG, WEBP or PDF file.");
-      setAttachment(null);
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setAttachmentError("File size must be less than 5 MB.");
-      setAttachment(null);
-      return;
-    }
-
-    setAttachment(file);
-    setAttachmentError("");
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const validationErrors = validateForm(form);
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length > 0) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const payload = new FormData();
-      payload.append("name", form.name.trim());
-      payload.append("email", form.email.trim());
-      payload.append("phone", form.phone.trim());
-      payload.append("subject", form.subject);
-      payload.append("orderNumber", form.orderNumber.trim());
-      payload.append("message", form.message.trim());
-      if (attachment) payload.append("attachment", attachment);
-
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        body: payload,
-      });
-      const result = await response.json().catch(() => null);
-
-      if (!response.ok || !result?.success) {
-        throw new Error(result?.error || "We could not send your message. Please try again.");
-      }
-
-      setSubmitted(true);
-    } catch (error) {
-      setErrors((previous) => ({
-        ...previous,
-        message: error instanceof Error ? error.message : "Something went wrong. Please try again.",
-      }));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setForm(INITIAL_FORM);
-    setErrors({});
-    setAttachment(null);
-    setAttachmentError("");
-    setSubmitted(false);
-    setShowOrderField(false);
-  };
 
   return (
-    <main id="top" className="min-h-screen overflow-hidden bg-[#f5f1eb] text-[#29251f]">
+    <main
+      id="top"
+      className="min-h-screen overflow-hidden bg-[#f5f1eb] text-[#29251f]"
+    >
+      {/* NAVIGATION */}
+
       <nav className="relative z-40 border-b border-[#d8cec0] bg-[#f5f1eb]">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-10">
           <Link
@@ -269,12 +139,18 @@ export default function ContactPage() {
             <Link href="/" className="transition hover:text-[#9a8060]">
               Home
             </Link>
-            <Link href="/products" className="transition hover:text-[#9a8060]">
+
+            <Link
+              href="/products"
+              className="transition hover:text-[#9a8060]"
+            >
               Collection
             </Link>
+
             <Link href="/about" className="transition hover:text-[#9a8060]">
               About
             </Link>
+
             <Link
               href="/contact"
               className="border-b border-[#29251f] pb-1"
@@ -286,8 +162,9 @@ export default function ContactPage() {
           <button
             type="button"
             onClick={() => setMenuOpen((value) => !value)}
-            className="rounded-full border border-[#d8cec0] p-2 md:hidden"
+            className="rounded-full border border-[#d8cec0] p-2 transition hover:border-[#a68b68] md:hidden"
             aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
           >
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -299,19 +176,34 @@ export default function ContactPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
               className="overflow-hidden border-t border-[#d8cec0] md:hidden"
             >
               <div className="flex flex-col gap-5 px-6 py-6 text-sm uppercase tracking-widest">
-                <Link href="/" onClick={() => setMenuOpen(false)}>Home</Link>
-                <Link href="/products" onClick={() => setMenuOpen(false)}>Collection</Link>
-                <Link href="/about" onClick={() => setMenuOpen(false)}>About</Link>
-                <Link href="/contact" onClick={() => setMenuOpen(false)}>Contact</Link>
+                <Link href="/" onClick={() => setMenuOpen(false)}>
+                  Home
+                </Link>
+
+                <Link href="/products" onClick={() => setMenuOpen(false)}>
+                  Collection
+                </Link>
+
+                <Link href="/about" onClick={() => setMenuOpen(false)}>
+                  About
+                </Link>
+
+                <Link href="/contact" onClick={() => setMenuOpen(false)}>
+                  Contact
+                </Link>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </nav>
-            <section className="relative border-b border-[#d8cec0]">
+
+      {/* HERO SECTION */}
+
+      <section className="relative border-b border-[#d8cec0]">
         <div className="pointer-events-none absolute -right-32 top-0 h-96 w-96 rounded-full bg-[#c8b69e]/20 blur-3xl" />
 
         <div className="mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-10 lg:py-28">
@@ -326,6 +218,7 @@ export default function ContactPage() {
               className="mb-7 flex items-center gap-3"
             >
               <span className="h-px w-10 bg-[#a68b68]" />
+
               <span className="text-[10px] font-medium uppercase tracking-[0.35em] text-[#927b5e]">
                 We are here for you
               </span>
@@ -337,7 +230,10 @@ export default function ContactPage() {
             >
               Let&apos;s start
               <br />
-              a <span className="font-serif italic text-[#a68b68]">conversation.</span>
+              a{" "}
+              <span className="font-serif italic text-[#a68b68]">
+                conversation.
+              </span>
             </motion.h1>
 
             <motion.p
@@ -346,15 +242,21 @@ export default function ContactPage() {
             >
               Whether you have a question about an order, need help finding
               the perfect fit, or simply want to say hello, we would love to
-              hear from you.
+              hear from you. Connect with us directly through Instagram.
             </motion.p>
 
-            <motion.div variants={fadeUp} className="mt-10 flex flex-wrap gap-4">
+            <motion.div
+              variants={fadeUp}
+              className="mt-10 flex flex-wrap gap-4"
+            >
               <a
-                href="#contact-form"
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noreferrer"
                 className="group inline-flex items-center gap-4 bg-[#29251f] px-7 py-4 text-[10px] uppercase tracking-[0.2em] text-white transition hover:bg-[#a68b68]"
               >
-                Send us a message
+                Message us on Instagram
+
                 <ArrowUpRight
                   size={15}
                   className="transition-transform group-hover:-translate-y-1 group-hover:translate-x-1"
@@ -378,16 +280,21 @@ export default function ContactPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#f5f1eb] bg-[#d8c9b5]">
                   <Headphones size={16} />
                 </div>
+
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#f5f1eb] bg-[#c7b69e]">
                   <MessageCircle size={16} />
                 </div>
+
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#f5f1eb] bg-[#b6a38a]">
                   <Sparkles size={16} />
                 </div>
               </div>
 
               <div>
-                <p className="text-xs font-medium">A little help goes a long way.</p>
+                <p className="text-xs font-medium">
+                  A little help goes a long way.
+                </p>
+
                 <p className="mt-1 text-[10px] tracking-wide text-[#8c8275]">
                   The TALA customer care experience
                 </p>
@@ -402,27 +309,40 @@ export default function ContactPage() {
             className="relative mx-auto w-full max-w-lg"
           >
             <div className="absolute -inset-4 rotate-3 border border-[#cdbda8]" />
+
             <div className="relative aspect-[4/5] overflow-hidden bg-[#ded4c6]">
               <div className="absolute inset-0 bg-gradient-to-br from-[#b8a58c] via-[#e4d9ca] to-[#c7b49c]" />
+
               <div className="absolute left-1/2 top-1/2 h-[75%] w-[58%] -translate-x-1/2 -translate-y-1/2 border border-white/40" />
+
               <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
                 <span className="text-7xl font-light tracking-[0.2em] text-white/90 sm:text-8xl">
                   T
                 </span>
+
                 <span className="mt-5 text-[9px] uppercase tracking-[0.45em] text-white">
                   Thoughtfully yours
                 </span>
               </div>
+
               <div className="absolute bottom-7 left-7 right-7 flex items-end justify-between border-t border-white/50 pt-5 text-white">
                 <span className="text-[9px] uppercase tracking-[0.3em]">
                   TALA Studio
                 </span>
-                <span className="font-serif text-2xl italic">01 / 01</span>
+
+                <span className="font-serif text-2xl italic">
+                  01 / 01
+                </span>
               </div>
             </div>
+
             <div className="absolute -bottom-7 -right-5 hidden bg-[#f5f1eb] px-6 py-5 shadow-xl sm:block">
               <Sparkles size={18} className="text-[#a68b68]" />
-              <p className="mt-3 font-serif text-lg italic">Made with care.</p>
+
+              <p className="mt-3 font-serif text-lg italic">
+                Made with care.
+              </p>
+
               <p className="mt-1 text-[9px] uppercase tracking-[0.2em] text-[#8c8275]">
                 Every detail matters
               </p>
@@ -430,6 +350,8 @@ export default function ContactPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* CONTACT DETAILS */}
 
       <section
         id="contact-details"
@@ -440,17 +362,19 @@ export default function ContactPage() {
             <p className="text-[10px] uppercase tracking-[0.35em] text-[#a68b68]">
               Get in touch
             </p>
+
             <h2 className="mt-4 font-serif text-4xl font-light sm:text-5xl">
               We&apos;re one message away.
             </h2>
           </div>
+
           <p className="max-w-sm text-sm leading-7 text-[#82796d]">
-            Choose the way that works best for you. We&apos;ll be happy to
-            help with your questions.
+            A simple message can be the beginning of something wonderful.
+            Connect with our team through Instagram.
           </p>
         </div>
 
-        <div className="grid gap-px border border-[#d8cec0] bg-[#d8cec0] sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-px border border-[#d8cec0] bg-[#d8cec0] lg:grid-cols-3">
           {CONTACT_DETAILS.map((item, index) => {
             const Icon = item.icon;
 
@@ -458,376 +382,219 @@ export default function ContactPage() {
               <motion.a
                 key={item.label}
                 href={item.href}
-                target={item.href.startsWith("http") ? "_blank" : undefined}
-                rel={item.href.startsWith("http") ? "noreferrer" : undefined}
+                target="_blank"
+                rel="noreferrer"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="group bg-[#f5f1eb] p-8 transition-colors hover:bg-[#eee7dc] sm:p-10"
+                className="group bg-[#f5f1eb] p-8 transition-colors hover:bg-[#eee7dc] sm:p-10 lg:col-span-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#d5c8b7] transition group-hover:border-[#a68b68]">
                     <Icon size={19} strokeWidth={1.4} />
                   </div>
+
                   <ArrowUpRight
                     size={18}
                     className="text-[#9a8b78] transition group-hover:-translate-y-1 group-hover:translate-x-1"
                   />
                 </div>
+
                 <p className="mt-8 text-[9px] uppercase tracking-[0.3em] text-[#a68b68]">
                   {item.label}
                 </p>
-                <p className="mt-3 break-all text-lg font-light tracking-wide">
+
+                <p className="mt-3 text-lg font-light tracking-wide">
                   {item.value}
                 </p>
+
+                <p className="mt-2 text-xs text-[#8c8275]">
+                  {item.description}
+                </p>
+
+                <span className="mt-7 inline-flex items-center gap-3 text-[9px] uppercase tracking-[0.2em] text-[#927b5e]">
+                  Visit our Instagram
+                  <ArrowUpRight size={14} />
+                </span>
               </motion.a>
             );
           })}
         </div>
       </section>
 
+      {/* INSTAGRAM CONTACT EXPERIENCE */}
+
       <section
         id="contact-form"
         className="border-y border-[#d8cec0] bg-[#eee8df]"
       >
         <div className="mx-auto grid max-w-7xl gap-14 px-6 py-20 lg:grid-cols-[0.8fr_1.2fr] lg:px-10 lg:py-28">
-          <div className="lg:sticky lg:top-20 lg:self-start">
+          <motion.div
+            initial={{ opacity: 0, x: -25 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            className="lg:sticky lg:top-20 lg:self-start"
+          >
             <p className="text-[10px] uppercase tracking-[0.35em] text-[#a68b68]">
-              Contact form
+              A personal connection
             </p>
+
             <h2 className="mt-5 font-serif text-5xl font-light leading-tight sm:text-6xl">
-              Tell us
+              We&apos;d love
               <br />
-              <span className="italic text-[#a68b68]">what you need.</span>
+              <span className="italic text-[#a68b68]">
+                to hear from you.
+              </span>
             </h2>
+
             <p className="mt-7 max-w-md text-sm leading-8 text-[#82796d]">
-              Fill in the details below and share your question with us.
-              Please include your order number if your message is about an
-              existing purchase.
+              At TALA, we believe that personal service is part of the
+              experience. Whether you are exploring a collection or need
+              assistance with an order, we are here to help.
             </p>
 
             <div className="mt-12 space-y-6 border-t border-[#d4c9bb] pt-8">
               <div className="flex items-start gap-4">
                 <Clock size={18} className="mt-1 text-[#a68b68]" />
+
                 <div>
-                  <p className="text-xs font-medium">Customer care</p>
+                  <p className="text-xs font-medium">
+                    Customer care
+                  </p>
+
                   <p className="mt-2 text-xs leading-6 text-[#82796d]">
-                    Send us your question anytime through this form.
+                    Reach out whenever you have a question about your TALA
+                    experience.
                   </p>
                 </div>
               </div>
+
               <div className="flex items-start gap-4">
                 <ShieldCheck size={18} className="mt-1 text-[#a68b68]" />
+
                 <div>
-                  <p className="text-xs font-medium">Your information</p>
+                  <p className="text-xs font-medium">
+                    Your privacy
+                  </p>
+
                   <p className="mt-2 text-xs leading-6 text-[#82796d]">
-                    Only share information relevant to your inquiry. Avoid
-                    including passwords or payment details.
+                    Only share information relevant to your inquiry. Never
+                    share passwords or payment details.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <MessageCircle size={18} className="mt-1 text-[#a68b68]" />
+
+                <div>
+                  <p className="text-xs font-medium">
+                    Direct communication
+                  </p>
+
+                  <p className="mt-2 text-xs leading-6 text-[#82796d]">
+                    Our Instagram channel is the place to connect with TALA.
                   </p>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="border border-[#d8cec0] bg-[#f8f5f0] p-6 sm:p-10 lg:p-12">
-            <AnimatePresence mode="wait">
-              {submitted ? (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex min-h-[500px] flex-col items-center justify-center text-center"
-                >
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#b9a78f]">
-                    <CheckCircle2 size={34} className="text-[#927b5e]" />
+          <motion.div
+            initial={{ opacity: 0, y: 25 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="relative"
+          >
+            <div className="absolute -inset-3 border border-[#cdbda8]" />
+
+            <div className="relative flex min-h-[500px] flex-col justify-between border border-[#d8cec0] bg-[#f8f5f0] p-7 sm:p-10 lg:p-12">
+              <div>
+                <div className="flex items-center justify-between border-b border-[#ded5c9] pb-7">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-[#a68b68]">
+                      We would love to hear from you
+                    </p>
+
+                    <h3 className="mt-2 font-serif text-3xl font-light">
+                      Connect with TALA
+                    </h3>
                   </div>
-                  <p className="mt-8 text-[10px] uppercase tracking-[0.3em] text-[#a68b68]">
-                    Form completed
-                  </p>
-                  <h3 className="mt-4 font-serif text-4xl font-light">
-                    Thank you.
-                  </h3>
-                  <p className="mt-5 max-w-sm text-sm leading-7 text-[#82796d]">
-                    Your message has been received by TALA. Our team can review
-                    your inquiry and get back to you using the contact details provided.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="mt-9 inline-flex items-center gap-3 bg-[#29251f] px-7 py-4 text-[10px] uppercase tracking-[0.2em] text-white transition hover:bg-[#a68b68]"
+
+                  <span className="font-serif text-2xl italic text-[#c1b19c]">
+                    T.
+                  </span>
+                </div>
+
+                <div className="mt-12 flex flex-col items-center text-center">
+                  <motion.div
+                    initial={{ scale: 0.85, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.7 }}
+                    className="flex h-24 w-24 items-center justify-center rounded-full border border-[#cdbda8] bg-[#eee8df]"
                   >
-                    <RefreshCw size={14} />
-                    Send another message
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="form"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <div className="mb-10 flex items-center justify-between border-b border-[#ded5c9] pb-6">
-                    <div>
-                      <p className="text-[9px] uppercase tracking-[0.3em] text-[#a68b68]">
-                        We would love to hear from you
-                      </p>
-                      <h3 className="mt-2 font-serif text-3xl font-light">
-                        Write to us
-                      </h3>
-                    </div>
-                    <span className="font-serif text-2xl italic text-[#c1b19c]">
-                      T.
+                    <Instagram
+                      size={38}
+                      strokeWidth={1.2}
+                      className="text-[#927b5e]"
+                    />
+                  </motion.div>
+
+                  <p className="mt-9 text-[9px] uppercase tracking-[0.35em] text-[#a68b68]">
+                    The TALA community
+                  </p>
+
+                  <h4 className="mt-4 max-w-md font-serif text-4xl font-light leading-tight sm:text-5xl">
+                    A conversation
+                    <br />
+                    <span className="italic text-[#a68b68]">
+                      starts here.
                     </span>
-                  </div>
+                  </h4>
 
-                  <form onSubmit={handleSubmit} noValidate className="space-y-7">
-                    <div className="grid gap-7 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="contact-name" className="mb-3 block text-[9px] uppercase tracking-[0.2em]">
-                          Full name *
-                        </label>
-                        <input
-                          id="contact-name"
-                          type="text"
-                          autoComplete="name"
-                          value={form.name}
-                          onChange={(event) => updateField("name", event.target.value)}
-                          placeholder="Your full name"
-                          maxLength={100}
-                          className="w-full border-b border-[#cfc4b5] bg-transparent px-0 py-4 text-sm outline-none transition placeholder:text-[#b2a99d] focus:border-[#8f7657]"
-                        />
-                        {errors.name && (
-                          <p className="mt-2 flex items-center gap-2 text-xs text-red-700">
-                            <AlertCircle size={13} />
-                            {errors.name}
-                          </p>
-                        )}
-                      </div>
+                  <p className="mt-6 max-w-sm text-sm leading-8 text-[#82796d]">
+                    For order inquiries, product questions, styling
+                    assistance, or simply to say hello, send us a message
+                    through Instagram.
+                  </p>
 
-                      <div>
-                        <label htmlFor="contact-email" className="mb-3 block text-[9px] uppercase tracking-[0.2em]">
-                          Email address *
-                        </label>
-                        <input
-                          id="contact-email"
-                          type="email"
-                          autoComplete="email"
-                          value={form.email}
-                          onChange={(event) => updateField("email", event.target.value)}
-                          placeholder="you@example.com"
-                          maxLength={150}
-                          className="w-full border-b border-[#cfc4b5] bg-transparent px-0 py-4 text-sm outline-none transition placeholder:text-[#b2a99d] focus:border-[#8f7657]"
-                        />
-                        {errors.email && (
-                          <p className="mt-2 flex items-center gap-2 text-xs text-red-700">
-                            <AlertCircle size={13} />
-                            {errors.email}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                  <a
+                    href={INSTAGRAM_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group mt-9 inline-flex w-full items-center justify-between bg-[#29251f] px-7 py-5 text-white transition hover:bg-[#927b5e] sm:max-w-sm"
+                  >
+                    <span className="text-[10px] uppercase tracking-[0.25em]">
+                      Open Instagram
+                    </span>
 
-                    <div className="grid gap-7 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="contact-phone" className="mb-3 block text-[9px] uppercase tracking-[0.2em]">
-                          Phone number
-                        </label>
-                        <input
-                          id="contact-phone"
-                          type="tel"
-                          autoComplete="tel"
-                          value={form.phone}
-                          onChange={(event) => updateField("phone", event.target.value)}
-                          placeholder="+20"
-                          maxLength={25}
-                          className="w-full border-b border-[#cfc4b5] bg-transparent px-0 py-4 text-sm outline-none transition placeholder:text-[#b2a99d] focus:border-[#8f7657]"
-                        />
-                      </div>
+                    <ArrowUpRight
+                      size={17}
+                      className="transition-transform group-hover:-translate-y-1 group-hover:translate-x-1"
+                    />
+                  </a>
+                </div>
+              </div>
 
-                      <div>
-                        <label htmlFor="contact-subject" className="mb-3 block text-[9px] uppercase tracking-[0.2em]">
-                          Subject *
-                        </label>
-                        <div className="relative">
-                          <select
-                            id="contact-subject"
-                            value={form.subject}
-                            onChange={(event) => {
-                              updateField("subject", event.target.value);
-                              setShowOrderField(event.target.value === "Order Support");
-                            }}
-                            className="w-full appearance-none border-b border-[#cfc4b5] bg-transparent px-0 py-4 pr-8 text-sm outline-none focus:border-[#8f7657]"
-                          >
-                            <option value="">Select a subject</option>
-                            {SUBJECTS.map((subject) => (
-                              <option key={subject} value={subject}>
-                                {subject}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown
-                            size={16}
-                            className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[#8c8275]"
-                          />
-                        </div>
-                        {errors.subject && (
-                          <p className="mt-2 text-xs text-red-700">{errors.subject}</p>
-                        )}
-                      </div>
-                    </div>
+              <div className="mt-12 flex items-center justify-between border-t border-[#ded5c9] pt-6">
+                <span className="text-[9px] uppercase tracking-[0.25em] text-[#a69a8a]">
+                  Thoughtfully yours
+                </span>
 
-                    <AnimatePresence>
-                      {showOrderField && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <label htmlFor="contact-order" className="mb-3 block text-[9px] uppercase tracking-[0.2em]">
-                            Order number
-                          </label>
-                          <input
-                            id="contact-order"
-                            type="text"
-                            value={form.orderNumber}
-                            onChange={(event) => updateField("orderNumber", event.target.value)}
-                            placeholder="Enter your order number"
-                            maxLength={60}
-                            className="w-full border-b border-[#cfc4b5] bg-transparent px-0 py-4 text-sm outline-none focus:border-[#8f7657]"
-                          />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <div>
-                      <div className="mb-3 flex items-center justify-between">
-                        <label htmlFor="contact-message" className="block text-[9px] uppercase tracking-[0.2em]">
-                          Your message *
-                        </label>
-                        <span className="text-[10px] tabular-nums text-[#a69a8a]">
-                          {form.message.length}/2000
-                        </span>
-                      </div>
-                      <textarea
-                        id="contact-message"
-                        value={form.message}
-                        onChange={(event) => updateField("message", event.target.value)}
-                        placeholder="Tell us how we can help..."
-                        rows={6}
-                        maxLength={2000}
-                        className="w-full resize-y border-b border-[#cfc4b5] bg-transparent px-0 py-4 text-sm leading-7 outline-none transition placeholder:text-[#b2a99d] focus:border-[#8f7657]"
-                      />
-                      {errors.message && (
-                        <p className="mt-2 flex items-center gap-2 text-xs text-red-700">
-                          <AlertCircle size={13} />
-                          {errors.message}
-                        </p>
-                      )}
-                    </div>
-                                        <div className="border border-dashed border-[#cfc4b5] p-6 transition hover:border-[#9a8060]">
-                      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eee8df]">
-                            <Paperclip size={18} className="text-[#927b5e]" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium">Attach a file</p>
-                            <p className="mt-2 text-[10px] leading-5 text-[#8c8275]">
-                              JPG, PNG, WEBP or PDF · Maximum 5 MB
-                            </p>
-                          </div>
-                        </div>
-
-                        <label className="inline-flex cursor-pointer items-center justify-center gap-3 border border-[#cfc4b5] px-5 py-3 text-[9px] uppercase tracking-[0.2em] transition hover:border-[#29251f]">
-                          <Upload size={14} />
-                          Choose file
-                          <input
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.webp,.pdf"
-                            onChange={handleAttachment}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-
-                      {attachment && (
-                        <div className="mt-5 flex items-center justify-between gap-4 border-t border-[#ded5c9] pt-4">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <FileText size={17} className="shrink-0 text-[#a68b68]" />
-                            <div className="min-w-0">
-                              <p className="truncate text-xs">{attachment.name}</p>
-                              <p className="mt-1 text-[9px] text-[#8c8275]">
-                                {(attachment.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setAttachment(null)}
-                            className="rounded-full p-2 transition hover:bg-[#e8ded1]"
-                            aria-label="Remove attachment"
-                          >
-                            <X size={15} />
-                          </button>
-                        </div>
-                      )}
-
-                      {attachmentError && (
-                        <p className="mt-4 flex items-center gap-2 text-xs text-red-700">
-                          <AlertCircle size={14} />
-                          {attachmentError}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-5 border-t border-[#ded5c9] pt-7">
-                      <label className="flex items-start gap-3 text-[10px] leading-6 text-[#82796d]">
-                        <input
-                          type="checkbox"
-                          required
-                          className="mt-1 accent-[#927b5e]"
-                        />
-                        <span>
-                          I confirm that the information provided is accurate
-                          and does not contain sensitive payment information.
-                        </span>
-                      </label>
-
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="group flex w-full items-center justify-between bg-[#29251f] px-7 py-5 text-white transition hover:bg-[#927b5e] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <span className="text-[10px] uppercase tracking-[0.25em]">
-                          {isSubmitting ? "Processing..." : "Submit your message"}
-                        </span>
-
-                        {isSubmitting ? (
-                          <RefreshCw size={17} className="animate-spin" />
-                        ) : (
-                          <Send
-                            size={17}
-                            className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
-                          />
-                        )}
-                      </button>
-
-                      <p className="text-center text-[9px] leading-5 text-[#a69a8a]">
-                        Your message is securely submitted to TALA for review.
-                      </p>
-                    </div>
-                  </form>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                <span className="font-serif text-2xl italic text-[#c1b19c]">
+                  T.
+                </span>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
+
+      {/* FREQUENTLY ASKED QUESTIONS */}
 
       <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
         <div className="grid gap-14 lg:grid-cols-[0.8fr_1.2fr]">
@@ -835,14 +602,18 @@ export default function ContactPage() {
             <p className="text-[10px] uppercase tracking-[0.35em] text-[#a68b68]">
               Need a quick answer?
             </p>
+
             <h2 className="mt-5 font-serif text-5xl font-light leading-tight sm:text-6xl">
               Frequently
               <br />
-              <span className="italic text-[#a68b68]">asked questions.</span>
+              <span className="italic text-[#a68b68]">
+                asked questions.
+              </span>
             </h2>
+
             <p className="mt-7 max-w-sm text-sm leading-8 text-[#82796d]">
               Here are some answers to questions our customers commonly ask.
-              If you need more help, send us a message.
+              If you need more help, connect with us through Instagram.
             </p>
 
             <Link
@@ -873,6 +644,7 @@ export default function ContactPage() {
                       <span className="font-serif text-sm italic text-[#a68b68]">
                         0{index + 1}
                       </span>
+
                       <span className="text-sm font-medium sm:text-base">
                         {faq.question}
                       </span>
@@ -910,25 +682,36 @@ export default function ContactPage() {
         </div>
       </section>
 
+      {/* DARK CTA SECTION */}
+
       <section className="relative overflow-hidden bg-[#29251f] px-6 py-20 text-[#f5f1eb] lg:py-28">
         <div className="pointer-events-none absolute -right-20 -top-40 h-96 w-96 rounded-full border border-white/10" />
+
         <div className="pointer-events-none absolute -right-10 -top-28 h-72 w-72 rounded-full border border-white/10" />
 
         <div className="relative mx-auto flex max-w-5xl flex-col items-center text-center">
           <Sparkles size={23} className="text-[#c5a982]" />
+
           <p className="mt-7 text-[9px] uppercase tracking-[0.4em] text-[#c5a982]">
             The TALA experience
           </p>
+
           <h2 className="mt-6 max-w-3xl font-serif text-4xl font-light leading-tight sm:text-6xl">
             Good style begins with
-            <span className="italic text-[#c5a982]"> good conversations.</span>
+            <span className="italic text-[#c5a982]">
+              {" "}good conversations.
+            </span>
           </h2>
+
           <p className="mt-7 max-w-lg text-sm leading-8 text-[#c5beb3]">
             Every question matters. Every detail counts. We are glad you are
             here and look forward to hearing from you.
           </p>
+
           <a
-            href="#contact-form"
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noreferrer"
             className="mt-10 inline-flex items-center gap-4 border border-[#c5a982]/60 px-8 py-5 text-[10px] uppercase tracking-[0.25em] transition hover:bg-[#f5f1eb] hover:text-[#29251f]"
           >
             Start a conversation
@@ -936,124 +719,12 @@ export default function ContactPage() {
           </a>
         </div>
       </section>
-            <footer className="bg-[#f5f1eb]">
-        <div className="mx-auto max-w-7xl px-6 py-16 lg:px-10 lg:py-20">
-          <div className="grid gap-12 border-b border-[#d8cec0] pb-14 md:grid-cols-2 lg:grid-cols-4">
-            <div className="lg:col-span-2">
-              <Link
-                href="/"
-                className="inline-block text-5xl font-semibold tracking-[0.3em]"
-              >
-                TALA
-              </Link>
 
-              <p className="mt-7 max-w-sm text-sm leading-8 text-[#82796d]">
-                Thoughtfully selected pieces, timeless details, and a
-                considered approach to everyday style. Welcome to TALA.
-              </p>
-
-              <div className="mt-8 flex items-center gap-3">
-                <a
-                  href="https://instagram.com/"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Instagram"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d8cec0] transition hover:border-[#a68b68] hover:bg-[#eee8df]"
-                >
-                  <Instagram size={17} />
-                </a>
-
-                <a
-                  href="mailto:hello@tala.com"
-                  aria-label="Email TALA"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d8cec0] transition hover:border-[#a68b68] hover:bg-[#eee8df]"
-                >
-                  <Mail size={17} />
-                </a>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.25em]">
-                Explore
-              </h3>
-
-              <div className="mt-7 flex flex-col gap-4 text-xs text-[#82796d]">
-                <Link href="/" className="transition hover:text-[#a68b68]">
-                  Home
-                </Link>
-                <Link href="/products" className="transition hover:text-[#a68b68]">
-                  Collection
-                </Link>
-                <Link href="/about" className="transition hover:text-[#a68b68]">
-                  About TALA
-                </Link>
-                <Link href="/sale" className="transition hover:text-[#a68b68]">
-                  Sale
-                </Link>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.25em]">
-                Customer care
-              </h3>
-
-              <div className="mt-7 flex flex-col gap-4 text-xs text-[#82796d]">
-                <Link href="/contact" className="transition hover:text-[#a68b68]">
-                  Contact us
-                </Link>
-                <Link href="/faq" className="transition hover:text-[#a68b68]">
-                  FAQs
-                </Link>
-                <Link href="/size-guide" className="transition hover:text-[#a68b68]">
-                  Size guide
-                </Link>
-                <Link href="/track-order" className="transition hover:text-[#a68b68]">
-                  Track order
-                </Link>
-                <Link href="/returns" className="transition hover:text-[#a68b68]">
-                  Returns
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-between gap-5 pt-8 text-center sm:flex-row sm:text-left">
-            <p className="text-[9px] uppercase tracking-[0.18em] text-[#968b7e]">
-              © {new Date().getFullYear()} TALA. All rights reserved.
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-6 text-[9px] uppercase tracking-[0.15em] text-[#968b7e]">
-              <Link href="/privacy" className="transition hover:text-[#29251f]">
-                Privacy
-              </Link>
-              <Link href="/terms" className="transition hover:text-[#29251f]">
-                Terms
-              </Link>
-              <Link href="/returns" className="transition hover:text-[#29251f]">
-                Returns
-              </Link>
-            </div>
-
-            <a
-              href="#top"
-              className="group flex items-center gap-3 text-[9px] uppercase tracking-[0.2em] transition hover:text-[#a68b68]"
-            >
-              Back to top
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#d8cec0] transition group-hover:-translate-y-1 group-hover:border-[#a68b68]">
-                <ArrowUpRight size={14} />
-              </span>
-            </a>
-          </div>
-        </div>
-      </footer>
-            {/* ADVANCED CONTACT EXPERIENCE */}
+      {/* ADVANCED CONTACT EXPERIENCE */}
 
       <section className="relative overflow-hidden border-t border-[#d8cec0] bg-[#eee8df] px-6 py-24 lg:px-10">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
-
             <motion.div
               initial={{ opacity: 0, x: -35 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -1066,7 +737,9 @@ export default function ContactPage() {
 
               <h2 className="mt-6 max-w-xl font-serif text-5xl font-light leading-tight sm:text-6xl">
                 Every detail deserves
-                <span className="italic text-[#a68b68]"> attention.</span>
+                <span className="italic text-[#a68b68]">
+                  {" "}attention.
+                </span>
               </h2>
 
               <p className="mt-7 max-w-lg text-sm leading-8 text-[#82796d]">
@@ -1076,26 +749,7 @@ export default function ContactPage() {
               </p>
 
               <div className="mt-12 space-y-8">
-                {[
-                  {
-                    number: "01",
-                    title: "Personal attention",
-                    description:
-                      "Every inquiry deserves a thoughtful and helpful response.",
-                  },
-                  {
-                    number: "02",
-                    title: "Clear communication",
-                    description:
-                      "We believe in making information simple and accessible.",
-                  },
-                  {
-                    number: "03",
-                    title: "Considered experience",
-                    description:
-                      "From browsing to after-sales support, details matter.",
-                  },
-                ].map((item, index) => (
+                {TALA_PROMISES.map((item, index) => (
                   <motion.div
                     key={item.number}
                     initial={{ opacity: 0, y: 20 }}
@@ -1145,13 +799,18 @@ export default function ContactPage() {
                     A better experience
                     <br />
                     starts with
-                    <span className="italic text-[#c5a982]"> listening.</span>
+                    <span className="italic text-[#c5a982]">
+                      {" "}listening.
+                    </span>
                   </p>
 
                   <div className="mt-12 border-t border-white/15 pt-8">
                     <div className="flex items-center gap-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#c5a982]/15">
-                        <Headphones size={20} className="text-[#c5a982]" />
+                        <Headphones
+                          size={20}
+                          className="text-[#c5a982]"
+                        />
                       </div>
 
                       <div>
@@ -1178,7 +837,6 @@ export default function ContactPage() {
                 </div>
               </div>
             </motion.div>
-
           </div>
         </div>
       </section>
@@ -1198,32 +856,7 @@ export default function ContactPage() {
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                icon: ShieldCheck,
-                title: "Privacy first",
-                description:
-                  "Share only the information needed to help with your inquiry.",
-              },
-              {
-                icon: MessageCircle,
-                title: "Easy communication",
-                description:
-                  "Find the contact method that works best for you.",
-              },
-              {
-                icon: Sparkles,
-                title: "Thoughtful service",
-                description:
-                  "A considered experience is at the heart of TALA.",
-              },
-              {
-                icon: Clock,
-                title: "Convenient access",
-                description:
-                  "Explore our help information whenever you need it.",
-              },
-            ].map((item, index) => {
+            {EXPERIENCE_HIGHLIGHTS.map((item, index) => {
               const Icon = item.icon;
 
               return (
@@ -1253,6 +886,156 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+
+      {/* FOOTER */}
+
+      <footer className="bg-[#f5f1eb]">
+        <div className="mx-auto max-w-7xl px-6 py-16 lg:px-10 lg:py-20">
+          <div className="grid gap-12 border-b border-[#d8cec0] pb-14 md:grid-cols-2 lg:grid-cols-4">
+            <div className="lg:col-span-2">
+              <Link
+                href="/"
+                className="inline-block text-5xl font-semibold tracking-[0.3em]"
+              >
+                TALA
+              </Link>
+
+              <p className="mt-7 max-w-sm text-sm leading-8 text-[#82796d]">
+                Thoughtfully selected pieces, timeless details, and a
+                considered approach to everyday style. Welcome to TALA.
+              </p>
+
+              <div className="mt-8 flex items-center gap-3">
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Instagram"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d8cec0] transition hover:border-[#a68b68] hover:bg-[#eee8df]"
+                >
+                  <Instagram size={17} />
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.25em]">
+                Explore
+              </h3>
+
+              <div className="mt-7 flex flex-col gap-4 text-xs text-[#82796d]">
+                <Link href="/" className="transition hover:text-[#a68b68]">
+                  Home
+                </Link>
+
+                <Link
+                  href="/products"
+                  className="transition hover:text-[#a68b68]"
+                >
+                  Collection
+                </Link>
+
+                <Link
+                  href="/about"
+                  className="transition hover:text-[#a68b68]"
+                >
+                  About TALA
+                </Link>
+
+                <Link
+                  href="/sale"
+                  className="transition hover:text-[#a68b68]"
+                >
+                  Sale
+                </Link>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.25em]">
+                Customer care
+              </h3>
+
+              <div className="mt-7 flex flex-col gap-4 text-xs text-[#82796d]">
+                <Link
+                  href="/contact"
+                  className="transition hover:text-[#a68b68]"
+                >
+                  Contact us
+                </Link>
+
+                <Link
+                  href="/faq"
+                  className="transition hover:text-[#a68b68]"
+                >
+                  FAQs
+                </Link>
+
+                <Link
+                  href="/size-guide"
+                  className="transition hover:text-[#a68b68]"
+                >
+                  Size guide
+                </Link>
+
+                <Link
+                  href="/track-order"
+                  className="transition hover:text-[#a68b68]"
+                >
+                  Track order
+                </Link>
+
+                <Link
+                  href="/returns"
+                  className="transition hover:text-[#a68b68]"
+                >
+                  Returns
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-between gap-5 pt-8 text-center sm:flex-row sm:text-left">
+            <p className="text-[9px] uppercase tracking-[0.18em] text-[#968b7e]">
+              © {new Date().getFullYear()} TALA. All rights reserved.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-6 text-[9px] uppercase tracking-[0.15em] text-[#968b7e]">
+              <Link
+                href="/privacy"
+                className="transition hover:text-[#29251f]"
+              >
+                Privacy
+              </Link>
+
+              <Link
+                href="/terms"
+                className="transition hover:text-[#29251f]"
+              >
+                Terms
+              </Link>
+
+              <Link
+                href="/returns"
+                className="transition hover:text-[#29251f]"
+              >
+                Returns
+              </Link>
+            </div>
+
+            <a
+              href="#top"
+              className="group flex items-center gap-3 text-[9px] uppercase tracking-[0.2em] transition hover:text-[#a68b68]"
+            >
+              Back to top
+
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#d8cec0] transition group-hover:-translate-y-1 group-hover:border-[#a68b68]">
+                <ArrowUpRight size={14} />
+              </span>
+            </a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
