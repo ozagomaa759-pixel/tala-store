@@ -21,14 +21,27 @@ import type { Product } from "@/data/products";
 type SortOption = "featured" | "newest" | "price-low" | "price-high";
 type CategoryOption = "All" | "Sets" | "Jackets";
 
-const FORMAT_PRICE = new Intl.NumberFormat("en-EG", {
+const PRICE_FORMAT = new Intl.NumberFormat("en-EG", {
   style: "currency",
   currency: "EGP",
   maximumFractionDigits: 0,
 });
 
+const C = {
+  page: "#B8AA98",
+  surface: "#B0A18E",
+  image: "#A99A88",
+  imageDeep: "#998A78",
+  ink: "#292720",
+  muted: "#625B50",
+  lime: "#D8ED83",
+  limeDark: "#C9DE72",
+  dark: "#292923",
+  line: "rgba(41,39,32,0.22)",
+};
+
 function formatPrice(price: number) {
-  return FORMAT_PRICE.format(price);
+  return PRICE_FORMAT.format(price);
 }
 
 function isRealImage(src?: string | null) {
@@ -53,10 +66,12 @@ function ProductImage({
   images?: string[];
 }) {
   const [failed, setFailed] = useState(false);
+  const [secondaryFailed, setSecondaryFailed] = useState(false);
   const [activeImage, setActiveImage] = useState(src || "");
 
   useEffect(() => {
     setFailed(false);
+    setSecondaryFailed(false);
     setActiveImage(src || "");
   }, [src]);
 
@@ -66,14 +81,14 @@ function ProductImage({
   );
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#EAE7DF]">
+    <div className="relative h-full w-full overflow-hidden bg-[#A99A88]">
       {!isRealImage(activeImage) || failed ? (
-        <div className="flex h-full w-full items-center justify-center bg-[#EAE7DF]">
+        <div className="flex h-full w-full items-center justify-center bg-[#A99A88]">
           <div className="text-center">
-            <span className="font-serif text-5xl tracking-[0.18em] text-[#242421]/20">
+            <span className="font-serif text-5xl tracking-[0.18em] text-[#292720]/25">
               TALA
             </span>
-            <p className="mt-2 text-[8px] tracking-[0.3em] text-[#242421]/35">
+            <p className="mt-2 text-[8px] tracking-[0.3em] text-[#292720]/45">
               LUXURY FASHION
             </p>
           </div>
@@ -88,11 +103,12 @@ function ProductImage({
             className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.045]"
           />
 
-          {secondaryImage && (
+          {secondaryImage && !secondaryFailed && (
             <img
               src={secondaryImage}
               alt={`${alt} alternate view`}
               loading="lazy"
+              onError={() => setSecondaryFailed(true)}
               className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
             />
           )}
@@ -119,8 +135,8 @@ function ProductCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.08 }}
       transition={{
-        duration: 0.55,
-        delay: (index % 4) * 0.055,
+        duration: 0.5,
+        delay: (index % 4) * 0.045,
       }}
       className="group min-w-0"
     >
@@ -131,7 +147,7 @@ function ProductCard({
         className="block"
         aria-label={`View ${product.name}`}
       >
-        <div className="relative aspect-[3/4] overflow-hidden bg-[#EAE7DF]">
+        <div className="relative aspect-[3/4] overflow-hidden bg-[#A99A88]">
           <ProductImage
             src={product.image}
             images={product.images}
@@ -140,57 +156,57 @@ function ProductCard({
 
           <div className="absolute left-3 top-3 flex flex-col items-start gap-2 sm:left-4 sm:top-4">
             {!product.isAvailable && (
-              <span className="bg-[#242421] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.16em] text-white">
+              <span className="bg-[#292923] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.15em] text-[#F0E7D9]">
                 Sold out
               </span>
             )}
 
             {product.isNew && (
-              <span className="bg-[#D8ED83] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.16em] text-[#242421]">
+              <span className="bg-[#D8ED83] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.15em] text-[#292720]">
                 New drop
               </span>
             )}
 
             {isOnSale && product.isAvailable && (
-              <span className="bg-white px-3 py-2 text-[8px] font-bold uppercase tracking-[0.16em] text-[#242421]">
+              <span className="bg-[#625747] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.15em] text-[#F5EBDD]">
                 Special price
               </span>
             )}
           </div>
 
           {product.isBestSeller && (
-            <span className="absolute bottom-3 left-3 bg-white/90 px-3 py-2 text-[8px] font-bold uppercase tracking-[0.14em] text-[#242421] backdrop-blur-sm sm:bottom-4 sm:left-4">
+            <span className="absolute bottom-3 left-3 bg-[#292923]/90 px-3 py-2 text-[8px] font-bold uppercase tracking-[0.14em] text-[#D8ED83] backdrop-blur-sm sm:bottom-4 sm:left-4">
               Best seller
             </span>
           )}
 
-          <span className="absolute bottom-3 right-3 flex h-10 w-10 translate-y-3 items-center justify-center rounded-full bg-[#D8ED83] text-[#242421] opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:bottom-4 sm:right-4">
+          <span className="absolute bottom-3 right-3 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-[#D8ED83] text-[#292720] opacity-100 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:bg-[#292923] group-hover:text-[#D8ED83] sm:bottom-4 sm:right-4 sm:translate-y-3 sm:opacity-0 sm:group-hover:opacity-100">
             <ArrowUpRight size={18} strokeWidth={1.6} />
           </span>
         </div>
 
         <div className="px-0.5 pt-4 sm:pt-5">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#858176]">
+            <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#625B50]">
               TALA / {product.category}
             </p>
 
-            <span className="text-[8px] uppercase tracking-[0.12em] text-[#A19C91]">
+            <span className="text-[8px] uppercase tracking-[0.1em] text-[#625B50]">
               {product.isAvailable ? "Available" : "Unavailable"}
             </span>
           </div>
 
-          <h3 className="line-clamp-1 text-[11px] font-semibold tracking-[0.015em] text-[#242421] sm:text-xs">
+          <h3 className="line-clamp-1 text-[12px] font-semibold tracking-[0.01em] text-[#292720] sm:text-sm">
             {product.name}
           </h3>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold text-[#242421] sm:text-xs">
+            <span className="text-xs font-bold text-[#292720] sm:text-sm">
               {formatPrice(product.price)}
             </span>
 
             {isOnSale && (
-              <span className="text-[10px] text-[#9C978D] line-through">
+              <span className="text-[10px] text-[#625B50] line-through">
                 {formatPrice(product.oldPrice!)}
               </span>
             )}
@@ -202,13 +218,13 @@ function ProductCard({
                 <span
                   key={`${product.id}-${color.name}`}
                   title={color.name}
-                  className="h-3 w-3 rounded-full border border-black/10"
+                  className="h-3.5 w-3.5 rounded-full border border-[#292720]/25"
                   style={{ backgroundColor: color.value }}
                 />
               ))}
 
               {product.colors.length > 5 && (
-                <span className="ml-1 text-[8px] text-[#858176]">
+                <span className="ml-1 text-[8px] text-[#625B50]">
                   +{product.colors.length - 5}
                 </span>
               )}
@@ -217,6 +233,14 @@ function ProductCard({
         </div>
       </Link>
     </motion.article>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-3 text-[8px] font-bold uppercase tracking-[0.28em] text-[#625B50]">
+      {children}
+    </p>
   );
 }
 
@@ -351,16 +375,16 @@ export default function AllPiecesCollectionPage() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#F4F1EA] text-[#242421]">
+    <main className="min-h-screen overflow-hidden bg-[#B8AA98] text-[#292720]">
       <Header />
 
-      {/* Gen Z ticker */}
+      {/* TALA moving statement */}
       <div className="relative z-20 overflow-hidden bg-[#D8ED83] py-2.5">
         <div className="flex w-max animate-[tala-marquee_28s_linear_infinite] items-center gap-8 whitespace-nowrap">
           {Array.from({ length: 8 }).map((_, index) => (
             <span
               key={index}
-              className="flex items-center gap-8 text-[9px] font-bold uppercase tracking-[0.2em]"
+              className="flex items-center gap-8 text-[9px] font-bold uppercase tracking-[0.2em] text-[#292720]"
             >
               NOT HERE TO BLEND IN
               <span className="text-base">✳</span>
@@ -383,7 +407,7 @@ export default function AllPiecesCollectionPage() {
             className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
           />
         ) : (
-          <div className="absolute inset-0 -z-20 bg-[#777467]">
+          <div className="absolute inset-0 -z-20 bg-[#777064]">
             <span className="absolute -right-8 top-0 font-serif text-[280px] leading-none tracking-[-0.12em] text-white/[0.08] sm:text-[430px]">
               T.
             </span>
@@ -459,16 +483,14 @@ export default function AllPiecesCollectionPage() {
       <section className="mx-auto max-w-[1600px] px-5 py-12 sm:px-10 sm:py-16 lg:px-16">
         <div className="mb-7 flex items-end justify-between gap-4">
           <div>
-            <p className="mb-3 text-[8px] font-bold uppercase tracking-[0.28em] text-[#858176]">
-              PICK YOUR MOOD
-            </p>
+            <SectionLabel>PICK YOUR MOOD</SectionLabel>
 
-            <h2 className="font-serif text-3xl tracking-[-0.05em] sm:text-5xl">
-              The edits<span className="text-[#A7BD62]">.</span>
+            <h2 className="font-serif text-3xl tracking-[-0.05em] text-[#292720] sm:text-5xl">
+              The edits<span className="text-[#657044]">.</span>
             </h2>
           </div>
 
-          <span className="pb-1 text-[8px] uppercase tracking-[0.15em] text-[#858176]">
+          <span className="pb-1 text-[8px] uppercase tracking-[0.15em] text-[#625B50]">
             02 COLLECTIONS
           </span>
         </div>
@@ -482,7 +504,7 @@ export default function AllPiecesCollectionPage() {
                 .getElementById("all-products")
                 ?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="group relative flex min-h-[125px] flex-col justify-between overflow-hidden bg-[#D8ED83] p-4 text-left transition duration-300 hover:bg-[#CDE477] sm:min-h-[175px] sm:p-7"
+            className="group flex min-h-[125px] flex-col justify-between overflow-hidden bg-[#D8ED83] p-4 text-left transition duration-300 hover:bg-[#C9DE72] sm:min-h-[175px] sm:p-7"
           >
             <span className="flex items-center justify-between text-[8px] font-bold uppercase tracking-[0.2em] text-[#4C5435]">
               THE CO-ORD EDIT
@@ -490,7 +512,7 @@ export default function AllPiecesCollectionPage() {
             </span>
 
             <span>
-              <span className="block font-serif text-3xl tracking-[-0.05em] text-[#242421] sm:text-5xl">
+              <span className="block font-serif text-3xl tracking-[-0.05em] text-[#292720] sm:text-5xl">
                 Sets
               </span>
               <span className="mt-2 block text-[8px] uppercase tracking-[0.15em] text-[#4C5435]">
@@ -507,7 +529,7 @@ export default function AllPiecesCollectionPage() {
                 .getElementById("all-products")
                 ?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="group relative flex min-h-[125px] flex-col justify-between overflow-hidden bg-[#292923] p-4 text-left transition duration-300 hover:bg-[#3B3B32] sm:min-h-[175px] sm:p-7"
+            className="group flex min-h-[125px] flex-col justify-between overflow-hidden bg-[#292923] p-4 text-left transition duration-300 hover:bg-[#3B3B32] sm:min-h-[175px] sm:p-7"
           >
             <span className="flex items-center justify-between text-[8px] font-bold uppercase tracking-[0.2em] text-white/65">
               THE LAYERING EDIT
@@ -515,7 +537,7 @@ export default function AllPiecesCollectionPage() {
             </span>
 
             <span>
-              <span className="block font-serif text-3xl tracking-[-0.05em] text-white sm:text-5xl">
+              <span className="block font-serif text-3xl tracking-[-0.05em] text-[#F0E7D9] sm:text-5xl">
                 Jackets
               </span>
               <span className="mt-2 block text-[8px] uppercase tracking-[0.15em] text-white/55">
@@ -529,23 +551,25 @@ export default function AllPiecesCollectionPage() {
       {/* Product collection */}
       <section
         id="all-products"
-        className="scroll-mt-20 border-t border-[#242421]/10 bg-[#F4F1EA]"
+        className="scroll-mt-20 border-y border-[#292720]/20 bg-[#B8AA98]"
       >
         <div className="mx-auto max-w-[1600px] px-5 py-14 sm:px-10 sm:py-20 lg:px-16">
           <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
-              <p className="mb-3 flex items-center gap-2 text-[8px] font-bold uppercase tracking-[0.28em] text-[#858176]">
+              <p className="mb-3 flex items-center gap-2 text-[8px] font-bold uppercase tracking-[0.28em] text-[#625B50]">
                 <Sparkles size={13} />
                 THE TALA LINEUP
               </p>
 
-              <h2 className="font-serif text-4xl tracking-[-0.055em] sm:text-6xl">
+              <h2 className="font-serif text-4xl tracking-[-0.055em] text-[#292720] sm:text-6xl">
                 Good things
-                <span className="ml-2 italic text-[#929A61]">live here.</span>
+                <span className="ml-2 italic text-[#59633D]">
+                  live here.
+                </span>
               </h2>
             </div>
 
-            <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-[#858176]">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-[#625B50]">
               {loading
                 ? "LOADING THE GOOD STUFF..."
                 : `${visibleProducts.length} PIECES TO EXPLORE`}
@@ -553,12 +577,12 @@ export default function AllPiecesCollectionPage() {
           </div>
 
           {/* Search */}
-          <div className="mb-6 flex flex-col gap-4 border-y border-[#242421]/15 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-6 flex flex-col gap-4 border-y border-[#292720]/25 py-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-[390px]">
               <Search
                 size={17}
                 strokeWidth={1.5}
-                className="absolute left-0 top-1/2 -translate-y-1/2 text-[#858176]"
+                className="absolute left-0 top-1/2 -translate-y-1/2 text-[#625B50]"
               />
 
               <input
@@ -567,7 +591,7 @@ export default function AllPiecesCollectionPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by name, category or color..."
                 aria-label="Search TALA products"
-                className="w-full border-b border-[#242421]/30 bg-transparent py-3 pl-8 pr-9 text-xs text-[#242421] outline-none placeholder:text-[#9B968B] focus:border-[#929A61]"
+                className="w-full border-b border-[#292720]/40 bg-transparent py-3 pl-8 pr-9 text-xs text-[#292720] outline-none placeholder:text-[#625B50] focus:border-[#292720]"
               />
 
               {search && (
@@ -575,7 +599,7 @@ export default function AllPiecesCollectionPage() {
                   type="button"
                   onClick={() => setSearch("")}
                   aria-label="Clear search"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-[#858176] hover:text-[#242421]"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-[#625B50] hover:text-[#292720]"
                 >
                   <X size={16} />
                 </button>
@@ -585,7 +609,7 @@ export default function AllPiecesCollectionPage() {
             <button
               type="button"
               onClick={() => setMobileFiltersOpen((open) => !open)}
-              className="flex min-h-11 items-center justify-between gap-3 border border-[#242421]/20 px-4 text-[9px] font-bold uppercase tracking-[0.16em] transition hover:border-[#242421] sm:hidden"
+              className="flex min-h-11 items-center justify-between gap-3 border border-[#292720]/35 px-4 text-[9px] font-bold uppercase tracking-[0.16em] transition hover:bg-[#292923] hover:text-[#F0E7D9] sm:hidden"
             >
               <span className="flex items-center gap-2">
                 <SlidersHorizontal size={15} />
@@ -595,7 +619,7 @@ export default function AllPiecesCollectionPage() {
             </button>
           </div>
 
-          {/* Filters and sort */}
+          {/* Filters and sorting */}
           <div
             className={`mb-9 flex-col justify-between gap-5 sm:flex sm:flex-row sm:items-center ${
               mobileFiltersOpen ? "flex" : "hidden"
@@ -616,8 +640,8 @@ export default function AllPiecesCollectionPage() {
                   aria-pressed={category === value}
                   className={`min-h-10 border px-4 text-[9px] font-bold uppercase tracking-[0.13em] transition ${
                     category === value
-                      ? "border-[#242421] bg-[#242421] text-white"
-                      : "border-[#242421]/20 bg-transparent text-[#5E5C52] hover:border-[#242421]"
+                      ? "border-[#292923] bg-[#292923] text-[#D8ED83]"
+                      : "border-[#292720]/30 bg-transparent text-[#292720] hover:border-[#292923] hover:bg-[#A99A88]"
                   }`}
                 >
                   {label}
@@ -625,14 +649,14 @@ export default function AllPiecesCollectionPage() {
               ))}
             </div>
 
-            <label className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-[0.16em] text-[#858176]">
+            <label className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-[0.16em] text-[#625B50]">
               Sort by
               <select
                 value={sort}
                 onChange={(event) =>
                   setSort(event.target.value as SortOption)
                 }
-                className="min-h-10 min-w-[155px] border-b border-[#242421]/30 bg-transparent px-2 text-[10px] text-[#242421] outline-none"
+                className="min-h-10 min-w-[155px] border-b border-[#292720]/40 bg-[#B8AA98] px-2 text-[10px] text-[#292720] outline-none"
               >
                 <option value="featured">Featured</option>
                 <option value="newest">New arrivals</option>
@@ -643,10 +667,10 @@ export default function AllPiecesCollectionPage() {
           </div>
 
           {search.trim() && (
-            <div className="mb-7 flex flex-wrap items-center justify-between gap-3 text-[9px] uppercase tracking-[0.14em] text-[#858176]">
+            <div className="mb-7 flex flex-wrap items-center justify-between gap-3 text-[9px] uppercase tracking-[0.14em] text-[#625B50]">
               <p>
                 RESULTS FOR{" "}
-                <span className="font-bold text-[#242421]">
+                <span className="font-bold text-[#292720]">
                   “{search.trim()}”
                 </span>
               </p>
@@ -654,45 +678,47 @@ export default function AllPiecesCollectionPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="border-b border-[#242421] pb-1 font-bold text-[#242421]"
+                className="border-b border-[#292720] pb-1 font-bold text-[#292720]"
               >
                 Reset everything
               </button>
             </div>
           )}
 
-          {/* Loading state */}
+          {/* Loading */}
           {loading ? (
             <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
               {Array.from({ length: 8 }).map((_, index) => (
                 <div key={index} className="animate-pulse">
-                  <div className="aspect-[3/4] bg-[#E7E3DA]" />
-                  <div className="mt-4 h-2.5 w-1/3 bg-[#E7E3DA]" />
-                  <div className="mt-3 h-3 w-3/4 bg-[#E7E3DA]" />
-                  <div className="mt-3 h-3 w-1/4 bg-[#E7E3DA]" />
+                  <div className="aspect-[3/4] bg-[#998A78]" />
+                  <div className="mt-4 h-2.5 w-1/3 bg-[#998A78]" />
+                  <div className="mt-3 h-3 w-3/4 bg-[#998A78]" />
+                  <div className="mt-3 h-3 w-1/4 bg-[#998A78]" />
                 </div>
               ))}
             </div>
           ) : error ? (
             <div className="py-24 text-center">
-              <p className="font-serif text-3xl">{error}</p>
+              <p className="font-serif text-3xl text-[#292720]">
+                {error}
+              </p>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-7 border-b border-[#242421] pb-2 text-[9px] font-bold uppercase tracking-[0.18em]"
+                className="mt-7 border-b border-[#292720] pb-2 text-[9px] font-bold uppercase tracking-[0.18em]"
               >
                 Try again
               </button>
             </div>
           ) : visibleProducts.length === 0 ? (
             <div className="py-24 text-center">
-              <span className="text-3xl text-[#929A61]">✳</span>
+              <span className="text-3xl text-[#59633D]">✳</span>
 
-              <h3 className="mt-5 font-serif text-4xl tracking-[-0.04em]">
+              <h3 className="mt-5 font-serif text-4xl tracking-[-0.04em] text-[#292720]">
                 Nothing here. Yet.
               </h3>
 
-              <p className="mx-auto mt-4 max-w-sm text-xs leading-7 text-[#858176]">
+              <p className="mx-auto mt-4 max-w-sm text-xs leading-7 text-[#625B50]">
                 No pieces match your current search or filters.
                 Try a different mood.
               </p>
@@ -700,7 +726,7 @@ export default function AllPiecesCollectionPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="mt-8 bg-[#D8ED83] px-6 py-4 text-[9px] font-bold uppercase tracking-[0.18em] text-[#242421] transition hover:bg-[#CDE477]"
+                className="mt-8 bg-[#D8ED83] px-6 py-4 text-[9px] font-bold uppercase tracking-[0.18em] text-[#292720] transition hover:bg-[#C9DE72]"
               >
                 Show me everything
               </button>
@@ -708,11 +734,13 @@ export default function AllPiecesCollectionPage() {
           ) : (
             <>
               <div className="mb-5 flex items-center justify-between">
-                <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#858176]">
-                  {category === "All" ? "THE COMPLETE EDIT" : `${category} EDIT`}
+                <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#625B50]">
+                  {category === "All"
+                    ? "THE COMPLETE EDIT"
+                    : `${category} EDIT`}
                 </p>
 
-                <p className="text-[8px] uppercase tracking-[0.15em] text-[#858176]">
+                <p className="text-[8px] uppercase tracking-[0.15em] text-[#625B50]">
                   {visibleProducts.length} RESULTS
                 </p>
               </div>
@@ -732,8 +760,8 @@ export default function AllPiecesCollectionPage() {
       </section>
 
       {/* Closing statement */}
-      <section className="relative mx-5 mb-14 overflow-hidden bg-[#D8ED83] px-6 py-12 sm:mx-10 sm:px-12 sm:py-16 lg:mx-16">
-        <span className="pointer-events-none absolute -right-5 -top-20 font-serif text-[210px] leading-none tracking-[-0.1em] text-[#242421]/[0.07] sm:text-[300px]">
+      <section className="relative mx-5 mb-14 mt-14 overflow-hidden bg-[#D8ED83] px-6 py-12 sm:mx-10 sm:px-12 sm:py-16 lg:mx-16">
+        <span className="pointer-events-none absolute -right-5 -top-20 font-serif text-[210px] leading-none tracking-[-0.1em] text-[#292720]/[0.07] sm:text-[300px]">
           T.
         </span>
 
@@ -743,7 +771,7 @@ export default function AllPiecesCollectionPage() {
               THE LOOK IS YOURS
             </p>
 
-            <h2 className="max-w-2xl font-serif text-4xl leading-[0.95] tracking-[-0.055em] sm:text-6xl">
+            <h2 className="max-w-2xl font-serif text-4xl leading-[0.95] tracking-[-0.055em] text-[#292720] sm:text-6xl">
               Wear what
               <span className="ml-2 italic">feels like you.</span>
             </h2>
@@ -751,7 +779,7 @@ export default function AllPiecesCollectionPage() {
 
           <Link
             href="/collections"
-            className="group inline-flex min-h-12 w-fit items-center gap-7 border-b border-[#242421] pb-2 text-[9px] font-bold uppercase tracking-[0.18em]"
+            className="group inline-flex min-h-12 w-fit items-center gap-7 border-b border-[#292720] pb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#292720]"
           >
             Explore the edits
             <ArrowUpRight
@@ -763,7 +791,7 @@ export default function AllPiecesCollectionPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#242421] px-5 py-12 text-center text-[#F4F1EA]">
+      <footer className="bg-[#292923] px-5 py-12 text-center text-[#F0E7D9]">
         <Link
           href="/"
           className="font-serif text-4xl tracking-[0.24em]"
@@ -771,22 +799,31 @@ export default function AllPiecesCollectionPage() {
           TALA
         </Link>
 
-        <p className="mt-2 text-[8px] font-medium uppercase tracking-[0.4em] text-white/50">
+        <p className="mt-2 text-[8px] font-medium uppercase tracking-[0.4em] text-[#C0B6A7]">
           LUXURY FASHION
         </p>
 
         <div className="mx-auto mt-8 h-px max-w-5xl bg-white/15" />
 
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-x-7 gap-y-4 text-[8px] font-semibold uppercase tracking-[0.18em] text-white/60">
-          <Link href="/collections/sets" className="transition hover:text-[#D8ED83]">
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-x-7 gap-y-4 text-[8px] font-semibold uppercase tracking-[0.18em] text-[#C0B6A7]">
+          <Link
+            href="/collections/sets"
+            className="transition hover:text-[#D8ED83]"
+          >
             Sets
           </Link>
 
-          <Link href="/collections/jackets" className="transition hover:text-[#D8ED83]">
+          <Link
+            href="/collections/jackets"
+            className="transition hover:text-[#D8ED83]"
+          >
             Jackets
           </Link>
 
-          <Link href="/collections" className="transition hover:text-[#D8ED83]">
+          <Link
+            href="/collections"
+            className="transition hover:text-[#D8ED83]"
+          >
             Collections
           </Link>
 
