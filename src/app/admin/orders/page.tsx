@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -175,7 +175,7 @@ function SalesCard({
 }: {
   title: string;
   stats: PeriodStats | null;
-  icon: React.ReactNode;
+  icon: ReactNode;
   loading: boolean;
 }) {
   return (
@@ -338,7 +338,6 @@ export default function AdminOrdersPage() {
         )
       );
 
-      // Refresh the independent sales statistics.
       void fetchAnalytics();
     } catch (err) {
       setError(
@@ -436,7 +435,6 @@ export default function AdminOrdersPage() {
           </button>
         </div>
 
-        {/* Sales analytics */}
         <section className="mt-10">
           <div className="mb-5 flex items-center gap-3">
             <TrendingUp size={20} strokeWidth={1.5} />
@@ -550,7 +548,6 @@ export default function AdminOrdersPage() {
           )}
         </section>
 
-        {/* Orders summary */}
         <section className="mt-10 grid gap-4 sm:grid-cols-2">
           <div className="border border-[#E5DACE] bg-white/70 p-6">
             <ClipboardList size={23} strokeWidth={1} />
@@ -573,7 +570,6 @@ export default function AdminOrdersPage() {
           </div>
         </section>
 
-        {/* Search and filters */}
         <section className="mt-8 border border-[#E5DACE] bg-white/60 p-5 sm:p-6">
           <div className="grid gap-3 md:grid-cols-[1fr_200px_200px_auto]">
             <div className="relative">
@@ -634,7 +630,6 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
-        {/* Orders list */}
         <section className="mt-8">
           {loading ? (
             <div className="flex min-h-48 items-center justify-center gap-3 text-sm text-[#8A7969]">
@@ -663,7 +658,6 @@ export default function AdminOrdersPage() {
 
                 const isCancelled = order.status === "cancelled";
                 const isDelivered = order.status === "delivered";
-
                 const isFinalStatus = isCancelled || isDelivered;
 
                 return (
@@ -681,29 +675,24 @@ export default function AdminOrdersPage() {
                             {order.order_number || order.id}
                           </h2>
                           <p className="mt-2 flex items-center gap-2 text-xs text-[#8A7969]">
-                            <CalendarDays size={14} />
-                            Ordered: {formatDate(order.created_at)}
+                            <CalendarDays size={13} />
+                            {formatDate(order.created_at)}
                           </p>
-
-                          {order.status === "delivered" && (
-                            <p className="mt-2 flex items-center gap-2 text-xs text-green-700">
-                              <Package size={14} />
-                              {order.delivered_at
-                                ? `Delivered: ${formatDate(order.delivered_at)}`
-                                : "Delivery date unavailable"}
+                          {isDelivered && order.delivered_at && (
+                            <p className="mt-2 text-xs text-green-700">
+                              Delivered: {formatDate(order.delivered_at)}
                             </p>
                           )}
                         </div>
 
-                        <div className="text-left sm:text-right">
-                          <p className="text-xs text-[#8A7969]">
-                            Order Total
-                          </p>
-                          <p className="mt-1 text-2xl font-light">
-                            {money(order.total)}
-                          </p>
+                        <div className="flex flex-wrap gap-2">
                           <span
-                            className={`mt-2 inline-flex px-3 py-1 text-xs ${statusStyle(order.status)}`}
+                            className={`px-3 py-1.5 text-xs ${statusStyle(order.payment_status)}`}
+                          >
+                            Payment: {statusLabel(order.payment_status)}
+                          </span>
+                          <span
+                            className={`px-3 py-1.5 text-xs ${statusStyle(order.status)}`}
                           >
                             {statusLabel(order.status)}
                           </span>
