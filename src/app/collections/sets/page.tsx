@@ -1,7 +1,6 @@
-"use client";
 
-import { ProductsPageView } from "@/app/products/products-page-view";
+import { redirect } from "next/navigation";
 
 export default function SetsCollectionPage() {
-  return <ProductsPageView initialCategory="Sets" />;
+  redirect("/products?category=sets");
 }
