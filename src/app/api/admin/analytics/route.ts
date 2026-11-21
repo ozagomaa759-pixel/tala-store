@@ -213,6 +213,7 @@ export async function GET() {
     const todayStats = createEmptyStats();
     const weekStats = createEmptyStats();
     const monthStats = createEmptyStats();
+    const allTimeStats = createEmptyStats();
 
     let deliveredWithoutDate = 0;
     let pendingOrders = 0;
@@ -230,6 +231,10 @@ export async function GET() {
 
       if (status === "delivered") {
         deliveredOrders += 1;
+
+        // All-time revenue includes every delivered order,
+        // even historical orders without a delivery date.
+        addOrder(allTimeStats, order);
 
         if (!order.delivered_at) {
           deliveredWithoutDate += 1;
@@ -278,6 +283,7 @@ export async function GET() {
           today: todayStats,
           week: weekStats,
           month: monthStats,
+          allTime: allTimeStats,
         },
 
         orders: {
