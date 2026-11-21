@@ -170,7 +170,7 @@ export default function SalePage() {
         ) : hasError ? (
           <div className="border border-[#DED7CC] bg-white/50 px-6 py-16 text-center">
             <h3 className="font-serif text-2xl font-light">
-              We couldn't load the sale collection.
+              We couldn&apos;t load the sale collection.
             </h3>
 
             <p className="mt-4 text-sm text-[#82796F]">
