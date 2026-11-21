@@ -739,12 +739,22 @@ export default function HomePage() {
                 >
                   <div className="aspect-[3/4] overflow-hidden bg-[#d7cec2]">
                     <img
-                      src={product.image}
-                      alt={product.name}
-                      className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                      loading="lazy"
-                      decoding="async"
-                    />
+  src={category.image_url}
+  alt={category.name}
+  className="h-full w-full object-cover transition duration-1000 group-hover:scale-[1.04]"
+  loading="lazy"
+  decoding="async"
+  onError={(event) => {
+    const image = event.currentTarget;
+    const fallback = category.mobile_image_url;
+
+    if (fallback && image.src !== fallback) {
+      image.src = fallback;
+    } else {
+      image.style.display = "none";
+    }
+  }}
+/>
                   </div>
                   <h3 className="mt-5 text-sm tracking-wide transition-colors duration-300 group-hover:text-[#8d7962]">
                     {product.name}
