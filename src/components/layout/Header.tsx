@@ -34,19 +34,22 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
+  const closePanels = () => {
     setMobileMenuOpen(false);
     setSearchOpen(false);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setSearchQuery(params.get("q") || "");
+    closePanels();
   }, [pathname]);
 
   useEffect(() => {
     if (!mobileMenuOpen && !searchOpen) return;
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMobileMenuOpen(false);
-        setSearchOpen(false);
-      }
+      if (event.key === "Escape") closePanels();
     };
 
     window.addEventListener("keydown", closeOnEscape);
@@ -64,14 +67,23 @@ export default function Header() {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  function toggleSearch() {
+    if (!searchOpen) {
+      const params = new URLSearchParams(window.location.search);
+      setSearchQuery(params.get("q") || "");
+    }
+
+    setSearchOpen((open) => !open);
+    setMobileMenuOpen(false);
+  }
+
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const query = searchQuery.trim();
     if (!query) return;
 
-    setSearchOpen(false);
-    setMobileMenuOpen(false);
+    closePanels();
 
     router.push(
       `/collections/all-pieces?q=${encodeURIComponent(query)}`
@@ -79,7 +91,7 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#24221F]/10 bg-[#F5F1EB]/95 text-[#24221F] backdrop-blur-xl">
+    <header className="sticky top-0 z-[80] w-full border-b border-[#24221F]/10 bg-[#F5F1EB]/95 text-[#24221F] backdrop-blur-xl">
       <div className="mx-auto grid h-[72px] max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-8 lg:h-[84px] lg:px-10 xl:px-14">
 
         {/* MOBILE MENU BUTTON */}
@@ -92,6 +104,7 @@ export default function Header() {
             }}
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileMenuOpen}
+            aria-controls="tala-mobile-menu"
             className="flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:bg-[#24221F]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89965D]"
           >
             {mobileMenuOpen ? (
@@ -150,12 +163,10 @@ export default function Header() {
         <div className="flex items-center justify-end gap-1 sm:gap-3">
           <button
             type="button"
-            onClick={() => {
-              setSearchOpen((open) => !open);
-              setMobileMenuOpen(false);
-            }}
+            onClick={toggleSearch}
             aria-label={searchOpen ? "Close search" : "Search products"}
             aria-expanded={searchOpen}
+            aria-controls="tala-search-panel"
             className="flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:bg-[#24221F]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89965D]"
           >
             {searchOpen ? (
@@ -181,9 +192,22 @@ export default function Header() {
         </div>
       </div>
 
+      {/* BACKDROP */}
+      {(searchOpen || mobileMenuOpen) && (
+        <button
+          type="button"
+          aria-label="Close open menu"
+          onClick={closePanels}
+          className="fixed inset-0 z-[60] bg-black/25 backdrop-blur-[2px]"
+        />
+      )}
+
       {/* SEARCH PANEL */}
       {searchOpen && (
-        <div className="absolute left-0 top-full z-[70] w-full border-t border-[#24221F]/10 bg-[#F5F1EB] px-5 py-6 shadow-xl sm:px-10">
+        <div
+          id="tala-search-panel"
+          className="absolute left-0 top-full z-[70] w-full border-t border-[#24221F]/10 bg-[#F5F1EB] px-5 py-6 shadow-xl sm:px-10"
+        >
           <form
             onSubmit={handleSearch}
             role="search"
@@ -206,6 +230,17 @@ export default function Header() {
               className="min-w-0 w-full bg-transparent py-2 text-sm text-[#24221F] outline-none placeholder:text-[#999188]"
             />
 
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+                className="flex h-9 w-9 shrink-0 items-center justify-center text-[#77716A] transition-colors hover:text-[#24221F]"
+              >
+                <X size={17} />
+              </button>
+            )}
+
             <button
               type="submit"
               disabled={!searchQuery.trim()}
@@ -224,7 +259,10 @@ export default function Header() {
 
       {/* MOBILE NAVIGATION */}
       {mobileMenuOpen && (
-        <div className="absolute left-0 top-full z-[70] max-h-[calc(100dvh-72px)] w-full overflow-y-auto border-t border-[#24221F]/10 bg-[#F5F1EB] px-6 pb-10 pt-8 shadow-xl lg:hidden">
+        <div
+          id="tala-mobile-menu"
+          className="absolute left-0 top-full z-[70] max-h-[calc(100dvh-72px)] w-full overflow-y-auto border-t border-[#24221F]/10 bg-[#F5F1EB] px-6 pb-10 pt-8 shadow-xl lg:hidden"
+        >
           <div className="mb-8 flex items-center justify-between">
             <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[#77716A]">
               YOUR NEXT TALA FIND
@@ -240,7 +278,7 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={closePanels}
                 aria-current={isActive(item.href) ? "page" : undefined}
                 className="group flex min-h-[65px] items-center justify-between border-b border-[#24221F]/10 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#89965D]"
               >
@@ -272,7 +310,7 @@ export default function Header() {
           {/* SHOPPING BAG */}
           <Link
             href="/cart"
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={closePanels}
             className="mt-8 flex min-h-14 items-center justify-between bg-[#24221F] px-5 py-4 text-[#F5F1EB] transition-colors hover:bg-[#3A3832] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89965D]"
           >
             <span className="text-[9px] font-semibold uppercase tracking-[0.2em]">
