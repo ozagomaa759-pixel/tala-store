@@ -18,15 +18,17 @@ import {
   Check,
   Eye,
   EyeOff,
+  ExternalLink,
   ImagePlus,
+  Layers3,
+  Loader2,
   Monitor,
-  Smartphone,
   RefreshCw,
   Save,
+  Smartphone,
+  Sparkles,
   Upload,
   X,
-  Layers3,
-  ExternalLink,
 } from "lucide-react";
 
 type Category = {
@@ -83,10 +85,10 @@ const EMPTY_FORM: CategoryForm = {
 };
 
 const inputClass =
-  "w-full border border-[#e7e0d7] bg-white px-4 py-3 text-sm text-[#29251f] outline-none transition placeholder:text-[#b8aea2] focus:border-[#8b7965]";
+  "w-full rounded-xl border border-[#e7e5dc] bg-white px-4 py-3 text-sm text-[#292d25] outline-none transition placeholder:text-[#aaa99f] focus:border-[#929f76]";
 
 const labelClass =
-  "mb-2 block text-[10px] font-medium uppercase tracking-[0.2em] text-[#887b6d]";
+  "mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-[#858477]";
 
 async function readResponse(response: Response): Promise<ApiResponse> {
   try {
@@ -113,7 +115,7 @@ function Field({
       <label className={labelClass}>{label}</label>
       {children}
       {hint && (
-        <p className="mt-2 text-[11px] leading-5 text-[#a3988c]">
+        <p className="mt-2 text-[11px] leading-5 text-[#99988e]">
           {hint}
         </p>
       )}
@@ -121,7 +123,7 @@ function Field({
   );
 }
 
-function StatusMessage({
+function Notice({
   type,
   children,
 }: {
@@ -130,10 +132,10 @@ function StatusMessage({
 }) {
   return (
     <div
-      className={`flex items-start gap-3 border px-4 py-3 text-sm ${
+      className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
         type === "success"
-          ? "border-[#dce8d8] bg-[#f2f7ef] text-[#55734f]"
-          : "border-[#f0d5d1] bg-[#fff5f3] text-[#a44f45]"
+          ? "border-[#dce8d5] bg-[#f1f7ed] text-[#59734f]"
+          : "border-[#f0d5d1] bg-[#fff3f1] text-[#a44f45]"
       }`}
     >
       {type === "success" ? (
@@ -172,6 +174,12 @@ export default function AdminCategoriesPage() {
   const visibleCategories = categories.filter(
     (category) => category.is_active && category.show_on_homepage
   );
+
+  const coreCategories = categories
+    .filter((category) =>
+      CORE_COLLECTIONS.includes(category.slug.toLowerCase())
+    )
+    .sort((a, b) => a.sort_order - b.sort_order);
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -277,7 +285,7 @@ export default function AdminCategoriesPage() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size === 0 || file.size > 5 * 1024 * 1024) {
       setError("Image size must not exceed 5 MB.");
       event.target.value = "";
       return;
@@ -288,9 +296,8 @@ export default function AdminCategoriesPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("productId", "categories");
 
-      const response = await fetch("/api/admin/products/upload", {
+      const response = await fetch("/api/admin/categories/upload", {
         method: "POST",
         body: formData,
       });
@@ -360,7 +367,6 @@ export default function AdminCategoriesPage() {
       }
 
       setSuccess(`${selectedCategory.name} has been updated successfully.`);
-
       await loadCategories();
     } catch (err) {
       setError(
@@ -395,6 +401,7 @@ export default function AdminCategoriesPage() {
       }
 
       await loadCategories();
+
       setSuccess(
         category.show_on_homepage
           ? `${category.name} is now hidden from the homepage.`
@@ -413,7 +420,7 @@ export default function AdminCategoriesPage() {
     category: Category,
     direction: "up" | "down"
   ) {
-    const currentIndex = categories.findIndex(
+    const currentIndex = coreCategories.findIndex(
       (item) => item.id === category.id
     );
 
@@ -423,13 +430,13 @@ export default function AdminCategoriesPage() {
     if (
       currentIndex < 0 ||
       targetIndex < 0 ||
-      targetIndex >= categories.length
+      targetIndex >= coreCategories.length
     ) {
       return;
     }
 
-    const current = categories[currentIndex];
-    const target = categories[targetIndex];
+    const current = coreCategories[currentIndex];
+    const target = coreCategories[targetIndex];
 
     setWorkingId(category.id);
     setError("");
@@ -490,29 +497,29 @@ export default function AdminCategoriesPage() {
     form.subtitle.trim() || "THE ART OF EVERYDAY ELEGANCE";
 
   return (
-    <main className="min-h-screen bg-[#f5f1eb] px-4 py-7 text-[#29251f] md:px-8 md:py-10">
+    <main className="min-h-screen bg-[#F5F3ED] px-4 py-7 text-[#292D25] md:px-8 md:py-10">
       <div className="mx-auto max-w-7xl">
         <header className="mb-9 flex flex-wrap items-end justify-between gap-5">
           <div>
             <Link
               href="/admin"
-              className="mb-6 inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[#948779] transition hover:text-[#29251f]"
+              className="mb-6 inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[#929187] transition hover:text-[#292D25]"
             >
               <ArrowLeft size={14} />
               Back to dashboard
             </Link>
 
-            <p className="mb-2 text-[10px] uppercase tracking-[0.35em] text-[#a18c75]">
+            <p className="mb-2 text-[10px] uppercase tracking-[0.3em] text-[#8B9278]">
               TALA / Store management
             </p>
 
-            <h1 className="font-serif text-4xl tracking-tight md:text-6xl">
-              Collection Studio
+            <h1 className="text-4xl font-semibold tracking-[-0.05em] md:text-6xl">
+              Collection Studio<span className="text-[#AAB7A0]">.</span>
             </h1>
 
-            <p className="mt-3 max-w-xl text-sm leading-7 text-[#8d8175]">
-              Control the visual identity of your collections.
-              Create a consistent experience across desktop and mobile.
+            <p className="mt-3 max-w-xl text-sm leading-7 text-[#89877D]">
+              Shape the visual identity of your collections and create
+              a consistent experience across desktop and mobile.
             </p>
           </div>
 
@@ -520,230 +527,214 @@ export default function AdminCategoriesPage() {
             type="button"
             onClick={() => void loadCategories()}
             disabled={loading}
-            className="inline-flex items-center gap-2 border border-[#ded5ca] bg-white px-5 py-3 text-[10px] uppercase tracking-[0.16em] transition hover:bg-[#eee8df] disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-full border border-[#DEDDD4] bg-white px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] transition hover:border-[#292D25] disabled:opacity-50"
           >
             <RefreshCw
               size={14}
               className={loading ? "animate-spin" : ""}
             />
-            Refresh collections
+            Refresh
           </button>
         </header>
 
         {error && (
           <div className="mb-5">
-            <StatusMessage type="error">{error}</StatusMessage>
+            <Notice type="error">{error}</Notice>
           </div>
         )}
 
         {success && (
           <div className="mb-5">
-            <StatusMessage type="success">{success}</StatusMessage>
+            <Notice type="success">{success}</Notice>
           </div>
         )}
 
         <section className="mb-8 grid gap-4 sm:grid-cols-3">
-          <div className="border border-[#e7dfd5] bg-white p-5">
+          <div className="rounded-2xl border border-[#E7E5DC] bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.18em] text-[#948779]">
+              <span className="text-[10px] uppercase tracking-[0.16em] text-[#929187]">
                 Main collections
               </span>
-              <Layers3 size={17} className="text-[#a18c75]" />
+              <Layers3 size={18} className="text-[#8B9278]" />
             </div>
-            <p className="font-serif text-3xl">02</p>
-            <p className="mt-1 text-xs text-[#a3988c]">
-              Sets and Jackets
-            </p>
+            <p className="text-3xl font-semibold tabular-nums">02</p>
+            <p className="mt-1 text-xs text-[#929187]">Sets and Jackets</p>
           </div>
 
-          <div className="border border-[#e7dfd5] bg-white p-5">
+          <div className="rounded-2xl border border-[#E7E5DC] bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.18em] text-[#948779]">
+              <span className="text-[10px] uppercase tracking-[0.16em] text-[#929187]">
                 Homepage visibility
               </span>
-              <Eye size={17} className="text-[#a18c75]" />
+              <Eye size={18} className="text-[#8B9278]" />
             </div>
-            <p className="font-serif text-3xl">
+            <p className="text-3xl font-semibold tabular-nums">
               {visibleCategories.length}
             </p>
-            <p className="mt-1 text-xs text-[#a3988c]">
+            <p className="mt-1 text-xs text-[#929187]">
               Collections currently visible
             </p>
           </div>
 
-          <div className="border border-[#e7dfd5] bg-white p-5">
+          <div className="rounded-2xl border border-[#E7E5DC] bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.18em] text-[#948779]">
+              <span className="text-[10px] uppercase tracking-[0.16em] text-[#929187]">
                 Storefront
               </span>
-              <ExternalLink size={17} className="text-[#a18c75]" />
+              <ExternalLink size={18} className="text-[#8B9278]" />
             </div>
             <Link
               href="/collections"
               target="_blank"
-              className="inline-flex items-center gap-2 font-serif text-xl transition hover:text-[#8b7965]"
+              className="inline-flex items-center gap-2 text-xl font-semibold transition hover:text-[#75845D]"
             >
               View collections
               <ExternalLink size={14} />
             </Link>
-            <p className="mt-1 text-xs text-[#a3988c]">
+            <p className="mt-1 text-xs text-[#929187]">
               Open the live collection pages
             </p>
           </div>
         </section>
 
-        <section className="mb-8 border border-[#e7dfd5] bg-white">
-          <div className="border-b border-[#eee8df] px-5 py-5 md:px-7">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-[#a18c75]">
+        <section className="mb-8 overflow-hidden rounded-2xl border border-[#E7E5DC] bg-white">
+          <div className="border-b border-[#EEEDE7] px-5 py-5 md:px-7">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B9278]">
               01 / Collection selection
             </p>
-            <h2 className="mt-2 font-serif text-2xl">
-              Choose a collection to edit
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+              Choose a collection
             </h2>
-            <p className="mt-1 text-xs leading-6 text-[#a3988c]">
-              These are the permanent main collections of TALA.
+            <p className="mt-1 text-xs leading-6 text-[#929187]">
+              Select Sets or Jackets to edit its storefront experience.
             </p>
           </div>
 
           {loading ? (
-            <div className="p-10 text-center text-sm text-[#9b9084]">
-              <RefreshCw
-                size={19}
-                className="mx-auto mb-3 animate-spin"
-              />
+            <div className="p-12 text-center text-sm text-[#929187]">
+              <Loader2 size={22} className="mx-auto mb-3 animate-spin" />
               Loading collections...
             </div>
+          ) : coreCategories.length === 0 ? (
+            <div className="p-12 text-center text-sm text-[#929187]">
+              No main collections were found.
+            </div>
           ) : (
-            <div className="grid gap-px bg-[#eee8df] md:grid-cols-2">
-              {categories
-                .filter((category) =>
-                  CORE_COLLECTIONS.includes(category.slug.toLowerCase())
-                )
-                .map((category, index) => {
-                  const selected = selectedId === category.id;
-                  const busy = workingId === category.id;
+            <div className="grid gap-px bg-[#EEEDE7] md:grid-cols-2">
+              {coreCategories.map((category, index) => {
+                const selected = selectedId === category.id;
+                const busy = workingId === category.id;
 
-                  return (
-                    <article
-                      key={category.id}
-                      className={`bg-white p-5 transition md:p-6 ${
-                        selected ? "ring-1 ring-inset ring-[#9b8874]" : ""
-                      }`}
-                    >
-                      <div className="flex gap-4">
-                        <div className="h-28 w-24 shrink-0 overflow-hidden bg-[#f2eee8]">
-                          {category.image_url ? (
-                            <img
-                              src={category.image_url}
-                              alt={category.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-[#b3a797]">
-                              <ImagePlus size={25} />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-serif text-2xl">
-                              {category.name}
-                            </h3>
-                            <span
-                              className={`px-2 py-1 text-[9px] uppercase tracking-wider ${
-                                category.is_active &&
-                                category.show_on_homepage
-                                  ? "bg-[#edf3e9] text-[#59734f]"
-                                  : "bg-[#f1eee9] text-[#897e72]"
-                              }`}
-                            >
-                              {category.is_active &&
-                              category.show_on_homepage
-                                ? "Visible"
-                                : "Hidden"}
-                            </span>
+                return (
+                  <article
+                    key={category.id}
+                    className={`bg-white p-5 transition md:p-7 ${
+                      selected ? "ring-1 ring-inset ring-[#AAB7A0]" : ""
+                    }`}
+                  >
+                    <div className="flex gap-4">
+                      <div className="h-32 w-24 shrink-0 overflow-hidden rounded-xl bg-[#F0EFE9]">
+                        {category.image_url ? (
+                          <img
+                            src={category.image_url}
+                            alt={category.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-[#A5A496]">
+                            <ImagePlus size={25} />
                           </div>
-
-                          <p className="mt-1 text-xs text-[#a3988c]">
-                            /collections/{category.slug}
-                          </p>
-
-                          <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#8d8175]">
-                            {category.headline ||
-                              category.description ||
-                              "No editorial headline added yet."}
-                          </p>
-
-                          <p className="mt-2 text-[10px] uppercase tracking-wider text-[#b0a598]">
-                            Position {category.sort_order}
-                          </p>
-                        </div>
+                        )}
                       </div>
 
-                      <div className="mt-5 flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(category)}
-                          className={`flex-1 px-4 py-3 text-[10px] uppercase tracking-[0.15em] transition ${
-                            selected
-                              ? "bg-[#29251f] text-white"
-                              : "border border-[#e7dfd5] bg-white hover:bg-[#f5f1eb]"
-                          }`}
-                        >
-                          {selected ? "Currently editing" : "Edit collection"}
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void toggleHomepage(category)}
-                          className="inline-flex items-center gap-2 border border-[#e7dfd5] px-3 py-3 text-[10px] uppercase tracking-wider transition hover:bg-[#f5f1eb] disabled:opacity-40"
-                        >
-                          {category.show_on_homepage ? (
-                            <EyeOff size={14} />
-                          ) : (
-                            <Eye size={14} />
-                          )}
-                          {category.show_on_homepage ? "Hide" : "Show"}
-                        </button>
-
-                        <div className="flex border border-[#e7dfd5]">
-                          <button
-                            type="button"
-                            disabled={index === 0 || busy}
-                            onClick={() =>
-                              void updateOrder(category, "up")
-                            }
-                            aria-label={`Move ${category.name} up`}
-                            className="p-3 transition hover:bg-[#f5f1eb] disabled:opacity-30"
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-2xl font-semibold tracking-tight">
+                            {category.name}
+                          </h3>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider ${
+                              category.is_active &&
+                              category.show_on_homepage
+                                ? "bg-[#EDF3E9] text-[#59734F]"
+                                : "bg-[#F1F0EA] text-[#89877D]"
+                            }`}
                           >
-                            <ArrowUp size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={
-                              index ===
-                                categories.filter((item) =>
-                                  CORE_COLLECTIONS.includes(
-                                    item.slug.toLowerCase()
-                                  )
-                                ).length -
-                                  1 || busy
-                            }
-                            onClick={() =>
-                              void updateOrder(category, "down")
-                            }
-                            aria-label={`Move ${category.name} down`}
-                            className="border-l border-[#e7dfd5] p-3 transition hover:bg-[#f5f1eb] disabled:opacity-30"
-                          >
-                            <ArrowDown size={14} />
-                          </button>
+                            {category.is_active &&
+                            category.show_on_homepage
+                              ? "Visible"
+                              : "Hidden"}
+                          </span>
                         </div>
+
+                        <p className="mt-1 text-xs text-[#929187]">
+                          /collections/{category.slug}
+                        </p>
+
+                        <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#89877D]">
+                          {category.headline ||
+                            category.description ||
+                            "No editorial headline added yet."}
+                        </p>
+
+                        <p className="mt-3 text-[9px] uppercase tracking-wider text-[#AAA99F]">
+                          Position {category.sort_order}
+                        </p>
                       </div>
-                    </article>
-                  );
-                })}
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(category)}
+                        className="flex-1 rounded-full bg-[#292D25] px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-white transition hover:bg-[#454A3D]"
+                      >
+                        Edit collection
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void toggleHomepage(category)}
+                        disabled={busy}
+                        title={
+                          category.show_on_homepage
+                            ? "Hide from homepage"
+                            : "Show on homepage"
+                        }
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E7E5DC] transition hover:bg-[#F5F3ED] disabled:opacity-40"
+                      >
+                        {busy ? (
+                          <Loader2 size={15} className="animate-spin" />
+                        ) : category.show_on_homepage ? (
+                          <EyeOff size={16} />
+                        ) : (
+                          <Eye size={16} />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void updateOrder(category, "up")}
+                        disabled={index === 0 || busy}
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E7E5DC] transition hover:bg-[#F5F3ED] disabled:opacity-30"
+                        title="Move up"
+                      >
+                        <ArrowUp size={15} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void updateOrder(category, "down")}
+                        disabled={index === coreCategories.length - 1 || busy}
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E7E5DC] transition hover:bg-[#F5F3ED] disabled:opacity-30"
+                        title="Move down"
+                      >
+                        <ArrowDown size={15} />
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
@@ -751,17 +742,17 @@ export default function AdminCategoriesPage() {
         {selectedCategory && (
           <form
             onSubmit={handleSave}
-            className="mb-8 border border-[#e7dfd5] bg-white"
+            className="overflow-hidden rounded-2xl border border-[#E7E5DC] bg-white"
           >
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#eee8df] px-5 py-5 md:px-7">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#EEEDE7] px-5 py-5 md:px-7">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-[#a18c75]">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B9278]">
                   02 / Editorial controls
                 </p>
-                <h2 className="mt-2 font-serif text-2xl">
+                <h2 className="mt-2 text-2xl font-semibold">
                   Edit {selectedCategory.name}
                 </h2>
-                <p className="mt-1 text-xs text-[#a3988c]">
+                <p className="mt-1 text-xs text-[#929187]">
                   Customize the collection experience.
                 </p>
               </div>
@@ -769,20 +760,20 @@ export default function AdminCategoriesPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="inline-flex items-center gap-2 border border-[#e7dfd5] px-4 py-2.5 text-[10px] uppercase tracking-wider transition hover:bg-[#f5f1eb]"
+                className="inline-flex items-center gap-2 rounded-full border border-[#E7E5DC] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider transition hover:bg-[#F5F3ED]"
               >
                 <X size={14} />
                 Close editor
               </button>
             </div>
 
-            <div className="space-y-9 p-5 md:p-7">
+            <div className="space-y-9 p-5 md:p-8">
               <section>
                 <div className="mb-5">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#a18c75]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B9278]">
                     01 / Visibility
                   </p>
-                  <h3 className="mt-2 font-serif text-xl">
+                  <h3 className="mt-2 text-xl font-semibold">
                     Storefront settings
                   </h3>
                 </div>
@@ -797,17 +788,14 @@ export default function AdminCategoriesPage() {
                       min={0}
                       value={form.sort_order}
                       onChange={(event) =>
-                        updateField(
-                          "sort_order",
-                          Number(event.target.value)
-                        )
+                        updateField("sort_order", Number(event.target.value))
                       }
                       className={inputClass}
                     />
                   </Field>
 
                   <div className="flex items-end">
-                    <label className="flex w-full cursor-pointer items-center gap-3 border border-[#e7dfd5] px-4 py-3">
+                    <label className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-[#E7E5DC] px-4 py-3">
                       <input
                         type="checkbox"
                         checked={form.show_on_homepage}
@@ -817,13 +805,13 @@ export default function AdminCategoriesPage() {
                             event.target.checked
                           )
                         }
-                        className="h-4 w-4 accent-[#29251f]"
+                        className="h-4 w-4 accent-[#292D25]"
                       />
                       <span>
-                        <span className="block text-sm">
+                        <span className="block text-sm font-medium">
                           Show on homepage
                         </span>
-                        <span className="mt-1 block text-[11px] text-[#a3988c]">
+                        <span className="mt-1 block text-[11px] text-[#929187]">
                           Display this collection on the home page.
                         </span>
                       </span>
@@ -832,17 +820,17 @@ export default function AdminCategoriesPage() {
                 </div>
               </section>
 
-              <section className="border-t border-[#eee8df] pt-8">
+              <section className="border-t border-[#EEEDE7] pt-8">
                 <div className="mb-5">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#a18c75]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B9278]">
                     02 / Campaign imagery
                   </p>
-                  <h3 className="mt-2 font-serif text-xl">
+                  <h3 className="mt-2 text-xl font-semibold">
                     Collection photography
                   </h3>
-                  <p className="mt-1 text-xs leading-6 text-[#a3988c]">
-                    Use a wide editorial image for desktop and a separate
-                    portrait image for mobile when available.
+                  <p className="mt-1 text-xs leading-6 text-[#929187]">
+                    Use a wide image for desktop and a separate portrait
+                    image for mobile.
                   </p>
                 </div>
 
@@ -872,7 +860,7 @@ export default function AdminCategoriesPage() {
                       label="Desktop image"
                       hint="Recommended: landscape image, at least 1600px wide."
                     >
-                      <div className="overflow-hidden border border-[#e7dfd5] bg-[#f5f1eb]">
+                      <div className="overflow-hidden rounded-xl border border-[#E7E5DC] bg-[#F5F3ED]">
                         <div className="aspect-[16/9]">
                           {form.image_url ? (
                             <img
@@ -881,7 +869,7 @@ export default function AdminCategoriesPage() {
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="flex h-full flex-col items-center justify-center gap-2 text-[#aa9e90]">
+                            <div className="flex h-full flex-col items-center justify-center gap-2 text-[#A5A496]">
                               <ImagePlus size={27} />
                               <span className="text-[10px] uppercase tracking-wider">
                                 No desktop image
@@ -896,13 +884,10 @@ export default function AdminCategoriesPage() {
                           type="button"
                           onClick={() => desktopInputRef.current?.click()}
                           disabled={uploadingField !== null}
-                          className="inline-flex items-center gap-2 bg-[#29251f] px-4 py-3 text-[10px] uppercase tracking-wider text-white transition hover:bg-[#51483e] disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-full bg-[#292D25] px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-white transition hover:bg-[#454A3D] disabled:opacity-50"
                         >
                           {uploadingField === "image_url" ? (
-                            <RefreshCw
-                              size={14}
-                              className="animate-spin"
-                            />
+                            <Loader2 size={14} className="animate-spin" />
                           ) : (
                             <Upload size={14} />
                           )}
@@ -913,7 +898,7 @@ export default function AdminCategoriesPage() {
                           <button
                             type="button"
                             onClick={() => updateField("image_url", "")}
-                            className="border border-[#e7dfd5] px-4 py-3 text-[10px] uppercase tracking-wider"
+                            className="rounded-full border border-[#E7E5DC] px-5 py-3 text-[10px] font-semibold uppercase tracking-wider"
                           >
                             Remove
                           </button>
@@ -927,7 +912,7 @@ export default function AdminCategoriesPage() {
                       label="Mobile image"
                       hint="Recommended: portrait image, at least 900px tall."
                     >
-                      <div className="mx-auto max-w-[300px] overflow-hidden border border-[#e7dfd5] bg-[#f5f1eb]">
+                      <div className="mx-auto max-w-[300px] overflow-hidden rounded-xl border border-[#E7E5DC] bg-[#F5F3ED]">
                         <div className="aspect-[4/5]">
                           {form.mobile_image_url ? (
                             <img
@@ -936,7 +921,7 @@ export default function AdminCategoriesPage() {
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="flex h-full flex-col items-center justify-center gap-2 text-[#aa9e90]">
+                            <div className="flex h-full flex-col items-center justify-center gap-2 text-[#A5A496]">
                               <Smartphone size={27} />
                               <span className="text-[10px] uppercase tracking-wider">
                                 No mobile image
@@ -951,13 +936,10 @@ export default function AdminCategoriesPage() {
                           type="button"
                           onClick={() => mobileInputRef.current?.click()}
                           disabled={uploadingField !== null}
-                          className="inline-flex items-center gap-2 border border-[#29251f] px-4 py-3 text-[10px] uppercase tracking-wider transition hover:bg-[#f5f1eb] disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-full border border-[#292D25] px-5 py-3 text-[10px] font-semibold uppercase tracking-wider transition hover:bg-[#F5F3ED] disabled:opacity-50"
                         >
                           {uploadingField === "mobile_image_url" ? (
-                            <RefreshCw
-                              size={14}
-                              className="animate-spin"
-                            />
+                            <Loader2 size={14} className="animate-spin" />
                           ) : (
                             <Upload size={14} />
                           )}
@@ -970,7 +952,7 @@ export default function AdminCategoriesPage() {
                             onClick={() =>
                               updateField("mobile_image_url", "")
                             }
-                            className="border border-[#e7dfd5] px-4 py-3 text-[10px] uppercase tracking-wider"
+                            className="rounded-full border border-[#E7E5DC] px-5 py-3 text-[10px] font-semibold uppercase tracking-wider"
                           >
                             Remove
                           </button>
@@ -980,18 +962,18 @@ export default function AdminCategoriesPage() {
                   </div>
                 </div>
 
-                <p className="mt-5 text-[11px] leading-6 text-[#a3988c]">
+                <p className="mt-5 text-[11px] leading-6 text-[#929187]">
                   Supported formats: JPG, PNG, WEBP and AVIF. Maximum
                   file size: 5 MB per image.
                 </p>
               </section>
 
-              <section className="border-t border-[#eee8df] pt-8">
+              <section className="border-t border-[#EEEDE7] pt-8">
                 <div className="mb-5">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#a18c75]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B9278]">
                     03 / Editorial language
                   </p>
-                  <h3 className="mt-2 font-serif text-xl">
+                  <h3 className="mt-2 text-xl font-semibold">
                     The collection story
                   </h3>
                 </div>
@@ -1055,22 +1037,22 @@ export default function AdminCategoriesPage() {
                 </div>
               </section>
 
-              <section className="border-t border-[#eee8df] pt-8">
+              <section className="border-t border-[#EEEDE7] pt-8">
                 <div className="mb-5">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#a18c75]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B9278]">
                     04 / Image treatment
                   </p>
-                  <h3 className="mt-2 font-serif text-xl">
+                  <h3 className="mt-2 text-xl font-semibold">
                     Overlay intensity
                   </h3>
                 </div>
 
-                <div className="border border-[#e7dfd5] bg-[#faf8f5] p-5">
+                <div className="rounded-xl border border-[#E7E5DC] bg-[#F8F7F2] p-5">
                   <div className="mb-4 flex items-center justify-between">
-                    <span className="text-xs text-[#887b6d]">
+                    <span className="text-xs text-[#858477]">
                       Dark overlay
                     </span>
-                    <span className="font-serif text-xl tabular-nums">
+                    <span className="text-xl font-semibold tabular-nums">
                       {form.overlay_opacity}%
                     </span>
                   </div>
@@ -1087,35 +1069,35 @@ export default function AdminCategoriesPage() {
                         Number(event.target.value)
                       )
                     }
-                    className="w-full accent-[#29251f]"
+                    className="w-full accent-[#292D25]"
                   />
 
-                  <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-[#a3988c]">
+                  <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-[#929187]">
                     <span>Bright</span>
                     <span>Dramatic</span>
                   </div>
                 </div>
               </section>
 
-              <section className="border-t border-[#eee8df] pt-8">
+              <section className="border-t border-[#EEEDE7] pt-8">
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#a18c75]">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B9278]">
                       05 / Live preview
                     </p>
-                    <h3 className="mt-2 font-serif text-xl">
+                    <h3 className="mt-2 text-xl font-semibold">
                       Preview the collection
                     </h3>
                   </div>
 
-                  <div className="flex border border-[#e7dfd5]">
+                  <div className="flex rounded-full border border-[#E7E5DC] p-1">
                     <button
                       type="button"
                       onClick={() => setPreviewMode("desktop")}
-                      className={`inline-flex items-center gap-2 px-4 py-2.5 text-[10px] uppercase tracking-wider ${
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider ${
                         previewMode === "desktop"
-                          ? "bg-[#29251f] text-white"
-                          : "text-[#887b6d]"
+                          ? "bg-[#292D25] text-white"
+                          : "text-[#858477]"
                       }`}
                     >
                       <Monitor size={14} />
@@ -1125,10 +1107,10 @@ export default function AdminCategoriesPage() {
                     <button
                       type="button"
                       onClick={() => setPreviewMode("mobile")}
-                      className={`inline-flex items-center gap-2 border-l border-[#e7dfd5] px-4 py-2.5 text-[10px] uppercase tracking-wider ${
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider ${
                         previewMode === "mobile"
-                          ? "bg-[#29251f] text-white"
-                          : "text-[#887b6d]"
+                          ? "bg-[#292D25] text-white"
+                          : "text-[#858477]"
                       }`}
                     >
                       <Smartphone size={14} />
@@ -1138,7 +1120,7 @@ export default function AdminCategoriesPage() {
                 </div>
 
                 <div
-                  className={`mx-auto overflow-hidden border border-[#e7dfd5] bg-[#d8cec1] ${
+                  className={`mx-auto overflow-hidden rounded-2xl border border-[#E7E5DC] bg-[#D8CEC1] ${
                     previewMode === "mobile"
                       ? "max-w-[340px]"
                       : "max-w-4xl"
@@ -1158,8 +1140,8 @@ export default function AdminCategoriesPage() {
                         className="absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#a99a89] to-[#554a40]">
-                        <span className="font-serif text-4xl tracking-[8px] text-white/70">
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#A99A89] to-[#554A40]">
+                        <span className="text-4xl tracking-[8px] text-white/70">
                           TALA
                         </span>
                       </div>
@@ -1201,19 +1183,19 @@ export default function AdminCategoriesPage() {
                   </div>
                 </div>
 
-                <p className="mt-3 text-center text-[10px] leading-5 text-[#a3988c]">
+                <p className="mt-3 text-center text-[10px] leading-5 text-[#929187]">
                   Preview only. Save changes to update the collection.
                 </p>
               </section>
 
-              <div className="flex flex-wrap gap-3 border-t border-[#eee8df] pt-6">
+              <div className="flex flex-wrap gap-3 border-t border-[#EEEDE7] pt-6">
                 <button
                   type="submit"
                   disabled={saving || uploadingField !== null}
-                  className="inline-flex items-center gap-2 bg-[#29251f] px-7 py-3.5 text-[10px] uppercase tracking-[0.17em] text-white transition hover:bg-[#51483e] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#292D25] px-7 py-3.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#454A3D] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? (
-                    <RefreshCw size={15} className="animate-spin" />
+                    <Loader2 size={15} className="animate-spin" />
                   ) : (
                     <Save size={15} />
                   )}
@@ -1223,7 +1205,7 @@ export default function AdminCategoriesPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="border border-[#e7dfd5] px-6 py-3.5 text-[10px] uppercase tracking-[0.17em] transition hover:bg-[#f5f1eb]"
+                  className="rounded-full border border-[#E7E5DC] px-6 py-3.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition hover:bg-[#F5F3ED]"
                 >
                   Cancel
                 </button>
@@ -1232,9 +1214,12 @@ export default function AdminCategoriesPage() {
           </form>
         )}
 
-        <footer className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[#e3dbd0] pt-5 text-[9px] uppercase tracking-[0.18em] text-[#a3988c]">
+        <footer className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E1D8] pt-5 text-[9px] uppercase tracking-[0.18em] text-[#929187]">
           <span>TALA / LUXURY FASHION</span>
-          <span>Collection Studio</span>
+          <span className="inline-flex items-center gap-2">
+            <Sparkles size={12} />
+            Collection Studio
+          </span>
         </footer>
       </div>
     </main>
