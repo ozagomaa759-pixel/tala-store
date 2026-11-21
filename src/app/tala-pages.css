@@ -31,8 +31,8 @@
 }
 
 /* =========================================
-   BUTTONS & LINKS — TEXT VISIBILITY
-   Preserve each element's intended text color
+   INTERACTIVE ELEMENTS
+   Do not override component text colors
    ========================================= */
 
 button,
@@ -41,35 +41,12 @@ a {
   text-decoration-skip-ink: auto;
 }
 
-/* Prevent invisible text caused by inherited
-   WebKit text-fill color on interactive elements */
-
-button,
-button *,
-a,
-a * {
-  -webkit-text-fill-color: currentColor;
+button {
+  cursor: pointer;
 }
 
-/* Keep labels and icons visible */
-button,
-a {
-  visibility: visible;
-}
-
-button > *,
-a > * {
-  visibility: visible;
-}
-
-/* Prevent disabled buttons from hiding their labels */
 button:disabled {
   cursor: not-allowed;
-}
-
-button:disabled,
-button:disabled * {
-  -webkit-text-fill-color: currentColor;
 }
 
 /* =========================================
@@ -77,8 +54,8 @@ button:disabled * {
    ========================================= */
 
 a.group [class*="bottom-3"][class*="right-3"][class*="opacity-0"] {
-  opacity: 1 !important;
-  transform: translateY(0) !important;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* =========================================
@@ -89,15 +66,7 @@ a[class*="bg-[#24221F]"],
 button[class*="bg-[#24221F]"],
 a[class*="bg-[#282821]"],
 button[class*="bg-[#282821]"] {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-
-a[class*="bg-[#24221F]"] *,
-button[class*="bg-[#24221F]"] *,
-a[class*="bg-[#282821]"] *,
-button[class*="bg-[#282821]"] * {
-  -webkit-text-fill-color: currentColor !important;
+  color: #ffffff;
 }
 
 /* =========================================
