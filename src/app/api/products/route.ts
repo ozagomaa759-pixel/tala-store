@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -6,8 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
@@ -36,7 +36,24 @@ export async function GET() {
     ] = await Promise.all([
       supabase
         .from("products")
-        .select("*")
+        .select(
+          [
+            "id",
+            "category_id",
+            "name",
+            "slug",
+            "description",
+            "price",
+            "compare_at_price",
+            "main_image",
+            "images",
+            "is_featured",
+            "is_best_seller",
+            "is_new_arrival",
+            "sort_order",
+            "created_at",
+          ].join(", ")
+        )
         .eq("status", "published")
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false }),
