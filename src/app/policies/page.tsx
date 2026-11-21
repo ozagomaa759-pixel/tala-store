@@ -93,9 +93,7 @@ export default function PoliciesPage() {
           <h1 className="mt-8 max-w-5xl font-serif text-[clamp(3.5rem,10vw,8rem)] font-light leading-[0.88] tracking-[-0.065em]">
             GOOD TO
             <br />
-            <span className="italic text-[#D8ED83]">
-              know.
-            </span>
+            <span className="italic text-[#D8ED83]">know.</span>
           </h1>
 
           <div className="mt-10 flex flex-col justify-between gap-7 sm:flex-row sm:items-end">
