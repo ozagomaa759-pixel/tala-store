@@ -116,10 +116,6 @@ export default function JacketsCollectionPage() {
 
   return (
     <main className="min-h-screen bg-[#F8F5F0] text-[#332A23]">
-      <div className="bg-[#292521] px-4 py-2.5 text-center text-[9px] tracking-[0.25em] text-white">
-        DISCOVER THE NEW TALA COLLECTION
-      </div>
-
       <header className="relative z-20 flex h-[76px] items-center justify-between border-b border-[#E8E0D6] px-5 sm:px-10">
         <Link
           href="/collections"
