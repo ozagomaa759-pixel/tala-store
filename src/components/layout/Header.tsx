@@ -18,7 +18,7 @@ const navigation = [
   { label: "Collections", href: "/collections" },
   { label: "Sets", href: "/collections/sets" },
   { label: "Jackets", href: "/collections/jackets" },
-  { label: "All Pieces", href: "/collections/all-pieces" },
+  { label: "All Collection", href: "/collections/all-pieces" },
 ];
 
 export default function Header() {
@@ -60,7 +60,8 @@ export default function Header() {
   };
 
   return (
-    <header className="relative z-50 w-full border-b border-[#24221F]/10 bg-[#F5F1EB] text-[#24221F]">
+    <header className="sticky top-0 z-50 w-full border-b border-[#24221F]/10 bg-[#F5F1EB]/95 text-[#24221F] backdrop-blur-xl">
+
       <div className="mx-auto flex h-[72px] max-w-[1600px] items-center justify-between px-5 sm:px-8 lg:h-[84px] lg:px-14">
 
         {/* Mobile menu */}
@@ -82,13 +83,13 @@ export default function Header() {
         </button>
 
         {/* Desktop navigation */}
-        <nav className="hidden flex-1 items-center gap-7 lg:flex xl:gap-9">
+        <nav className="hidden flex-1 items-center gap-6 lg:flex xl:gap-9">
           {navigation.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
-              className={`group relative py-3 text-[9px] font-semibold uppercase tracking-[0.16em] transition-colors xl:text-[10px] ${
+              className={`group relative py-3 text-[9px] font-semibold uppercase tracking-[0.15em] transition-colors xl:text-[10px] ${
                 isActive(item.href)
                   ? "text-[#24221F]"
                   : "text-[#77716A] hover:text-[#24221F]"
@@ -107,13 +108,13 @@ export default function Header() {
           ))}
         </nav>
 
-        {/* TALA wordmark */}
+        {/* Brand */}
         <Link
           href="/"
           aria-label="TALA Home"
           className="absolute left-1/2 -translate-x-1/2 text-center"
         >
-          <span className="block font-serif text-[30px] font-medium leading-none tracking-[0.2em] sm:text-[34px]">
+          <span className="block font-serif text-[30px] font-medium leading-none tracking-[0.2em] sm:text-[35px]">
             TALA
           </span>
 
@@ -155,10 +156,11 @@ export default function Header() {
               </span>
             )}
           </Link>
+
         </div>
       </div>
 
-      {/* Search panel */}
+      {/* Search */}
       {searchOpen && (
         <div className="absolute left-0 top-full z-50 w-full border-t border-[#24221F]/10 bg-[#F5F1EB] px-5 py-6 shadow-lg sm:px-10">
           <form
@@ -177,7 +179,7 @@ export default function Header() {
               name="q"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="What are you looking for?"
+              placeholder="Find your next favourite..."
               autoFocus
               className="w-full bg-transparent py-2 text-sm text-[#24221F] outline-none placeholder:text-[#999188]"
             />
@@ -197,6 +199,7 @@ export default function Header() {
       {/* Mobile navigation */}
       {mobileMenuOpen && (
         <div className="absolute left-0 top-full z-50 max-h-[calc(100dvh-72px)] w-full overflow-y-auto border-t border-[#24221F]/10 bg-[#F5F1EB] px-6 pb-10 pt-8 shadow-xl lg:hidden">
+
           <div className="mb-8 flex items-center justify-between">
             <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[#77716A]">
               YOUR NEXT TALA FIND
@@ -253,6 +256,7 @@ export default function Header() {
           <p className="mt-9 text-center text-[8px] tracking-[0.35em] text-[#999188]">
             TALA — LUXURY FASHION
           </p>
+
         </div>
       )}
     </header>
