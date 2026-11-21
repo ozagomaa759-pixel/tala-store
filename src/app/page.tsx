@@ -833,7 +833,7 @@ return (
             }}
           >
             <Link
-              href={`/products/${encodeURIComponent(String(product.id))}`}
+              href={`/products/${encodeURIComponent(String(product.slug || product.id))}`}
               className="group block"
             >
               <div className="aspect-[3/4] overflow-hidden bg-[#d7cec2]">
