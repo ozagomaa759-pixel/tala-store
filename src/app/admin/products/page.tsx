@@ -2,8 +2,8 @@
 "use client";
 
 import {
-  ChangeEvent,
-  FormEvent,
+  type ChangeEvent,
+  type FormEvent,
   useEffect,
   useMemo,
   useRef,
@@ -12,20 +12,21 @@ import {
 import Link from "next/link";
 import {
   ArrowLeft,
+  Archive,
+  Check,
   ImagePlus,
   Loader2,
   Package,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
   ShoppingBag,
+  Sparkles,
+  Star,
+  Trash2,
   Upload,
   X,
-  Pencil,
-  Trash2,
-  Star,
-  Archive,
-  Sparkles,
 } from "lucide-react";
 
 type Category = {
@@ -65,12 +66,6 @@ type Notice = {
   text: string;
 };
 
-const inputClass =
-  "mt-2 w-full border border-[#E5DACE] bg-white px-4 py-3 text-sm text-[#332A23] outline-none transition focus:border-[#A28A72]";
-
-const labelClass =
-  "text-xs uppercase tracking-[0.16em] text-[#8A7969]";
-
 const DEFAULT_VARIANTS: Variant[] = ["S", "M", "L", "XL", "XXL"].map(
   (size) => ({
     size,
@@ -81,12 +76,22 @@ const DEFAULT_VARIANTS: Variant[] = ["S", "M", "L", "XL", "XXL"].map(
   })
 );
 
+const inputClass =
+  "mt-2 w-full rounded-xl border border-[#E8E5DD] bg-white px-4 py-3.5 text-sm text-[#252720] outline-none transition placeholder:text-[#AAA99F] focus:border-[#7B8664] focus:ring-2 focus:ring-[#7B8664]/10";
+
+const labelClass =
+  "block text-[10px] font-semibold uppercase tracking-[0.17em] text-[#77796D]";
+
 function makeSlug(value: string) {
-  return value
+  const slug = value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+
+  return slug || `tala-product-${Date.now()}`;
 }
 
 async function readJson(response: Response) {
@@ -99,17 +104,20 @@ async function readJson(response: Response) {
   }
 }
 
+function formatPrice(value: number | string) {
+  return `EGP ${Number(value || 0).toLocaleString("en-EG")}`;
+}
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingProductId, setEditingProductId] = useState<string | null>(
-    null
-  );
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,7 +127,10 @@ export default function AdminProductsPage() {
   const [price, setPrice] = useState("");
   const [compareAtPrice, setCompareAtPrice] = useState("");
   const [status, setStatus] = useState("draft");
+
+  const [isFeatured, setIsFeatured] = useState(false);
   const [isBestSeller, setIsBestSeller] = useState(false);
+  const [isNewArrival, setIsNewArrival] = useState(true);
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
@@ -133,12 +144,11 @@ export default function AdminProductsPage() {
     [categories]
   );
 
-  // Only show the two collections used by TALA.
   const collectionCategories = useMemo(
     () =>
       activeCategories.filter((category) => {
-        const categorySlug = makeSlug(category.slug || category.name);
-        return categorySlug === "sets" || categorySlug === "jackets";
+        const value = (category.slug || category.name).toLowerCase();
+        return value === "sets" || value === "jackets";
       }),
     [activeCategories]
   );
@@ -206,7 +216,10 @@ export default function AdminProductsPage() {
     setPrice("");
     setCompareAtPrice("");
     setStatus("draft");
+
+    setIsFeatured(false);
     setIsBestSeller(false);
+    setIsNewArrival(true);
 
     setVariants(DEFAULT_VARIANTS.map((variant) => ({ ...variant })));
     setDeletedVariantIds([]);
@@ -226,6 +239,13 @@ export default function AdminProductsPage() {
     resetForm();
   }
 
+  function openNewProduct() {
+    setNotice(null);
+    resetForm();
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function handleFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
 
@@ -233,10 +253,6 @@ export default function AdminProductsPage() {
       ["image/jpeg", "image/png", "image/webp", "image/avif"].includes(
         file.type
       )
-    );
-
-    const tooLarge = allowed.find(
-      (file) => file.size > 5 * 1024 * 1024
     );
 
     if (files.length !== allowed.length) {
@@ -248,7 +264,7 @@ export default function AdminProductsPage() {
       return;
     }
 
-    if (tooLarge) {
+    if (allowed.some((file) => file.size > 5 * 1024 * 1024)) {
       setNotice({
         type: "error",
         text: "Each image must be 5 MB or smaller.",
@@ -264,16 +280,10 @@ export default function AdminProductsPage() {
     }
 
     setNotice(null);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    event.target.value = "";
   }
 
-  async function uploadImage(
-    file: File,
-    productId: string
-  ): Promise<string> {
+  async function uploadImage(file: File, productId: string): Promise<string> {
     const body = new FormData();
     body.append("file", file);
     body.append("productId", productId);
@@ -287,15 +297,12 @@ export default function AdminProductsPage() {
 
     if (!response.ok || !data.success || !data.url) {
       throw new Error(
-        data.error ||
-          `Could not upload "${file.name}" (HTTP ${response.status}).`
+        data.error || `Could not upload "${file.name}".`
       );
     }
 
     if (typeof data.url !== "string" || !data.url.startsWith("http")) {
-      throw new Error(
-        `The upload response for "${file.name}" has an invalid image URL.`
-      );
+      throw new Error(`Invalid image URL returned for "${file.name}".`);
     }
 
     return data.url;
@@ -340,7 +347,10 @@ export default function AdminProductsPage() {
           : String(product.compare_at_price)
       );
       setStatus(product.status || "draft");
+
+      setIsFeatured(Boolean(product.is_featured));
       setIsBestSeller(Boolean(product.is_best_seller));
+      setIsNewArrival(Boolean(product.is_new_arrival));
 
       setImageUrls(existingImages);
       setMainImage(
@@ -374,11 +384,7 @@ export default function AdminProductsPage() {
 
       setVariants(loadedVariants);
       setShowForm(true);
-
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       setNotice({
         type: "error",
@@ -428,12 +434,11 @@ export default function AdminProductsPage() {
   }
 
   function removeImage(url: string) {
-    const remainingImages = imageUrls.filter((image) => image !== url);
-
-    setImageUrls(remainingImages);
+    const remaining = imageUrls.filter((image) => image !== url);
+    setImageUrls(remaining);
 
     if (mainImage === url) {
-      setMainImage(remainingImages[0] || "");
+      setMainImage(remaining[0] || "__first_new_image__");
     }
   }
 
@@ -441,7 +446,10 @@ export default function AdminProductsPage() {
     setSelectedFiles((current) => {
       const remaining = current.filter((_, i) => i !== index);
 
-      if (remaining.length === 0 && mainImage === "__first_new_image__") {
+      if (
+        remaining.length === 0 &&
+        mainImage === "__first_new_image__"
+      ) {
         setMainImage(imageUrls[0] || "");
       }
 
@@ -520,7 +528,7 @@ export default function AdminProductsPage() {
     ) {
       setNotice({
         type: "error",
-        text: "Enter a product name, category, and a valid price.",
+        text: "Enter a product name, collection, and valid price.",
       });
       return;
     }
@@ -533,8 +541,7 @@ export default function AdminProductsPage() {
     ) {
       setNotice({
         type: "error",
-        text:
-          "Compare-at price must be greater than or equal to the product price.",
+        text: "Compare-at price must be greater than or equal to the product price.",
       });
       return;
     }
@@ -550,8 +557,7 @@ export default function AdminProductsPage() {
     ) {
       setNotice({
         type: "error",
-        text:
-          "Add at least one valid size and enter a stock quantity of zero or more.",
+        text: "Add at least one valid size and stock quantity.",
       });
       return;
     }
@@ -594,64 +600,53 @@ export default function AdminProductsPage() {
     try {
       let productId = editingProductId;
 
+      const productPayload = {
+        name: name.trim(),
+        slug: makeSlug(name),
+        category_id: categoryId,
+        description: description.trim(),
+        price: numericPrice,
+        compare_at_price: numericComparePrice,
+        status,
+        is_featured: isFeatured,
+        is_best_seller: isBestSeller,
+        is_new_arrival: isNewArrival,
+      };
+
       if (editingProductId) {
-        const updateResponse = await fetch("/api/admin/products", {
+        const response = await fetch("/api/admin/products", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: editingProductId,
-            name: name.trim(),
-            slug: makeSlug(name),
-            category_id: categoryId,
-            description: description.trim(),
-            price: numericPrice,
-            compare_at_price: numericComparePrice,
-            status,
-            is_best_seller: isBestSeller,
+            ...productPayload,
           }),
         });
 
-        const updateData = await readJson(updateResponse);
+        const data = await readJson(response);
 
-        if (!updateResponse.ok || updateData.success === false) {
-          throw new Error(
-            updateData.error || "Could not update product details."
-          );
+        if (!response.ok || data.success === false) {
+          throw new Error(data.error || "Could not update product details.");
         }
       } else {
-        const createResponse = await fetch("/api/admin/products", {
+        const response = await fetch("/api/admin/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: name.trim(),
-            slug: makeSlug(name),
-            category_id: categoryId,
-            description: description.trim(),
-            price: numericPrice,
-            compare_at_price: numericComparePrice,
+            ...productPayload,
             main_image: null,
             images: [],
-            status,
-            is_featured: false,
-            is_best_seller: isBestSeller,
-            is_new_arrival: true,
             sort_order: 0,
           }),
         });
 
-        const createdData = await readJson(createResponse);
+        const data = await readJson(response);
 
-        if (
-          !createResponse.ok ||
-          !createdData.success ||
-          !createdData.product?.id
-        ) {
-          throw new Error(
-            createdData.error || "The product could not be created."
-          );
+        if (!response.ok || !data.success || !data.product?.id) {
+          throw new Error(data.error || "The product could not be created.");
         }
 
-        productId = createdData.product.id as string;
+        productId = data.product.id as string;
       }
 
       if (!productId) {
@@ -661,13 +656,10 @@ export default function AdminProductsPage() {
       const uploadedUrls: string[] = [];
 
       for (const file of selectedFiles) {
-        const uploadedUrl = await uploadImage(file, productId);
-        uploadedUrls.push(uploadedUrl);
+        uploadedUrls.push(await uploadImage(file, productId));
       }
 
-      const finalImages = Array.from(
-        new Set([...imageUrls, ...uploadedUrls])
-      );
+      const finalImages = Array.from(new Set([...imageUrls, ...uploadedUrls]));
 
       if (finalImages.length === 0) {
         throw new Error("No product images are available to save.");
@@ -696,27 +688,19 @@ export default function AdminProductsPage() {
       const imageData = await readJson(imageResponse);
 
       if (!imageResponse.ok || imageData.success === false) {
-        throw new Error(
-          imageData.error ||
-            `The images could not be saved to the product (HTTP ${imageResponse.status}).`
-        );
+        throw new Error(imageData.error || "Could not save product images.");
       }
 
       const savedProduct = imageData.product;
 
-      if (!savedProduct) {
-        throw new Error(
-          "The image API did not return the updated product. The images may not have been saved."
-        );
-      }
-
       if (
+        !savedProduct ||
         savedProduct.main_image !== finalMainImage ||
         !Array.isArray(savedProduct.images) ||
-        finalImages.some((url: string) => !savedProduct.images.includes(url))
+        finalImages.some((url) => !savedProduct.images.includes(url))
       ) {
         throw new Error(
-          "The server response does not confirm that all product images were saved. Please try again."
+          "The server did not confirm that all product images were saved."
         );
       }
 
@@ -725,8 +709,8 @@ export default function AdminProductsPage() {
       setNotice({
         type: "success",
         text: editingProductId
-          ? "Product, photos, sizes, stock, and bestseller setting updated successfully."
-          : "Product, photos, sizes, stock, and bestseller setting created successfully.",
+          ? "Product, photos, collections, sizes and stock updated successfully."
+          : "Product created successfully. Photos, sizes and stock are saved.",
       });
 
       setShowForm(false);
@@ -747,6 +731,40 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function updateProduct(product: Product, updates: Record<string, unknown>) {
+    setNotice(null);
+    setSaving(true);
+
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: product.id, ...updates }),
+      });
+
+      const data = await readJson(response);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.error || "Could not update product.");
+      }
+
+      setNotice({
+        type: "success",
+        text: "Product settings updated successfully.",
+      });
+
+      await loadData();
+    } catch (error) {
+      setNotice({
+        type: "error",
+        text:
+          error instanceof Error ? error.message : "Could not update product.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function toggleProductStatus(product: Product) {
     const nextStatus =
       product.status === "published" ? "draft" : "published";
@@ -758,96 +776,12 @@ export default function AdminProductsPage() {
     );
 
     if (!confirmed) return;
-
-    setNotice(null);
-    setSaving(true);
-
-    try {
-      const response = await fetch("/api/admin/products", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: product.id,
-          status: nextStatus,
-        }),
-      });
-
-      const data = await readJson(response);
-
-      if (!response.ok || data.success === false) {
-        throw new Error(data.error || "Could not change product status.");
-      }
-
-      setNotice({
-        type: "success",
-        text:
-          nextStatus === "published"
-            ? "Product published successfully."
-            : "Product moved to Draft successfully.",
-      });
-
-      await loadData();
-    } catch (error) {
-      setNotice({
-        type: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Could not change product status.",
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function toggleBestSeller(product: Product) {
-    const nextValue = !product.is_best_seller;
-
-    setNotice(null);
-    setSaving(true);
-
-    try {
-      const response = await fetch("/api/admin/products", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: product.id,
-          is_best_seller: nextValue,
-        }),
-      });
-
-      const data = await readJson(response);
-
-      if (!response.ok || data.success === false) {
-        throw new Error(
-          data.error || "Could not update bestseller selection."
-        );
-      }
-
-      setNotice({
-        type: "success",
-        text: nextValue
-          ? `${product.name} is now marked as a Bestseller.`
-          : `${product.name} is no longer marked as a Bestseller.`,
-      });
-
-      await loadData();
-    } catch (error) {
-      setNotice({
-        type: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Could not update bestseller selection.",
-      });
-    } finally {
-      setSaving(false);
-    }
+    await updateProduct(product, { status: nextStatus });
   }
 
   async function deleteProduct(product: Product) {
     const confirmed = window.confirm(
-      `Are you sure you want to permanently delete "${product.name}"? This action cannot be undone.`
+      `Permanently delete "${product.name}"? This action cannot be undone.`
     );
 
     if (!confirmed) return;
@@ -877,40 +811,51 @@ export default function AdminProductsPage() {
       setNotice({
         type: "error",
         text:
-          error instanceof Error
-            ? error.message
-            : "Could not delete product.",
+          error instanceof Error ? error.message : "Could not delete product.",
       });
     } finally {
       setSaving(false);
     }
   }
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(search.toLowerCase()) ||
+      (product.slug || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" || product.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const publishedProducts = filteredProducts.filter(
     (product) => product.status === "published"
   );
-
   const draftProducts = filteredProducts.filter(
     (product) => product.status === "draft"
   );
-
   const archivedProducts = filteredProducts.filter(
     (product) => product.status === "archived"
   );
 
-  const bestSellerCount = filteredProducts.filter(
+  const bestSellerCount = products.filter(
     (product) => product.is_best_seller
+  ).length;
+
+  const featuredCount = products.filter(
+    (product) => product.is_featured
+  ).length;
+
+  const newArrivalCount = products.filter(
+    (product) => product.is_new_arrival
   ).length;
 
   function ProductImage({ product }: { product: Product }) {
     const image = product.main_image || product.images?.[0];
 
     return (
-      <div className="h-20 w-16 shrink-0 overflow-hidden bg-[#F1ECE5]">
+      <div className="h-28 w-20 shrink-0 overflow-hidden rounded-xl bg-[#EFEEE8] sm:h-32 sm:w-24">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -919,8 +864,8 @@ export default function AdminProductsPage() {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-[#B5A493]">
-            <ImagePlus size={20} />
+          <div className="flex h-full items-center justify-center text-[#A4A698]">
+            <ImagePlus size={22} />
           </div>
         )}
       </div>
@@ -934,73 +879,128 @@ export default function AdminProductsPage() {
     product: Product;
     section: "published" | "draft" | "archived";
   }) {
-    const productCategory = categories.find(
-      (category) => category.id === product.category_id
+    const category = categories.find(
+      (item) => item.id === product.category_id
     );
 
     return (
-      <div
-        key={product.id}
-        className="flex flex-wrap items-center gap-4 p-4 sm:px-7"
-      >
-        <ProductImage product={product} />
+      <article className="flex flex-col gap-4 p-4 transition hover:bg-[#FAFAF6] sm:flex-row sm:items-center sm:p-5">
+        <div className="flex min-w-0 flex-1 gap-4">
+          <ProductImage product={product} />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm">{product.name}</h3>
+          <div className="min-w-0 flex-1 py-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-sm font-semibold text-[#292B25]">
+                {product.name}
+              </h3>
 
-            {product.is_best_seller && (
-              <span className="inline-flex items-center gap-1 border border-[#D8C6A8] bg-[#F8F3E9] px-2 py-1 text-[9px] uppercase tracking-wider text-[#806744]">
-                <Star size={10} fill="currentColor" />
-                Bestseller
-              </span>
-            )}
-          </div>
+              {product.is_best_seller && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#F5F0DC] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-[#81703C]">
+                  <Star size={10} fill="currentColor" />
+                  Bestseller
+                </span>
+              )}
+            </div>
 
-          <p className="mt-1 text-xs text-[#8A7969]">
-            EGP {Number(product.price || 0).toLocaleString("en-EG")}
-          </p>
-
-          {productCategory && (
-            <p className="mt-1 text-[10px] uppercase tracking-wider text-[#806744]">
-              {productCategory.name}
+            <p className="mt-2 text-sm font-medium text-[#3D4234]">
+              {formatPrice(product.price)}
+              {product.compare_at_price != null &&
+                product.compare_at_price > product.price && (
+                  <span className="ml-2 text-xs font-normal text-[#A4A398] line-through">
+                    {formatPrice(product.compare_at_price)}
+                  </span>
+                )}
             </p>
-          )}
 
-          <p className="mt-1 text-[10px] uppercase tracking-wider text-[#9B8A7A]">
-            {section === "published"
-              ? "Published · Visible in store"
-              : section === "draft"
-                ? "Draft · Hidden from store"
-                : "Archived"}
-          </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wider text-[#888A7D]">
+              {category && <span>{category.name}</span>}
+              <span>·</span>
+              <span>{section}</span>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {product.is_featured && (
+                <span className="rounded-full bg-[#EAF0E2] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-[#526344]">
+                  Featured
+                </span>
+              )}
+              {product.is_new_arrival && (
+                <span className="rounded-full bg-[#F5EAE5] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-[#956A5D]">
+                  New arrival
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+        <div className="flex flex-wrap gap-2 sm:max-w-[360px] sm:justify-end">
           <button
             type="button"
             disabled={saving}
-            onClick={() => void toggleBestSeller(product)}
-            className={`inline-flex items-center gap-2 border px-3 py-2 text-[10px] uppercase tracking-wider disabled:opacity-50 ${
-              product.is_best_seller
-                ? "border-[#D8C6A8] bg-[#F8F3E9] text-[#806744]"
-                : "border-[#BCA995] text-[#59483B]"
+            onClick={() =>
+              void updateProduct(product, {
+                is_featured: !product.is_featured,
+              })
+            }
+            className={`rounded-full border px-3 py-2 text-[10px] font-semibold uppercase tracking-wider transition disabled:opacity-50 ${
+              product.is_featured
+                ? "border-[#D6E0C9] bg-[#EDF2E7] text-[#526344]"
+                : "border-[#E7E5DC] bg-white text-[#77796D]"
             }`}
           >
-            <Star
-              size={13}
-              fill={product.is_best_seller ? "currentColor" : "none"}
-            />
-            {product.is_best_seller ? "Remove Bestseller" : "Make Bestseller"}
+            <span className="inline-flex items-center gap-1.5">
+              <Sparkles size={12} />
+              Featured
+            </span>
+          </button>
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() =>
+              void updateProduct(product, {
+                is_best_seller: !product.is_best_seller,
+              })
+            }
+            className={`rounded-full border px-3 py-2 text-[10px] font-semibold uppercase tracking-wider transition disabled:opacity-50 ${
+              product.is_best_seller
+                ? "border-[#E8DFC1] bg-[#F7F2E2] text-[#81703C]"
+                : "border-[#E7E5DC] bg-white text-[#77796D]"
+            }`}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Star size={12} />
+              Bestseller
+            </span>
+          </button>
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() =>
+              void updateProduct(product, {
+                is_new_arrival: !product.is_new_arrival,
+              })
+            }
+            className={`rounded-full border px-3 py-2 text-[10px] font-semibold uppercase tracking-wider transition disabled:opacity-50 ${
+              product.is_new_arrival
+                ? "border-[#E8D6D0] bg-[#F8EEEA] text-[#956A5D]"
+                : "border-[#E7E5DC] bg-white text-[#77796D]"
+            }`}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Plus size={12} />
+              New
+            </span>
           </button>
 
           <button
             type="button"
             disabled={saving}
             onClick={() => void openEditForm(product)}
-            className="inline-flex items-center gap-2 border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#292D25] px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-white transition hover:bg-[#41483A] disabled:opacity-50"
           >
-            <Pencil size={13} />
+            <Pencil size={12} />
             Edit
           </button>
 
@@ -1009,9 +1009,9 @@ export default function AdminProductsPage() {
               type="button"
               disabled={saving}
               onClick={() => void toggleProductStatus(product)}
-              className="border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
+              className="rounded-full border border-[#E7E5DC] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#77796D] disabled:opacity-50"
             >
-              Move to Draft
+              Move to draft
             </button>
           )}
 
@@ -1020,7 +1020,7 @@ export default function AdminProductsPage() {
               type="button"
               disabled={saving}
               onClick={() => void toggleProductStatus(product)}
-              className="border border-[#53684B] bg-[#53684B] px-4 py-2 text-[10px] uppercase tracking-wider text-white disabled:opacity-50"
+              className="rounded-full bg-[#DCE9C9] px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#48563C] disabled:opacity-50"
             >
               Publish
             </button>
@@ -1031,14 +1031,11 @@ export default function AdminProductsPage() {
               type="button"
               disabled={saving}
               onClick={() =>
-                void toggleProductStatus({
-                  ...product,
-                  status: "draft",
-                })
+                void updateProduct(product, { status: "draft" })
               }
-              className="border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
+              className="rounded-full border border-[#E7E5DC] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#77796D] disabled:opacity-50"
             >
-              Move to Draft
+              Restore
             </button>
           )}
 
@@ -1046,104 +1043,174 @@ export default function AdminProductsPage() {
             type="button"
             disabled={saving}
             onClick={() => void deleteProduct(product)}
-            className="inline-flex items-center gap-2 border border-[#D8B9AE] px-3 py-2 text-[10px] uppercase tracking-wider text-[#8A3E2D] disabled:opacity-50"
+            aria-label={`Delete ${product.name}`}
+            className="rounded-full border border-[#F0DCD6] bg-white p-2 text-[#A45F50] transition hover:bg-[#FBF0ED] disabled:opacity-50"
           >
-            <Trash2 size={13} />
-            Delete
+            <Trash2 size={14} />
           </button>
         </div>
-      </div>
+      </article>
+    );
+  }
+
+  function ProductSection({
+    title,
+    subtitle,
+    items,
+    section,
+    icon,
+  }: {
+    title: string;
+    subtitle: string;
+    items: Product[];
+    section: "published" | "draft" | "archived";
+    icon: "published" | "draft" | "archived";
+  }) {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-[#EAE8DF] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EFEEE8] px-5 py-5 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1F2EA] text-[#626C52]">
+              {icon === "published" ? (
+                <ShoppingBag size={17} />
+              ) : icon === "draft" ? (
+                <Package size={17} />
+              ) : (
+                <Archive size={17} />
+              )}
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-[#292B25]">
+                {title}
+              </h2>
+              <p className="mt-1 text-[11px] text-[#929387]">{subtitle}</p>
+            </div>
+          </div>
+
+          <span className="rounded-full bg-[#F2F2EC] px-3 py-1.5 text-[10px] font-semibold text-[#64695A]">
+            {items.length} items
+          </span>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <Package
+              size={25}
+              strokeWidth={1.3}
+              className="mx-auto text-[#B4B6A9]"
+            />
+            <p className="mt-3 text-sm text-[#77796D]">
+              {search
+                ? "No products match your search."
+                : `No ${section} products yet.`}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#F0EFE9]">
+            {items.map((product) => (
+              <ProductRow
+                key={product.id}
+                product={product}
+                section={section}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F5F0] px-5 py-12 text-[#332A23] sm:px-6 sm:py-16">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-[#F6F6F0] px-4 py-7 text-[#292B25] sm:px-7 sm:py-10">
+      <div className="mx-auto max-w-7xl">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-2 text-sm text-[#8A7969] transition hover:text-[#332A23]"
+          className="inline-flex items-center gap-2 text-xs font-medium text-[#85877A] transition hover:text-[#303429]"
         >
-          <ArrowLeft size={16} />
-          Back to Dashboard
+          <ArrowLeft size={15} />
+          Back to dashboard
         </Link>
 
-        <div className="mt-10 flex flex-wrap items-end justify-between gap-5">
-          <div className="flex items-center gap-4">
-            <Package size={34} strokeWidth={1} />
-
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-[#A28A72]">
-                TALA Administration
-              </p>
-
-              <h1 className="mt-2 text-4xl font-light sm:text-5xl">
-                Products
-              </h1>
-
-              <p className="mt-2 text-sm text-[#77695D]">
-                Manage your collection, product photos, sizes, and stock.
-              </p>
-            </div>
+        <header className="mt-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8A9277]">
+              TALA / Administration
+            </p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-[-0.055em] sm:text-5xl">
+              Product studio<span className="text-[#A6B18C]">.</span>
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#85877A]">
+              Create products, curate collections, manage photos, sizes and
+              inventory — all in one place.
+            </p>
           </div>
 
           <button
             type="button"
-            onClick={() => {
-              if (showForm) {
-                closeForm();
-              } else {
-                resetForm();
-                setShowForm(true);
-              }
-            }}
+            onClick={() => (showForm ? closeForm() : openNewProduct())}
             disabled={saving}
-            className="inline-flex items-center gap-2 bg-[#332A23] px-5 py-3 text-xs uppercase tracking-[0.15em] text-white transition hover:bg-[#59483B] disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#292D25] px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.13em] text-white shadow-sm transition hover:bg-[#41483A] disabled:opacity-50"
           >
-            {showForm ? <X size={16} /> : <Plus size={16} />}
-            {showForm ? "Close Form" : "Add Product"}
+            {showForm ? <X size={15} /> : <Plus size={16} />}
+            {showForm ? "Close editor" : "Create product"}
           </button>
-        </div>
+        </header>
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-3">
-          <div className="border border-[#E5DACE] bg-white/80 p-4">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#9B8A7A]">
-              Total products
-            </p>
-            <p className="mt-2 text-2xl font-light">
-              {products.length}
-            </p>
-          </div>
-
-          <div className="border border-[#E5DACE] bg-white/80 p-4">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#9B8A7A]">
-              Published
-            </p>
-            <p className="mt-2 text-2xl font-light">
-              {products.filter((product) => product.status === "published").length}
-            </p>
-          </div>
-
-          <div className="border border-[#D8C6A8] bg-[#F8F3E9] p-4">
-            <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[#806744]">
-              <Star size={12} fill="currentColor" />
-              Bestsellers
-            </p>
-            <p className="mt-2 text-2xl font-light text-[#59483B]">
-              {bestSellerCount}
-            </p>
-          </div>
+        <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            {
+              label: "Total products",
+              value: products.length,
+              detail: "Across all collections",
+            },
+            {
+              label: "Published",
+              value: products.filter((p) => p.status === "published").length,
+              detail: "Visible in the store",
+            },
+            {
+              label: "Bestsellers",
+              value: bestSellerCount,
+              detail: "Customer favourites",
+            },
+            {
+              label: "Featured / New",
+              value: featuredCount + newArrivalCount,
+              detail: "Homepage selections",
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-[#EAE9E0] bg-white p-4 sm:p-5"
+            >
+              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929487]">
+                {stat.label}
+              </p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-[#303429]">
+                {stat.value}
+              </p>
+              <p className="mt-1 text-[10px] text-[#A1A296]">
+                {stat.detail}
+              </p>
+            </div>
+          ))}
         </div>
 
         {notice && (
           <div
             role="status"
             aria-live="polite"
-            className={`mt-7 border px-4 py-3 text-sm ${
+            className={`mt-6 flex items-start gap-3 rounded-xl border px-4 py-3.5 text-sm ${
               notice.type === "success"
-                ? "border-[#B8C8B2] bg-[#F0F5ED] text-[#40563A]"
-                : "border-[#D8B9AE] bg-[#FBF1EE] text-[#8A3E2D]"
+                ? "border-[#D9E4CD] bg-[#F0F5E9] text-[#526344]"
+                : "border-[#F0D8D1] bg-[#FBF0ED] text-[#985B4D]"
             }`}
           >
+            {notice.type === "success" ? (
+              <Check size={17} className="mt-0.5 shrink-0" />
+            ) : (
+              <X size={17} className="mt-0.5 shrink-0" />
+            )}
             {notice.text}
           </div>
         )}
@@ -1151,673 +1218,603 @@ export default function AdminProductsPage() {
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            className="mt-8 border border-[#E5DACE] bg-white/80 p-5 sm:p-8"
+            className="mt-7 overflow-hidden rounded-2xl border border-[#E5E6DA] bg-white shadow-sm"
           >
-            <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#EFEEE8] bg-[#FBFBF7] px-5 py-5 sm:px-7">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
-                  {editingProductId
-                    ? "Edit collection item"
-                    : "New collection item"}
+                <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#929A7D]">
+                  {editingProductId ? "Product editor" : "New product"}
                 </p>
-
-                <h2 className="mt-2 text-2xl font-light">
-                  {editingProductId ? "Edit product" : "Add a product"}
+                <h2 className="mt-1 text-xl font-semibold tracking-tight">
+                  {editingProductId ? "Edit product" : "Build a new product"}
                 </h2>
-
-                <p className="mt-2 text-xs leading-6 text-[#77695D]">
-                  {editingProductId
-                    ? "Update product information, photos, sizes, and stock."
-                    : "Add the product details, upload its photos, then enter the sizes and available stock."}
+                <p className="mt-1 text-xs text-[#929387]">
+                  Product information, merchandising, photography and stock.
                 </p>
               </div>
 
               {editingProductId && (
-                <span className="border border-[#D9CCBE] px-3 py-2 text-[10px] uppercase tracking-wider text-[#8A7969]">
+                <span className="rounded-full bg-[#EEF1E7] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#687454]">
                   Editing existing product
                 </span>
               )}
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2">
-              <label className={labelClass}>
-                Product name *
-
-                <input
-                  className={inputClass}
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="e.g. Classic Knit Set"
-                  required
-                />
-              </label>
-
-              <div>
-                <p className={labelClass}>Choose Collection *</p>
-
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  {(["sets", "jackets"] as const).map((slug) => {
-                    const category = collectionCategories.find(
-                      (item) =>
-                        makeSlug(item.slug || item.name) === slug
-                    );
-
-                    const selected = categoryId === category?.id;
-
-                    return (
-                      <button
-                        key={slug}
-                        type="button"
-                        disabled={!category}
-                        onClick={() => {
-                          if (category) setCategoryId(category.id);
-                        }}
-                        aria-pressed={selected}
-                        className={`min-h-24 border p-4 text-center transition ${
-                          selected
-                            ? "border-[#806744] bg-[#F8F3E9] text-[#59483B]"
-                            : "border-[#E5DACE] bg-white text-[#8A7969] hover:border-[#A28A72]"
-                        } disabled:cursor-not-allowed disabled:opacity-40`}
-                      >
-                        <span className="block text-sm tracking-[0.2em]">
-                          {slug === "sets" ? "SETS" : "JACKETS"}
-                        </span>
-
-                        <span className="mt-2 block text-[10px] uppercase tracking-wider">
-                          {selected
-                            ? "Selected"
-                            : category
-                              ? "Choose collection"
-                              : "Not available"}
-                        </span>
-                      </button>
-                    );
-                  })}
+            <div className="space-y-8 p-5 sm:p-7">
+              <section>
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="h-5 w-1 rounded-full bg-[#AAB68F]" />
+                  <h3 className="text-sm font-semibold">Product information</h3>
                 </div>
 
-                {!categoryId && (
-                  <p className="mt-2 text-xs text-[#9A5145]">
-                    Please choose Sets or Jackets.
-                  </p>
-                )}
-              </div>
-
-              <label className={labelClass}>
-                Price *
-
-                <input
-                  className={inputClass}
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={price}
-                  onChange={(event) => setPrice(event.target.value)}
-                  required
-                />
-              </label>
-
-              <label className={labelClass}>
-                Compare-at price
-
-                <input
-                  className={inputClass}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={compareAtPrice}
-                  onChange={(event) => setCompareAtPrice(event.target.value)}
-                  placeholder="Optional"
-                />
-              </label>
-
-              <label className={labelClass}>
-                Store status *
-
-                <select
-                  className={inputClass}
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value)}
-                >
-                  <option value="draft">Draft — hidden from store</option>
-                  <option value="published">
-                    Published — visible in store
-                  </option>
-                  <option value="archived">Archived</option>
-                </select>
-              </label>
-
-              <label className={labelClass}>
-                Description
-
-                <textarea
-                  className={`${inputClass} min-h-28 resize-y`}
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Describe the fabric, fit, and details..."
-                />
-              </label>
-            </div>
-
-            <div className="mt-7 border border-[#D8C6A8] bg-[#FBF8F1] p-5">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#F0E7D8] text-[#806744]">
-                    <Sparkles size={19} />
-                  </div>
+                <div className="grid gap-5 md:grid-cols-2">
+                  <label className={labelClass}>
+                    Product name *
+                    <input
+                      className={inputClass}
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="e.g. The Everyday Set"
+                      required
+                    />
+                  </label>
 
                   <div>
-                    <p className="text-sm font-medium text-[#59483B]">
-                      Bestseller selection
+                    <p className={labelClass}>Collection *</p>
+                    <div className="mt-2 grid grid-cols-2 gap-3">
+                      {(["sets", "jackets"] as const).map((slug) => {
+                        const category = collectionCategories.find(
+                          (item) =>
+                            (item.slug || item.name).toLowerCase() === slug
+                        );
+                        const selected = categoryId === category?.id;
+
+                        return (
+                          <button
+                            key={slug}
+                            type="button"
+                            disabled={!category}
+                            onClick={() => {
+                              if (category) setCategoryId(category.id);
+                            }}
+                            aria-pressed={selected}
+                            className={`rounded-xl border px-4 py-4 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                              selected
+                                ? "border-[#899573] bg-[#F0F3E9]"
+                                : "border-[#E9E8E0] bg-white hover:border-[#B6BEA4]"
+                            }`}
+                          >
+                            <span className="block text-xs font-semibold uppercase tracking-[0.15em]">
+                              {slug}
+                            </span>
+                            <span className="mt-1 block text-[10px] text-[#929387]">
+                              {selected
+                                ? "Selected"
+                                : category
+                                  ? "Choose collection"
+                                  : "Unavailable"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <label className={labelClass}>
+                    Price (EGP) *
+                    <input
+                      className={inputClass}
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={price}
+                      onChange={(event) => setPrice(event.target.value)}
+                      placeholder="0.00"
+                      required
+                    />
+                  </label>
+
+                  <label className={labelClass}>
+                    Compare-at price (EGP)
+                    <input
+                      className={inputClass}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={compareAtPrice}
+                      onChange={(event) => setCompareAtPrice(event.target.value)}
+                      placeholder="Optional — original price"
+                    />
+                  </label>
+
+                  <label className={labelClass}>
+                    Store status
+                    <select
+                      className={inputClass}
+                      value={status}
+                      onChange={(event) => setStatus(event.target.value)}
+                    >
+                      <option value="draft">Draft — hidden from store</option>
+                      <option value="published">Published — live</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </label>
+
+                  <label className={labelClass}>
+                    Product description
+                    <textarea
+                      className={`${inputClass} min-h-28 resize-y`}
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder="Tell the story of this piece. Mention fabric, fit and details..."
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="border-t border-[#EFEEE8] pt-7">
+                <div className="mb-4">
+                  <p className="text-sm font-semibold">Merchandising</p>
+                  <p className="mt-1 text-xs text-[#929387]">
+                    Choose how this product is highlighted around the store.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  {[
+                    {
+                      title: "Featured",
+                      description: "Highlight in featured product areas.",
+                      checked: isFeatured,
+                      set: setIsFeatured,
+                      icon: <Sparkles size={17} />,
+                      tone: "sage",
+                    },
+                    {
+                      title: "Bestseller",
+                      description: "Mark as one of TALA's bestsellers.",
+                      checked: isBestSeller,
+                      set: setIsBestSeller,
+                      icon: <Star size={17} />,
+                      tone: "sand",
+                    },
+                    {
+                      title: "New arrival",
+                      description: "Identify this as a new collection item.",
+                      checked: isNewArrival,
+                      set: setIsNewArrival,
+                      icon: <Plus size={17} />,
+                      tone: "rose",
+                    },
+                  ].map((item) => (
+                    <label
+                      key={item.title}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                        item.checked
+                          ? "border-[#AAB68F] bg-[#F5F7F0]"
+                          : "border-[#EAE9E1] bg-white hover:bg-[#FAFAF6]"
+                      }`}
+                    >
+                      <span className="mt-0.5 text-[#788466]">{item.icon}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold">
+                          {item.title}
+                        </span>
+                        <span className="mt-1 block text-[10px] leading-5 text-[#929387]">
+                          {item.description}
+                        </span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={item.checked}
+                        onChange={(event) => item.set(event.target.checked)}
+                        className="mt-1 h-4 w-4 accent-[#788466]"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              <section className="border-t border-[#EFEEE8] pt-7">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">Product photography</h3>
+                    <p className="mt-1 text-xs text-[#929387]">
+                      JPG, PNG, WEBP or AVIF · maximum 5 MB per image.
                     </p>
-                    <p className="mt-1 max-w-md text-xs leading-5 text-[#8A7969]">
-                      Highlight this product as one of TALA&apos;s bestsellers.
-                      You can change this setting whenever you want.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-full border border-[#DADDD0] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[#59634A] transition hover:bg-[#F3F5ED]"
+                  >
+                    <ImagePlus size={15} />
+                    Add photos
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    multiple
+                    onChange={handleFiles}
+                    className="hidden"
+                  />
+                </div>
+
+                {imageUrls.length > 0 || previews.length > 0 ? (
+                  <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                    {imageUrls.map((url) => (
+                      <div
+                        key={url}
+                        className="group relative aspect-[4/5] overflow-hidden rounded-xl bg-[#EFEEE8]"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt="Product photo"
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setMainImage(url)}
+                          className={`absolute bottom-2 left-2 rounded-full px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider ${
+                            mainImage === url
+                              ? "bg-[#292D25] text-white"
+                              : "bg-white/90 text-[#3D4234]"
+                          }`}
+                        >
+                          {mainImage === url ? "Cover photo" : "Set as cover"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(url)}
+                          aria-label="Remove image"
+                          className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-[#A45F50]"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {previews.map((preview, index) => (
+                      <div
+                        key={`${preview}-${index}`}
+                        className="relative aspect-[4/5] overflow-hidden rounded-xl bg-[#EFEEE8]"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={preview}
+                          alt={`New product photo ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                        <span className="absolute bottom-2 left-2 rounded-full bg-white/90 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#59634A]">
+                          New photo
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeNewFile(index)}
+                          aria-label="Remove new image"
+                          className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-[#A45F50]"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-5 flex min-h-44 w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#D5D8CB] bg-[#FAFAF6] text-[#858A78] transition hover:border-[#AAB68F] hover:bg-[#F5F7F0]"
+                  >
+                    <Upload size={24} strokeWidth={1.4} />
+                    <span className="mt-3 text-xs font-medium">
+                      Select product photos
+                    </span>
+                    <span className="mt-1 text-[10px] text-[#A2A497]">
+                      Add multiple angles and details
+                    </span>
+                  </button>
+                )}
+
+                <p className="mt-3 text-[10px] leading-5 text-[#999B90]">
+                  The cover photo is used in product cards and collection
+                  previews. You can change it at any time.
+                </p>
+              </section>
+
+              <section className="border-t border-[#EFEEE8] pt-7">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">Sizes, colours & stock</h3>
+                    <p className="mt-1 text-xs text-[#929387]">
+                      Each size and colour combination has its own stock quantity.
                     </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => addVariant()}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#DADDD0] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[#59634A]"
+                    >
+                      <Plus size={13} />
+                      Add size
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addVariant("One Size")}
+                      className="rounded-full border border-[#DADDD0] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[#59634A]"
+                    >
+                      One size
+                    </button>
                   </div>
                 </div>
 
-                <label className="flex cursor-pointer items-center gap-3">
-                  <span className="text-[10px] uppercase tracking-[0.15em] text-[#806744]">
-                    {isBestSeller ? "Selected" : "Not selected"}
-                  </span>
-
-                  <input
-                    type="checkbox"
-                    checked={isBestSeller}
-                    onChange={(event) =>
-                      setIsBestSeller(event.target.checked)
-                    }
-                    className="h-5 w-5 accent-[#806744]"
-                  />
-                </label>
-              </div>
-
-              {isBestSeller && (
-                <div className="mt-4 inline-flex items-center gap-2 border border-[#D8C6A8] bg-white px-3 py-2 text-[10px] uppercase tracking-wider text-[#806744]">
-                  <Star size={12} fill="currentColor" />
-                  This product is marked as a Bestseller
-                </div>
-              )}
-            </div>
-
-            <div className="mt-8 border-t border-[#E5DACE] pt-7">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-light">Product photos *</h3>
-
-                  <p className="mt-1 text-xs text-[#8A7969]">
-                    JPG, PNG, WEBP, or AVIF · up to 5 MB per image
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 border border-[#BCA995] px-4 py-2.5 text-xs uppercase tracking-wider"
-                >
-                  <ImagePlus size={16} />
-                  Add photos
-                </button>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/avif"
-                  multiple
-                  onChange={handleFiles}
-                  className="hidden"
-                />
-              </div>
-
-              {imageUrls.length > 0 || previews.length > 0 ? (
-                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {imageUrls.map((url) => (
-                    <div
-                      key={url}
-                      className="relative aspect-[4/5] overflow-hidden bg-[#F1ECE5]"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={url}
-                        alt="Product photo"
-                        className="h-full w-full object-cover"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => setMainImage(url)}
-                        className={`absolute left-2 top-2 flex items-center gap-1 px-2 py-1 text-[9px] uppercase ${
-                          mainImage === url
-                            ? "bg-[#332A23] text-white"
-                            : "bg-white/90 text-[#332A23]"
-                        }`}
-                      >
-                        <Star size={11} />
-                        {mainImage === url ? "Cover" : "Set cover"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => removeImage(url)}
-                        className="absolute right-2 top-2 bg-white/90 p-1.5 text-[#8A3E2D]"
-                        aria-label="Remove image"
-                      >
-                        <X size={13} />
-                      </button>
-                    </div>
-                  ))}
-
-                  {previews.map((preview, index) => (
-                    <div
-                      key={`${preview}-${index}`}
-                      className="relative aspect-[4/5] overflow-hidden bg-[#F1ECE5]"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={preview}
-                        alt={`New product photo ${index + 1}`}
-                        className="h-full w-full object-cover"
-                      />
-
-                      <span className="absolute bottom-2 left-2 bg-white/90 px-2 py-1 text-[9px] uppercase tracking-wider">
-                        New photo
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => removeNewFile(index)}
-                        className="absolute right-2 top-2 bg-white/90 p-1.5 text-[#8A3E2D]"
-                        aria-label="Remove new photo"
-                      >
-                        <X size={13} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mt-5 flex min-h-36 w-full flex-col items-center justify-center border border-dashed border-[#CDBEAE] bg-[#FBF9F6] text-[#8A7969]"
-                >
-                  <Upload size={22} strokeWidth={1.3} />
-
-                  <span className="mt-3 text-xs">
-                    Tap to select product photos
-                  </span>
-                </button>
-              )}
-
-              <p className="mt-3 text-xs text-[#8A7969]">
-                The selected cover photo will appear in the product list and
-                store. If no cover is selected, the first available photo will
-                be used.
-              </p>
-            </div>
-
-            <div className="mt-8 border-t border-[#E5DACE] pt-7">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-light">
-                    Sizes, color & stock
-                  </h3>
-
-                  <p className="mt-1 text-xs text-[#8A7969]">
-                    Manage each size and its stock quantity separately.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => addVariant()}
-                    className="inline-flex items-center gap-2 border border-[#BCA995] px-4 py-2.5 text-xs uppercase tracking-wider"
-                  >
-                    <Plus size={15} />
-                    Add size
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => addVariant("One Size")}
-                    className="border border-[#BCA995] px-4 py-2.5 text-xs uppercase tracking-wider"
-                  >
-                    Add One Size
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-4">
                 {variants.length === 0 && (
-                  <p className="border border-dashed border-[#CDBEAE] bg-[#FBF9F6] p-5 text-sm text-[#8A7969]">
-                    No sizes have been added. Add a size or choose One Size.
+                  <p className="mt-5 rounded-xl border border-dashed border-[#D5D8CB] bg-[#FAFAF6] p-5 text-sm text-[#85877A]">
+                    No sizes added yet. Add at least one size before saving.
                   </p>
                 )}
 
-                {variants.map((variant, index) => (
-                  <div
-                    key={variant.id || `new-${index}`}
-                    className="grid gap-3 border border-[#E5DACE] bg-[#FBF9F6] p-4 sm:grid-cols-2 lg:grid-cols-4"
-                  >
-                    <label className={labelClass}>
-                      Size
+                <div className="mt-5 space-y-3">
+                  {variants.map((variant, index) => (
+                    <div
+                      key={variant.id || `new-${index}`}
+                      className="rounded-xl border border-[#EAE9E1] bg-[#FBFBF8] p-4"
+                    >
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <label className={labelClass}>
+                          Size
+                          <input
+                            className={inputClass}
+                            value={variant.size}
+                            onChange={(event) =>
+                              updateVariant(index, "size", event.target.value)
+                            }
+                            placeholder="S, M, XL, XXL..."
+                          />
+                        </label>
 
-                      <input
-                        className={inputClass}
-                        value={variant.size}
-                        onChange={(event) =>
-                          updateVariant(index, "size", event.target.value)
-                        }
-                        placeholder="S, M, XL or One Size"
-                      />
-                    </label>
+                        <label className={labelClass}>
+                          Colour name
+                          <input
+                            className={inputClass}
+                            value={variant.color}
+                            onChange={(event) =>
+                              updateVariant(index, "color", event.target.value)
+                            }
+                            placeholder="Black"
+                          />
+                        </label>
 
-                    <label className={labelClass}>
-                      Color name
+                        <label className={labelClass}>
+                          Stock quantity
+                          <input
+                            className={inputClass}
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={variant.stock_quantity}
+                            onChange={(event) =>
+                              updateVariant(
+                                index,
+                                "stock_quantity",
+                                event.target.value === ""
+                                  ? 0
+                                  : Number(event.target.value)
+                              )
+                            }
+                          />
+                        </label>
 
-                      <input
-                        className={inputClass}
-                        value={variant.color}
-                        onChange={(event) =>
-                          updateVariant(index, "color", event.target.value)
-                        }
-                        placeholder="Black"
-                      />
-                    </label>
+                        <div className="flex items-end gap-3">
+                          <label className={`${labelClass} min-w-0 flex-1`}>
+                            Colour code
+                            <input
+                              className={`${inputClass} h-[49px] cursor-pointer p-1.5`}
+                              type="color"
+                              value={variant.color_code || "#222222"}
+                              onChange={(event) =>
+                                updateVariant(
+                                  index,
+                                  "color_code",
+                                  event.target.value
+                                )
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => removeVariant(index)}
+                            aria-label="Remove size"
+                            className="mb-0.5 rounded-xl border border-[#F0DCD6] bg-white p-3 text-[#A45F50] transition hover:bg-[#FBF0ED]"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
 
-                    <label className={labelClass}>
-                      Stock quantity
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#ECEBE4] pt-3">
+                        <label className="flex cursor-pointer items-center gap-2 text-xs text-[#77796D]">
+                          <input
+                            type="checkbox"
+                            checked={variant.is_active}
+                            onChange={(event) =>
+                              updateVariant(
+                                index,
+                                "is_active",
+                                event.target.checked
+                              )
+                            }
+                            className="h-4 w-4 accent-[#788466]"
+                          />
+                          Available for sale
+                        </label>
 
-                      <input
-                        className={inputClass}
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={variant.stock_quantity}
-                        onChange={(event) =>
-                          updateVariant(
-                            index,
-                            "stock_quantity",
-                            event.target.value === ""
-                              ? 0
-                              : Number(event.target.value)
-                          )
-                        }
-                      />
-                    </label>
-
-                    <div className="flex items-end justify-between gap-3">
-                      <label className={labelClass}>
-                        Color code
-
-                        <input
-                          className={`${inputClass} h-12 p-1`}
-                          type="color"
-                          value={variant.color_code || "#222222"}
-                          onChange={(event) =>
-                            updateVariant(
-                              index,
-                              "color_code",
-                              event.target.value
-                            )
-                          }
-                        />
-                      </label>
-
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(index)}
-                        className="mb-1 border border-[#D8B9AE] p-3 text-[#8A3E2D]"
-                        aria-label="Remove size"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2 lg:col-span-4">
-                      <label className="flex items-center gap-2 text-xs text-[#77695D]">
-                        <input
-                          type="checkbox"
-                          checked={variant.is_active}
-                          onChange={(event) =>
-                            updateVariant(
-                              index,
-                              "is_active",
-                              event.target.checked
-                            )
-                          }
-                        />
-                        Available for sale
-                      </label>
-
-                      {variant.stock_quantity === 0 ? (
-                        <span className="text-xs font-semibold tracking-wider text-[#9A5145]">
-                          ✕ SOLD OUT
+                        <span
+                          className={`rounded-full px-3 py-1 text-[9px] font-semibold uppercase tracking-wider ${
+                            variant.stock_quantity === 0
+                              ? "bg-[#F9EDE9] text-[#A45F50]"
+                              : "bg-[#EDF2E7] text-[#637650]"
+                          }`}
+                        >
+                          {variant.stock_quantity === 0
+                            ? "Sold out"
+                            : `${variant.stock_quantity} in stock`}
                         </span>
-                      ) : (
-                        <span className="text-xs text-[#71836B]">
-                          {variant.stock_quantity} IN STOCK
-                        </span>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </section>
             </div>
 
-            <div className="mt-8 flex flex-wrap justify-end gap-3 border-t border-[#E5DACE] pt-6">
+            <div className="flex flex-wrap justify-end gap-3 border-t border-[#EFEEE8] bg-[#FBFBF8] px-5 py-5 sm:px-7">
               <button
                 type="button"
                 onClick={closeForm}
                 disabled={saving}
-                className="border border-[#CDBEAE] px-5 py-3 text-xs uppercase tracking-wider text-[#77695D] disabled:opacity-50"
+                className="rounded-full border border-[#E2E1D8] bg-white px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[#77796D] disabled:opacity-50"
               >
                 Cancel
               </button>
-
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 bg-[#332A23] px-6 py-3 text-xs uppercase tracking-[0.15em] text-white disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-full bg-[#292D25] px-7 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#41483A] disabled:opacity-60"
               >
                 {saving ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={15} className="animate-spin" />
                 ) : editingProductId ? (
-                  <Pencil size={16} />
+                  <Pencil size={14} />
                 ) : (
-                  <Plus size={16} />
+                  <Plus size={15} />
                 )}
-
                 {saving
-                  ? "Saving..."
+                  ? "Saving product..."
                   : editingProductId
                     ? "Save changes"
-                    : "Save product"}
+                    : "Create product"}
               </button>
             </div>
           </form>
         )}
 
-        <div className="mt-9 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
-              Product management
-            </p>
-
-            <h2 className="mt-2 text-2xl font-light">
-              Your Collection
-            </h2>
-
-            <p className="mt-1 text-xs text-[#8A7969]">
-              {products.length} total product(s) in the database
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center border border-[#E5DACE] bg-white px-3">
-              <Search size={15} className="text-[#9B8A7A]" />
-
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search products"
-                className="w-36 bg-transparent px-2 py-2.5 text-xs outline-none sm:w-48"
-              />
+        <section className="mt-10">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-[#929A7D]">
+                Catalogue management
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+                Your collection
+              </h2>
+              <p className="mt-1 text-xs text-[#929387]">
+                {products.length} products stored in your TALA catalogue.
+              </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => void loadData()}
-              aria-label="Refresh products"
-              className="border border-[#E5DACE] bg-white p-2.5 text-[#77695D] hover:bg-[#F8F5F0]"
-            >
-              <RefreshCw size={15} />
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-[#E7E6DE] bg-white px-4 sm:w-56 sm:flex-none">
+                <Search size={15} className="shrink-0 text-[#929387]" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search products..."
+                  className="min-w-0 flex-1 bg-transparent py-3 text-xs outline-none placeholder:text-[#AAA99F]"
+                />
+              </div>
+
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                className="rounded-full border border-[#E7E6DE] bg-white px-4 py-3 text-xs text-[#65685B] outline-none"
+              >
+                <option value="all">All statuses</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => void loadData()}
+                aria-label="Refresh products"
+                className="rounded-full border border-[#E7E6DE] bg-white p-3 text-[#77796D] transition hover:bg-[#F0F1E9]"
+              >
+                <RefreshCw size={15} />
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
 
         {loading ? (
-          <div className="mt-7 flex items-center justify-center gap-3 border border-[#E5DACE] bg-white/70 p-12 text-sm text-[#8A7969]">
+          <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl border border-[#EAE9E1] bg-white p-14 text-sm text-[#85877A]">
             <Loader2 size={18} className="animate-spin" />
-            Loading products...
+            Loading your collection...
           </div>
         ) : (
-          <div className="mt-7 space-y-7">
-            <section className="border border-[#E5DACE] bg-white/70">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
-                <div>
-                  <h2 className="text-xl font-light">
-                    Published Products
-                  </h2>
+          <div className="mt-6 space-y-5">
+            {(statusFilter === "all" || statusFilter === "published") && (
+              <ProductSection
+                title="Published products"
+                subtitle="Products currently visible in your online store."
+                items={publishedProducts}
+                section="published"
+                icon="published"
+              />
+            )}
 
-                  <p className="mt-1 text-xs text-[#8A7969]">
-                    Products currently visible in your store
-                  </p>
-                </div>
+            {(statusFilter === "all" || statusFilter === "draft") && (
+              <ProductSection
+                title="Draft products"
+                subtitle="Private products that are not visible to customers."
+                items={draftProducts}
+                section="draft"
+                icon="draft"
+              />
+            )}
 
-                <span className="border border-[#C4D0BE] px-3 py-1.5 text-xs text-[#53684B]">
-                  {publishedProducts.length} Published
-                </span>
+            {(statusFilter === "all" || statusFilter === "archived") && (
+              <ProductSection
+                title="Archived products"
+                subtitle="Products kept in your catalogue but not currently active."
+                items={archivedProducts}
+                section="archived"
+                icon="archived"
+              />
+            )}
+
+            {filteredProducts.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-[#DADDD0] bg-white px-6 py-14 text-center">
+                <Package
+                  size={27}
+                  strokeWidth={1.3}
+                  className="mx-auto text-[#A4A698]"
+                />
+                <p className="mt-3 text-sm font-medium text-[#55594B]">
+                  No products found
+                </p>
+                <p className="mt-1 text-xs text-[#929387]">
+                  Try another search or create a new product.
+                </p>
               </div>
-
-              {publishedProducts.length === 0 ? (
-                <div className="p-10 text-center">
-                  <ShoppingBag
-                    size={28}
-                    strokeWidth={1}
-                    className="mx-auto text-[#B5A493]"
-                  />
-
-                  <p className="mt-3 text-sm text-[#8A7969]">
-                    {search
-                      ? "No published products match your search."
-                      : "No published products yet."}
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y divide-[#EDE5DC]">
-                  {publishedProducts.map((product) => (
-                    <ProductRow
-                      key={product.id}
-                      product={product}
-                      section="published"
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="border border-[#D9CCBE] bg-white/70">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Archive size={19} strokeWidth={1.4} />
-
-                    <h2 className="text-xl font-light">
-                      Draft Products
-                    </h2>
-                  </div>
-
-                  <p className="mt-1 text-xs text-[#8A7969]">
-                    Private products that are not visible to customers
-                  </p>
-                </div>
-
-                <span className="border border-[#D9CCBE] px-3 py-1.5 text-xs text-[#8A7969]">
-                  {draftProducts.length} Draft
-                </span>
-              </div>
-
-              {draftProducts.length === 0 ? (
-                <div className="p-10 text-center">
-                  <Package
-                    size={28}
-                    strokeWidth={1}
-                    className="mx-auto text-[#B5A493]"
-                  />
-
-                  <p className="mt-3 text-sm text-[#8A7969]">
-                    {search
-                      ? "No draft products match your search."
-                      : "No draft products yet."}
-                  </p>
-
-                  <p className="mt-1 text-xs text-[#A28A72]">
-                    New products saved as Draft will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y divide-[#EDE5DC]">
-                  {draftProducts.map((product) => (
-                    <ProductRow
-                      key={product.id}
-                      product={product}
-                      section="draft"
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {archivedProducts.length > 0 && (
-              <section className="border border-[#E5DACE] bg-white/70">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5DACE] p-5 sm:px-7">
-                  <div>
-                    <h2 className="text-xl font-light">
-                      Archived Products
-                    </h2>
-
-                    <p className="mt-1 text-xs text-[#8A7969]">
-                      Products saved in the archived state
-                    </p>
-                  </div>
-
-                  <span className="border border-[#D9CCBE] px-3 py-1.5 text-xs text-[#8A7969]">
-                    {archivedProducts.length} Archived
-                  </span>
-                </div>
-
-                <div className="divide-y divide-[#EDE5DC]">
-                  {archivedProducts.map((product) => (
-                    <ProductRow
-                      key={product.id}
-                      product={product}
-                      section="archived"
-                    />
-                  ))}
-                </div>
-              </section>
             )}
           </div>
         )}
 
-        <Link
-          href="/products"
-          className="mt-8 inline-flex items-center gap-3 border-b border-[#A28A72] pb-2 text-xs uppercase tracking-widest"
-        >
-          <ShoppingBag size={15} />
-          View Store Products
-        </Link>
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[#E7E6DE] pt-5">
+          <p className="text-[10px] uppercase tracking-wider text-[#A0A194]">
+            TALA · Product management studio
+          </p>
+          <Link
+            href="/products"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-[#626C52] transition hover:text-[#303429]"
+          >
+            <ShoppingBag size={14} />
+            View storefront
+          </Link>
+        </div>
       </div>
     </main>
   );
