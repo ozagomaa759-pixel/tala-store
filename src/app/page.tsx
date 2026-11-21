@@ -2,15 +2,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useReducedMotion,
-} from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import {
   ArrowDown,
   ArrowRight,
+  ArrowUpRight,
   Instagram,
   Menu,
   ShoppingBag,
@@ -33,17 +30,6 @@ type HeroSlide = {
   sort_order: number;
 };
 
-type HeroContent = {
-  id: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  image: string;
-  mobileImage: string | null;
-  buttonText: string;
-  buttonLink: string;
-};
-
 type Category = {
   id: string;
   name: string;
@@ -59,892 +45,704 @@ type Category = {
   sort_order: number;
 };
 
-type ApiCategory = {
-  id?: string;
-  name?: string;
-  slug?: string;
-  description?: string | null;
-  image_url?: string | null;
-  mobile_image_url?: string | null;
-  subtitle?: string | null;
-  headline?: string | null;
-  button_text?: string | null;
-  button_link?: string | null;
-  overlay_opacity?: number | null;
-  sort_order?: number;
-};
-
 const EASE = [0.22, 1, 0.36, 1] as const;
-
-const TEXT_TRANSITION = {
-  duration: 0.5,
-  ease: EASE,
-};
-
-const MENU_TRANSITION = {
-  duration: 0.35,
-  ease: EASE,
-};
-
-const FALLBACK_HERO: HeroContent = {
-  id: "tala-default-hero",
-  title: "TALA",
-  subtitle: "THE ART OF EVERYDAY ELEGANCE",
-  description: "",
-  image: "",
-  mobileImage: null,
-  buttonText: "EXPLORE COLLECTION",
-  buttonLink: "/products",
-};
 
 export default function HomePage() {
   const cartCount = useCartCount();
   const reducedMotion = useReducedMotion();
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-
   const [categories, setCategories] = useState<Category[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
-
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
-  const [heroLoaded, setHeroLoaded] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const activeHero = heroSlides[heroIndex];
 
-  const hero: HeroContent | null = activeHero
-    ? {
-        id: activeHero.id,
-        title: activeHero.title?.trim() || "TALA",
-        subtitle:
-          activeHero.subtitle?.trim() ||
-          "THE ART OF EVERYDAY ELEGANCE",
-        description: activeHero.description?.trim() || "",
-        image: activeHero.image_url,
-        mobileImage: activeHero.mobile_image_url,
-        buttonText:
-          activeHero.button_text?.trim() || "EXPLORE COLLECTION",
-        buttonLink: activeHero.button_link || "/products",
-      }
-    : heroLoaded
-      ? FALLBACK_HERO
-      : null;
+  const heroImage =
+    activeHero?.image_url || products.find((p) => p.image)?.image || "";
 
-  // Load categories
+  const heroTitle =
+    activeHero?.title?.trim() || "DRESS LIKE YOU MEAN IT.";
+
+  const heroSubtitle =
+    activeHero?.subtitle?.trim() || "A NEW POINT OF VIEW";
+
+  const heroDescription =
+    activeHero?.description?.trim() ||
+    "Contemporary pieces. Distinctive energy. Made to be remembered.";
+
+  const heroButton =
+    activeHero?.button_text?.trim() || "EXPLORE THE COLLECTION";
+
+  const heroLink = activeHero?.button_link || "/collections/all-pieces";
+
   useEffect(() => {
     let active = true;
 
-    async function loadCategories() {
+    async function loadHomeData() {
       try {
-        const response = await fetch("/api/categories", {
-          cache: "no-store",
-        });
+        const [productData, categoryResponse, heroResponse] =
+          await Promise.all([
+            getTalaProducts(),
+            fetch("/api/categories", { cache: "no-store" }),
+            fetch("/api/hero", { cache: "no-store" }),
+          ]);
 
-        if (!response.ok) {
-          throw new Error("Unable to load categories");
+        if (!active) return;
+
+        setProducts(Array.isArray(productData) ? productData : []);
+
+        if (categoryResponse.ok) {
+          const result = await categoryResponse.json();
+
+          if (result.success && Array.isArray(result.categories)) {
+            const mapped = result.categories
+              .filter(
+                (item: Category) =>
+                  item &&
+                  typeof item.id === "string" &&
+                  typeof item.name === "string"
+              )
+              .sort(
+                (a: Category, b: Category) =>
+                  (a.sort_order || 0) - (b.sort_order || 0)
+              );
+
+            setCategories(mapped);
+          }
         }
 
-        const result = await response.json();
+        if (heroResponse.ok) {
+          const result = await heroResponse.json();
 
-        if (
-          !active ||
-          !result.success ||
-          !Array.isArray(result.categories)
-        ) {
-          return;
-        }
+          if (result.success && Array.isArray(result.slides)) {
+            const slides = result.slides
+              .filter(
+                (slide: HeroSlide) =>
+                  slide &&
+                  typeof slide.id === "string" &&
+                  typeof slide.image_url === "string" &&
+                  slide.image_url.trim() !== ""
+              )
+              .sort(
+                (a: HeroSlide, b: HeroSlide) =>
+                  a.sort_order - b.sort_order
+              );
 
-        const updatedCategories: Category[] = (
-          result.categories as ApiCategory[]
-        )
-          .filter(
-            (category) =>
-              typeof category.id === "string" &&
-              typeof category.name === "string" &&
-              typeof category.slug === "string"
-          )
-          .map((category) => ({
-            id: category.id!,
-            name: category.name!,
-            slug: category.slug!,
-            description: category.description?.trim() || "",
-            image_url: category.image_url?.trim() || null,
-            mobile_image_url:
-              category.mobile_image_url?.trim() || null,
-            subtitle: category.subtitle?.trim() || "",
-            headline: category.headline?.trim() || "",
-            button_text:
-              category.button_text?.trim() || "EXPLORE",
-            button_link:
-              category.button_link?.trim() ||
-              `/products?category=${encodeURIComponent(category.slug!)}`,
-            overlay_opacity:
-              typeof category.overlay_opacity === "number"
-                ? Math.min(
-                    100,
-                    Math.max(0, category.overlay_opacity)
-                  )
-                : 20,
-            sort_order: category.sort_order ?? 0,
-          }))
-          .sort((a, b) => a.sort_order - b.sort_order);
-
-        if (active) {
-          setCategories(updatedCategories);
+            setHeroSlides(slides);
+          }
         }
       } catch (error) {
-        console.error("TALA categories loading error:", error);
-      }
-    }
-
-    loadCategories();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  // Load hero slides
-  useEffect(() => {
-    let active = true;
-
-    async function loadHeroSlides() {
-      try {
-        const response = await fetch("/api/hero", {
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          throw new Error("Unable to load hero slides");
-        }
-
-        const result = await response.json();
-
-        if (active && result.success && Array.isArray(result.slides)) {
-          const validSlides = result.slides
-            .filter(
-              (slide: HeroSlide) =>
-                slide &&
-                typeof slide.id === "string" &&
-                typeof slide.image_url === "string" &&
-                slide.image_url.trim() !== ""
-            )
-            .sort(
-              (a: HeroSlide, b: HeroSlide) =>
-                a.sort_order - b.sort_order
-            );
-
-          setHeroSlides(validSlides);
-          setHeroIndex(0);
-        }
-      } catch (error) {
-        console.error("TALA hero loading error:", error);
-
-        if (active) {
-          setHeroSlides([]);
-        }
+        console.error("TALA homepage error:", error);
       } finally {
-        if (active) {
-          setHeroLoaded(true);
-        }
+        if (active) setLoading(false);
       }
     }
 
-    loadHeroSlides();
+    loadHomeData();
 
     return () => {
       active = false;
     };
   }, []);
 
-  // Preload the next hero image
   useEffect(() => {
-    if (heroSlides.length <= 1) return;
+    if (heroSlides.length < 2) return;
 
-    const nextIndex = (heroIndex + 1) % heroSlides.length;
-    const nextSlide = heroSlides[nextIndex];
-
-    if (!nextSlide) return;
-
-    const desktopImage = new window.Image();
-    desktopImage.src = nextSlide.image_url;
-
-    if (nextSlide.mobile_image_url) {
-      const mobileImage = new window.Image();
-      mobileImage.src = nextSlide.mobile_image_url;
-    }
-  }, [heroIndex, heroSlides]);
-
-  // Automatic hero slider
-  useEffect(() => {
-    if (!heroLoaded || heroSlides.length <= 1) return;
-
-    const interval = window.setInterval(() => {
+    const timer = window.setInterval(() => {
       setHeroIndex((current) => (current + 1) % heroSlides.length);
-    }, 7000);
+    }, 6500);
 
-    return () => window.clearInterval(interval);
-  }, [heroLoaded, heroSlides.length]);
+    return () => window.clearInterval(timer);
+  }, [heroSlides.length]);
 
-  // Load products
-  useEffect(() => {
-    let active = true;
-
-    async function loadProducts() {
-      try {
-        setLoading(true);
-        setLoadError(false);
-
-        const data = await getTalaProducts();
-
-        if (active) {
-          setProducts(data);
-        }
-      } catch (error) {
-        console.error("TALA homepage products error:", error);
-
-        if (active) {
-          setLoadError(true);
-          setProducts([]);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadProducts();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const newArrivals = products
-    .filter((product) => product.isNew)
+  const featuredProducts = [...products]
+    .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
     .slice(0, 4);
 
-  const displayedProducts =
-    newArrivals.length > 0 ? newArrivals : products.slice(0, 4);
+  const collectionCategories = categories.filter((category) => {
+    const slug = category.slug?.toLowerCase();
+    const name = category.name?.toLowerCase();
+    return (
+      slug === "sets" ||
+      slug === "jackets" ||
+      name === "sets" ||
+      name === "jackets"
+    );
+  });
 
-  const pageMotion = reducedMotion
-    ? {
-        initial: { opacity: 1, y: 0 },
-        animate: { opacity: 1, y: 0 },
-        exit: { opacity: 1, y: 0 },
-        transition: { duration: 0 },
-      }
-    : {
-        initial: { opacity: 0, y: 14 },
-        animate: { opacity: 1, y: 0 },
-        exit: { opacity: 0, y: -8 },
-        transition: TEXT_TRANSITION,
-      };
+  const menuItems = [
+    { label: "NEW ARRIVALS", href: "/collections/all-pieces" },
+    { label: "SETS", href: "/collections/sets" },
+    { label: "JACKETS", href: "/collections/jackets" },
+    { label: "ALL COLLECTION", href: "/collections/all-pieces" },
+    { label: "OUR STORY", href: "/about" },
+    { label: "CONTACT", href: "/contact" },
+  ];
 
   return (
-    <main>
-      {/* HEADER */}
-      <header className="absolute left-0 top-[34px] z-40 flex w-full items-center justify-between px-5 py-7 text-white sm:px-8 md:px-14 md:py-9">
-        <button
-          type="button"
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((current) => !current)}
-          className="transition-opacity duration-300 hover:opacity-60"
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.span
-              key={menuOpen ? "close" : "menu"}
-              initial={
-                reducedMotion
-                  ? false
-                  : { opacity: 0, rotate: -35, scale: 0.85 }
-              }
-              animate={{ opacity: 1, rotate: 0, scale: 1 }}
-              exit={
-                reducedMotion
-                  ? undefined
-                  : { opacity: 0, rotate: 35, scale: 0.85 }
-              }
-              transition={{ duration: 0.2 }}
-              className="block"
+    <main className="overflow-hidden bg-[#F5F1EB] text-[#24221F]">
+      {/* HERO */}
+      <section className="relative min-h-[690px] h-[calc(100svh-34px)] max-h-[1050px] overflow-hidden bg-[#292521] text-white">
+        <AnimatePresence mode="sync" initial={false}>
+          {heroImage && (
+            <motion.div
+              key={heroImage}
+              initial={reducedMotion ? false : { opacity: 0, scale: 1.04 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: reducedMotion ? 0 : 1.1,
+                ease: EASE,
+              }}
+              className="absolute inset-0"
             >
-              {menuOpen ? (
-                <X size={23} strokeWidth={1.2} />
-              ) : (
-                <Menu size={23} strokeWidth={1.2} />
-              )}
-            </motion.span>
-          </AnimatePresence>
-        </button>
+              <img
+                src={heroImage}
+                alt="TALA fashion campaign"
+                className="h-full w-full object-cover object-center"
+                fetchPriority="high"
+                loading="eager"
+                decoding="async"
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <Link
-          href="/"
-          aria-label="TALA homepage"
-          className="text-3xl font-light tracking-[10px] transition-opacity duration-300 hover:opacity-75 sm:text-4xl sm:tracking-[13px]"
-        >
-          TALA
-        </Link>
+        {!heroImage && (
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_25%,#766b5d_0%,#403a34_48%,#24221f_100%)]" />
+        )}
 
-        <Link
-          href="/cart"
-          aria-label={`Shopping bag, ${cartCount} items`}
-          className="relative inline-flex items-center justify-center transition-opacity duration-300 hover:opacity-60"
-        >
-          <ShoppingBag size={22} strokeWidth={1.2} />
-          <span
-            className="absolute -right-3 -top-3 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-medium text-[#292521]"
-            aria-live="polite"
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/25" />
+
+        {/* HEADER */}
+        <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 pt-8 sm:px-9 md:px-14">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            className="flex h-11 w-11 items-center justify-center border border-white/50 transition hover:bg-white hover:text-[#24221F]"
           >
-            {cartCount}
-          </span>
-        </Link>
-      </header>
+            <Menu size={21} strokeWidth={1.3} />
+          </button>
 
-      {/* NAVIGATION MENU */}
+          <Link
+            href="/"
+            aria-label="TALA home"
+            className="text-[29px] font-light tracking-[0.34em] sm:text-4xl"
+          >
+            TALA
+          </Link>
+
+          <Link
+            href="/cart"
+            aria-label={`Shopping bag, ${cartCount} items`}
+            className="relative flex h-11 w-11 items-center justify-center border border-white/50 transition hover:bg-white hover:text-[#24221F]"
+          >
+            <ShoppingBag size={20} strokeWidth={1.3} />
+            {cartCount > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#D8ED83] px-1 text-[10px] font-semibold text-[#24221F]">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+        </header>
+
+        {/* HERO CONTENT */}
+        <div className="relative z-10 flex h-full flex-col justify-end px-6 pb-24 sm:px-10 sm:pb-28 md:px-16 lg:px-24">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="h-px w-9 bg-[#D8ED83]" />
+            <p className="text-[9px] tracking-[0.32em] text-white/90 sm:text-[10px]">
+              {heroSubtitle}
+            </p>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeHero?.id || "default-hero"}
+              initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{
+                duration: reducedMotion ? 0 : 0.55,
+                ease: EASE,
+              }}
+              className="max-w-[950px]"
+            >
+              <h1 className="max-w-[900px] font-serif text-[clamp(3.7rem,10vw,9.5rem)] font-normal uppercase leading-[0.82] tracking-[-0.045em]">
+                {heroTitle}
+              </h1>
+
+              <div className="mt-8 flex max-w-2xl flex-col gap-6 sm:mt-10 sm:flex-row sm:items-end sm:justify-between">
+                <p className="max-w-[330px] text-xs leading-7 text-white/80 sm:text-sm">
+                  {heroDescription}
+                </p>
+
+                <Link
+                  href={heroLink}
+                  className="group inline-flex min-h-12 w-fit items-center gap-8 border border-white/75 px-6 text-[9px] tracking-[0.2em] transition duration-300 hover:border-[#D8ED83] hover:bg-[#D8ED83] hover:text-[#24221F]"
+                >
+                  {heroButton}
+                  <ArrowUpRight
+                    size={17}
+                    strokeWidth={1.3}
+                    className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
+                  />
+                </Link>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="absolute bottom-8 left-6 right-6 flex items-center justify-between sm:left-10 sm:right-10 md:left-16 md:right-16">
+            <div className="flex items-center gap-3">
+              <ArrowDown size={15} strokeWidth={1.2} />
+              <span className="text-[8px] tracking-[0.25em]">SCROLL TO EXPLORE</span>
+            </div>
+
+            {heroSlides.length > 1 && (
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] tabular-nums">
+                  {String(heroIndex + 1).padStart(2, "0")}
+                </span>
+                <div className="flex gap-1.5">
+                  {heroSlides.map((slide, index) => (
+                    <button
+                      key={slide.id}
+                      type="button"
+                      onClick={() => setHeroIndex(index)}
+                      aria-label={`Show campaign ${index + 1}`}
+                      className={`h-[2px] transition-all duration-300 ${
+                        index === heroIndex
+                          ? "w-8 bg-[#D8ED83]"
+                          : "w-4 bg-white/50"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] tabular-nums text-white/60">
+                  {String(heroSlides.length).padStart(2, "0")}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* FULL COLLECTION INTRO */}
+      <section className="px-6 py-20 sm:px-10 sm:py-28 md:px-16">
+        <div className="mx-auto grid max-w-[1450px] gap-10 md:grid-cols-[1fr_1fr] md:items-end">
+          <div>
+            <p className="mb-5 text-[9px] tracking-[0.32em] text-[#8D7962]">
+              THE WORLD OF TALA
+            </p>
+            <h2 className="max-w-[700px] font-serif text-5xl leading-[0.98] tracking-[-0.035em] sm:text-7xl md:text-[5.7rem]">
+              Fashion is how you
+              <span className="block italic text-[#9A8A78]">feel.</span>
+            </h2>
+          </div>
+
+          <div className="flex flex-col items-start gap-7 md:items-end md:text-right">
+            <p className="max-w-[390px] text-sm leading-8 text-[#77716A]">
+              A fresh perspective on everyday dressing. Discover considered
+              pieces made to move with you, stand apart, and feel entirely your own.
+            </p>
+            <Link
+              href="/collections/all-pieces"
+              className="group inline-flex items-center gap-5 border-b border-[#24221F] pb-3 text-[9px] tracking-[0.2em]"
+            >
+              DISCOVER TALA
+              <ArrowUpRight
+                size={16}
+                className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
+              />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* COLLECTION EDITS */}
+      <section className="px-4 pb-20 sm:px-8 md:px-14 md:pb-28">
+        <div className="mx-auto max-w-[1500px]">
+          <div className="mb-8 flex items-end justify-between px-2 sm:mb-12">
+            <div>
+              <p className="mb-3 text-[9px] tracking-[0.3em] text-[#8D7962]">
+                FIND YOUR EDIT
+              </p>
+              <h2 className="font-serif text-4xl sm:text-5xl">
+                The Collections
+              </h2>
+            </div>
+            <Link
+              href="/collections"
+              className="hidden items-center gap-2 text-[9px] tracking-[0.16em] sm:flex"
+            >
+              VIEW ALL <ArrowUpRight size={15} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-5">
+            {collectionCategories.length > 0 ? (
+              collectionCategories.slice(0, 2).map((category, index) => {
+                const isSets =
+                  category.slug?.toLowerCase() === "sets" ||
+                  category.name?.toLowerCase() === "sets";
+
+                const href = isSets
+                  ? "/collections/sets"
+                  : "/collections/jackets";
+
+                return (
+                  <Link
+                    href={href}
+                    key={category.id}
+                    className="group relative block aspect-[3/4] overflow-hidden bg-[#D9D0C5] sm:aspect-[4/5]"
+                  >
+                    {category.image_url && (
+                      <img
+                        src={category.image_url}
+                        alt={category.name}
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 group-hover:scale-[1.045]"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-8 md:p-10">
+                      <p className="mb-2 text-[8px] tracking-[0.25em] text-white/75 sm:text-[9px]">
+                        {category.subtitle || `THE TALA EDIT 0${index + 1}`}
+                      </p>
+                      <h3 className="font-serif text-3xl sm:text-5xl md:text-6xl">
+                        {category.headline || category.name}
+                      </h3>
+                      <span className="mt-5 inline-flex items-center gap-3 border-b border-white/70 pb-2 text-[8px] tracking-[0.2em] sm:text-[9px]">
+                        EXPLORE EDIT
+                        <ArrowUpRight size={15} />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })
+            ) : (
+              <>
+                <Link
+                  href="/collections/sets"
+                  className="group relative flex aspect-[3/4] items-end overflow-hidden bg-[#D8D0C5] p-5 sm:aspect-[4/5] sm:p-9"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#BDB1A3] to-[#72675B]" />
+                  <div className="absolute inset-0 bg-black/10" />
+                  <div className="relative text-white">
+                    <p className="mb-2 text-[9px] tracking-[0.25em]">THE TALA EDIT 01</p>
+                    <h3 className="font-serif text-4xl sm:text-6xl">Sets</h3>
+                    <span className="mt-5 inline-flex items-center gap-3 text-[9px] tracking-[0.2em]">
+                      EXPLORE <ArrowUpRight size={15} />
+                    </span>
+                  </div>
+                </Link>
+                <Link
+                  href="/collections/jackets"
+                  className="group relative flex aspect-[3/4] items-end overflow-hidden bg-[#A59A8C] p-5 sm:aspect-[4/5] sm:p-9"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#9A8A78] to-[#403A34]" />
+                  <div className="absolute inset-0 bg-black/10" />
+                  <div className="relative text-white">
+                    <p className="mb-2 text-[9px] tracking-[0.25em]">THE TALA EDIT 02</p>
+                    <h3 className="font-serif text-4xl sm:text-6xl">Jackets</h3>
+                    <span className="mt-5 inline-flex items-center gap-3 text-[9px] tracking-[0.2em]">
+                      EXPLORE <ArrowUpRight size={15} />
+                    </span>
+                  </div>
+                </Link>
+              </>
+            )}
+          </div>
+
+          <Link
+            href="/collections/all-pieces"
+            className="mt-5 flex min-h-14 items-center justify-between bg-[#D8ED83] px-5 text-[9px] font-semibold tracking-[0.18em] text-[#24221F] transition hover:bg-[#C9E16D] sm:px-8"
+          >
+            EXPLORE ALL COLLECTION
+            <ArrowUpRight size={18} />
+          </Link>
+        </div>
+      </section>
+
+      {/* NEW ARRIVALS */}
+      <section className="bg-[#EAE4DA] px-5 py-20 sm:px-10 sm:py-24 md:px-16">
+        <div className="mx-auto max-w-[1450px]">
+          <div className="mb-10 flex items-end justify-between gap-4 sm:mb-14">
+            <div>
+              <p className="mb-3 text-[9px] tracking-[0.3em] text-[#8D7962]">
+                JUST LANDED
+              </p>
+              <h2 className="font-serif text-4xl sm:text-6xl">
+                New & Noted.
+              </h2>
+            </div>
+            <Link
+              href="/collections/all-pieces"
+              className="group mb-1 inline-flex items-center gap-2 text-[8px] tracking-[0.16em] sm:text-[9px]"
+            >
+              SHOP ALL
+              <ArrowUpRight
+                size={15}
+                className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
+              />
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item}>
+                  <div className="aspect-[3/4] animate-pulse bg-[#D8D0C5]" />
+                  <div className="mt-4 h-3 w-2/3 animate-pulse bg-[#D8D0C5]" />
+                  <div className="mt-3 h-3 w-1/3 animate-pulse bg-[#D8D0C5]" />
+                </div>
+              ))}
+            </div>
+          ) : featuredProducts.length > 0 ? (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-4 md:gap-6">
+              {featuredProducts.map((product, index) => (
+                <motion.article
+                  key={product.id}
+                  initial={reducedMotion ? false : { opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.15 }}
+                  transition={{
+                    duration: reducedMotion ? 0 : 0.55,
+                    delay: reducedMotion ? 0 : index * 0.07,
+                    ease: EASE,
+                  }}
+                >
+                  <Link
+                    href={`/products/${encodeURIComponent(
+                      String(product.slug || product.id)
+                    )}`}
+                    className="group block"
+                  >
+                    <div className="relative aspect-[3/4] overflow-hidden bg-[#D8D0C5]">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      {product.isNew && (
+                        <span className="absolute left-3 top-3 bg-[#D8ED83] px-3 py-2 text-[8px] font-semibold tracking-[0.13em] text-[#24221F]">
+                          NEW
+                        </span>
+                      )}
+                      {!product.isAvailable && (
+                        <span className="absolute bottom-3 left-3 bg-[#24221F] px-3 py-2 text-[8px] tracking-[0.13em] text-white">
+                          SOLD OUT
+                        </span>
+                      )}
+                      <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F1EB] text-[#24221F] opacity-0 transition-all duration-300 group-hover:opacity-100">
+                        <ArrowUpRight size={17} />
+                      </span>
+                    </div>
+
+                    <div className="flex items-start justify-between gap-2 pt-4">
+                      <div>
+                        <h3 className="text-[11px] font-medium tracking-wide sm:text-sm">
+                          {product.name}
+                        </h3>
+                        <p className="mt-1 text-[10px] text-[#77716A]">
+                          {product.subtitle}
+                        </p>
+                      </div>
+                      <p className="whitespace-nowrap text-[10px] sm:text-xs">
+                        {product.price.toLocaleString("en-EG")} EGP
+                      </p>
+                    </div>
+
+                    {product.colors?.length > 0 && (
+                      <div className="mt-3 flex gap-1.5">
+                        {product.colors.slice(0, 5).map((color, colorIndex) => (
+                          <span
+                            key={`${product.id}-${color.name}-${colorIndex}`}
+                            title={color.name}
+                            className="h-3 w-3 rounded-full border border-black/10"
+                            style={{ backgroundColor: color.value }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </Link>
+                </motion.article>
+              ))}
+            </div>
+          ) : (
+            <div className="py-16 text-center">
+              <p className="font-serif text-3xl">Something new is coming.</p>
+              <p className="mt-3 text-xs text-[#77716A]">
+                Our next collection is on its way.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* BRAND STATEMENT */}
+      <section className="relative overflow-hidden bg-[#24221F] px-6 py-24 text-[#F5F1EB] sm:px-12 sm:py-36">
+        <div className="pointer-events-none absolute -right-20 -top-32 h-[420px] w-[420px] rounded-full border border-white/10 sm:h-[600px] sm:w-[600px]" />
+        <div className="pointer-events-none absolute -right-8 -top-20 h-[300px] w-[300px] rounded-full border border-white/10 sm:h-[460px] sm:w-[460px]" />
+
+        <div className="relative mx-auto max-w-[1200px]">
+          <p className="mb-8 text-[9px] tracking-[0.35em] text-[#D8ED83]">
+            MORE THAN WHAT YOU WEAR
+          </p>
+          <h2 className="max-w-[1000px] font-serif text-5xl leading-[0.98] tracking-[-0.035em] sm:text-7xl md:text-[6.8rem]">
+            Not made to fit in.
+            <span className="block italic text-[#D8ED83]">
+              Made to feel like you.
+            </span>
+          </h2>
+          <div className="mt-12 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <p className="max-w-[360px] text-xs leading-7 text-white/55">
+              TALA is a point of view. A little unexpected, always considered,
+              and never just another outfit.
+            </p>
+            <Link
+              href="/about"
+              className="group inline-flex w-fit items-center gap-5 border-b border-white/50 pb-3 text-[9px] tracking-[0.2em] transition hover:border-[#D8ED83] hover:text-[#D8ED83]"
+            >
+              GET TO KNOW TALA
+              <ArrowUpRight
+                size={17}
+                className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
+              />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-[#F5F1EB] px-6 pb-8 pt-16 sm:px-10 md:px-16">
+        <div className="mx-auto max-w-[1450px]">
+          <div className="grid gap-12 border-b border-[#D9D1C7] pb-14 sm:grid-cols-2 md:grid-cols-4">
+            <div className="sm:col-span-2">
+              <Link
+                href="/"
+                className="font-serif text-5xl tracking-[0.12em]"
+              >
+                TALA
+              </Link>
+              <p className="mt-5 max-w-[300px] text-[10px] leading-6 tracking-wide text-[#77716A]">
+                Contemporary fashion. Distinctive energy. A signature of your own.
+              </p>
+            </div>
+
+            <div>
+              <p className="mb-5 text-[9px] font-semibold tracking-[0.2em]">
+                EXPLORE
+              </p>
+              <div className="flex flex-col gap-3 text-[10px] text-[#77716A]">
+                <Link href="/collections/sets">Sets</Link>
+                <Link href="/collections/jackets">Jackets</Link>
+                <Link href="/collections/all-pieces">All Collection</Link>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-5 text-[9px] font-semibold tracking-[0.2em]">
+                TALA
+              </p>
+              <div className="flex flex-col gap-3 text-[10px] text-[#77716A]">
+                <Link href="/about">Our Story</Link>
+                <Link href="/contact">Contact</Link>
+                <Link href="/policies">Policies</Link>
+                <a
+                  href="https://www.instagram.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2"
+                >
+                  Instagram <Instagram size={13} />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col justify-between gap-3 pt-6 text-[8px] tracking-[0.15em] text-[#8A8178] sm:flex-row">
+            <p>© 2026 TALA. ALL RIGHTS RESERVED.</p>
+            <p>MADE TO BE YOURS.</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* MENU */}
       <AnimatePresence>
         {menuOpen && (
           <>
             <motion.button
               type="button"
-              aria-label="Close navigation menu"
+              aria-label="Close menu"
               onClick={() => setMenuOpen(false)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: reducedMotion ? 0 : 0.25 }}
-              className="fixed inset-0 z-20 cursor-default bg-black/25"
+              className="fixed inset-0 z-40 bg-black/50"
             />
 
-            <motion.div
-              initial={
-                reducedMotion
-                  ? { opacity: 1 }
-                  : { opacity: 0, y: -18 }
-              }
-              animate={{ opacity: 1, y: 0 }}
-              exit={
-                reducedMotion
-                  ? { opacity: 0 }
-                  : { opacity: 0, y: -12 }
-              }
-              transition={
-                reducedMotion ? { duration: 0 } : MENU_TRANSITION
-              }
-              className="fixed inset-x-0 top-0 z-30 bg-[#f4f0e9] px-8 pb-12 pt-28 text-[#292521] shadow-xl"
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{
+                duration: reducedMotion ? 0 : 0.45,
+                ease: EASE,
+              }}
+              className="fixed inset-y-0 left-0 z-50 flex w-[min(88%,460px)] flex-col bg-[#F5F1EB] px-7 pb-8 pt-7 text-[#24221F] shadow-2xl sm:px-10"
             >
-              <nav className="mx-auto flex max-w-5xl flex-col">
-                <motion.div
-                  initial="hidden"
-                  animate="visible"
-                  variants={{
-                    hidden: {},
-                    visible: {
-                      transition: {
-                        staggerChildren: reducedMotion ? 0 : 0.055,
-                      },
-                    },
-                  }}
+              <div className="flex items-center justify-between border-b border-[#D9D1C7] pb-7">
+                <Link
+                  href="/"
+                  onClick={() => setMenuOpen(false)}
+                  className="font-serif text-3xl tracking-[0.2em]"
                 >
-                  {[
-                    { label: "SETS", href: "/collections/sets" },
-                    { label: "JACKETS", href: "/collections/jackets" },
-                    {
-                      label: "ALL PIECES",
-                      href: "/collections/all-pieces",
-                    },
-                    { label: "OUR STORY", href: "/about" },
-                    { label: "CONTACT", href: "/contact" },
-                  ].map((item) => (
-                    <motion.div
-                      key={`${item.label}-${item.href}`}
-                      variants={{
-                        hidden: reducedMotion
-                          ? { opacity: 1 }
-                          : { opacity: 0, y: 12 },
-                        visible: { opacity: 1, y: 0 },
-                      }}
-                      transition={{
-                        duration: reducedMotion ? 0 : 0.3,
-                        ease: EASE,
-                      }}
-                    >
-                      <Link
-                        href={item.href}
-                        onClick={() => setMenuOpen(false)}
-                        className="block border-b border-[#d9d0c5] py-5 text-2xl font-light tracking-[3px] transition-all duration-300 hover:pl-2 hover:text-[#8d7962]"
-                      >
-                        {item.label}
-                      </Link>
-                    </motion.div>
-                  ))}
-                </motion.div>
+                  TALA
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="flex h-10 w-10 items-center justify-center border border-[#D9D1C7]"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              <nav className="mt-10 flex flex-1 flex-col">
+                {menuItems.map((item, index) => (
+                  <Link
+                    key={item.href + item.label}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="group flex items-center justify-between border-b border-[#D9D1C7] py-5 font-serif text-2xl transition-colors hover:text-[#8D7962] sm:text-3xl"
+                  >
+                    <span>{item.label}</span>
+                    <span className="text-[9px] font-sans tracking-widest text-[#A99A89]">
+                      0{index + 1}
+                    </span>
+                  </Link>
+                ))}
               </nav>
-            </motion.div>
+
+              <div className="flex items-center justify-between pt-8 text-[9px] tracking-[0.2em] text-[#77716A]">
+                <span>TALA LUXURY FASHION</span>
+                <Instagram size={17} />
+              </div>
+            </motion.aside>
           </>
         )}
       </AnimatePresence>
-
-      {/* RESPONSIVE EDITORIAL HERO */}
-      <section className="relative min-h-[760px] h-[calc(100svh-34px)] max-h-[1100px] overflow-hidden bg-[#292521] text-white sm:min-h-[720px] md:min-h-[680px]">
-        {/* Hero image */}
-        {hero?.image ? (
-          <AnimatePresence mode="sync" initial={false}>
-            <motion.div
-              key={hero.image}
-              initial={
-                reducedMotion
-                  ? false
-                  : { opacity: 0, scale: 1.025 }
-              }
-              animate={{ opacity: 1, scale: 1 }}
-              exit={reducedMotion ? undefined : { opacity: 0 }}
-              transition={
-                reducedMotion
-                  ? { duration: 0 }
-                  : { duration: 0.9, ease: EASE }
-              }
-              className="absolute inset-0"
-            >
-              <picture>
-                {hero.mobileImage && (
-                  <source
-                    media="(max-width: 767px)"
-                    srcSet={hero.mobileImage}
-                  />
-                )}
-
-                <img
-                  src={hero.image}
-                  alt={hero.title}
-                  className="h-full w-full object-cover object-center"
-                  fetchPriority="high"
-                  loading="eager"
-                  decoding="async"
-                  onError={(event) => {
-                    event.currentTarget.style.opacity = "0";
-                  }}
-                />
-              </picture>
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#817568] via-[#65594f] to-[#292521]" />
-        )}
-
-        {/* Image overlays */}
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/20" />
-
-        {/* Desktop editorial panel */}
-        {hero && (
-          <AnimatePresence mode="sync" initial={false}>
-            <motion.div
-              key={`${hero.id}-editorial-panel`}
-              initial={
-                reducedMotion
-                  ? false
-                  : { opacity: 0, x: 22 }
-              }
-              animate={{ opacity: 1, x: 0 }}
-              exit={
-                reducedMotion
-                  ? undefined
-                  : { opacity: 0, x: 14 }
-              }
-              transition={
-                reducedMotion
-                  ? { duration: 0 }
-                  : { duration: 0.6, ease: EASE }
-              }
-              className="absolute left-4 right-4 bottom-[105px] z-10 mx-auto max-h-[calc(100%-190px)] w-auto max-w-[540px] overflow-y-auto bg-[#F4F0E9] px-6 py-7 text-[#292521] shadow-[0_18px_60px_rgba(0,0,0,0.16)] sm:left-auto sm:right-8 sm:bottom-[105px] sm:w-[min(540px,calc(100vw-4rem))] sm:px-10 sm:py-10 md:right-[7%] md:top-1/2 md:bottom-auto md:w-[min(39%,560px)] md:min-w-[340px] md:max-h-[calc(100%-150px)] md:-translate-y-1/2 md:px-10 md:py-12 lg:right-[9%] lg:px-14 lg:py-16"
-            >
-              <div className="mb-6 flex items-center gap-3 sm:mb-8">
-                <span className="h-px w-8 shrink-0 bg-[#A18B70]" />
-
-                <p className="min-w-0 break-words text-[8px] uppercase leading-5 tracking-[2px] text-[#8D7962] sm:text-[9px] sm:tracking-[3px]">
-                  {hero.subtitle}
-                </p>
-              </div>
-
-              <h1 className="break-words font-serif text-5xl font-normal leading-[0.98] tracking-[1px] sm:text-6xl md:text-6xl lg:text-[76px]">
-                {hero.title}
-              </h1>
-
-              {hero.description && (
-                <p className="mt-5 max-w-sm break-words text-[11px] font-light leading-7 tracking-[0.3px] text-[#77716A] sm:mt-7 sm:text-xs sm:leading-8">
-                  {hero.description}
-                </p>
-              )}
-
-              <div className="mt-7 flex flex-wrap items-center gap-4 sm:mt-9">
-                <Link
-                  href={hero.buttonLink}
-                  className="group inline-flex min-h-11 max-w-full items-center justify-center gap-5 bg-[#292521] px-5 py-3 text-[8px] uppercase tracking-[1.5px] text-white transition-all duration-500 hover:bg-[#8D7962] sm:px-7 sm:text-[9px] sm:tracking-[2px]"
-                >
-                  <span className="break-words">{hero.buttonText}</span>
-
-                  <ArrowRight
-                    size={14}
-                    strokeWidth={1.2}
-                    className="shrink-0 transition-transform duration-300 group-hover:translate-x-1"
-                  />
-                </Link>
-
-                <span className="hidden text-[8px] tracking-[2px] text-[#A69A8C] lg:inline">
-                  TALA LUXURY FASHION
-                </span>
-              </div>
-
-              <div className="mt-7 border-t border-[#DED5C9] pt-4 sm:mt-9 sm:pt-5">
-                <p className="text-[8px] uppercase tracking-[2px] text-[#A18B70] sm:tracking-[3px]">
-                  A QUIETER KIND OF ELEGANCE
-                </p>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        )}
-
-        {/* Slide controls */}
-        {heroSlides.length > 1 && (
-          <div className="absolute bottom-7 right-5 z-20 flex items-center gap-3 sm:bottom-9 sm:right-9 sm:gap-4 md:right-14">
-            <span className="text-[9px] tracking-[2px] text-white">
-              {String(heroIndex + 1).padStart(2, "0")}
-            </span>
-
-            <div className="flex items-center gap-2">
-              {heroSlides.map((slide, index) => (
-                <button
-                  key={slide.id}
-                  type="button"
-                  onClick={() => setHeroIndex(index)}
-                  aria-label={`Go to slide ${index + 1}`}
-                  aria-current={heroIndex === index}
-                  className={`h-[2px] transition-all duration-500 ${
-                    heroIndex === index
-                      ? "w-8 bg-white"
-                      : "w-4 bg-white/50 hover:bg-white"
-                  }`}
-                />
-              ))}
-            </div>
-
-            <span className="text-[9px] tracking-[2px] text-white/70">
-              {String(heroSlides.length).padStart(2, "0")}
-            </span>
-          </div>
-        )}
-
-        {/* Discover indicator */}
-        <div className="absolute bottom-7 left-5 z-20 flex items-center gap-3 text-white sm:bottom-9 sm:left-9 md:left-14">
-          <motion.span
-            animate={
-              reducedMotion
-                ? undefined
-                : { y: [0, 5, 0], opacity: [0.7, 1, 0.7] }
-            }
-            transition={{
-              duration: 2.2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            <ArrowDown size={15} strokeWidth={1} />
-          </motion.span>
-
-          <span className="text-[8px] uppercase tracking-[3px]">
-            Discover
-          </span>
-        </div>
-
-        {!heroLoaded && (
-          <div className="absolute inset-x-0 bottom-0 z-20 h-[2px] overflow-hidden bg-white/10">
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: "100%" }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-              className="h-full w-1/3 bg-white/80"
-            />
-          </div>
-        )}
-      </section>
-
-      {/* NEW ARRIVALS */}
-      <section className="bg-[#e9e2d8] px-5 py-24 md:px-14">
-        <div className="mb-14 flex flex-wrap items-end justify-between gap-5">
-          <div>
-            <p className="mb-4 text-[10px] tracking-[5px] text-[#a18b70]">
-              SELECTED FOR YOU
-            </p>
-
-            <h2 className="font-serif text-4xl font-light tracking-[2px]">
-              New Arrivals
-            </h2>
-          </div>
-
-          <Link
-            href="/products"
-            className="flex items-center gap-3 text-xs tracking-widest transition-opacity hover:opacity-60"
-          >
-            VIEW ALL <ArrowRight size={16} />
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-7">
-            {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="space-y-4">
-                <div className="aspect-[3/4] animate-pulse bg-[#d7cec2]" />
-                <div className="h-3 w-3/4 animate-pulse bg-[#d7cec2]" />
-                <div className="h-3 w-1/3 animate-pulse bg-[#d7cec2]" />
-              </div>
-            ))}
-          </div>
-        ) : loadError ? (
-          <p className="py-16 text-center text-sm text-[#77716a]">
-            Products could not be loaded. Please try again later.
-          </p>
-        ) : displayedProducts.length === 0 ? (
-          <p className="py-16 text-center text-sm text-[#77716a]">
-            Our collection is coming soon.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-7">
-            {displayedProducts.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={
-                  reducedMotion ? false : { opacity: 0, y: 16 }
-                }
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.15 }}
-                transition={{
-                  delay: reducedMotion ? 0 : index * 0.07,
-                  duration: reducedMotion ? 0 : 0.5,
-                  ease: EASE,
-                }}
-              >
-                <Link
-                  href={`/products/${encodeURIComponent(
-                    String(product.slug || product.id)
-                  )}`}
-                  className="group block"
-                >
-                  <div className="aspect-[3/4] overflow-hidden bg-[#d7cec2]">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-
-                  <h3 className="mt-5 text-sm tracking-wide transition-colors duration-300 group-hover:text-[#8d7962]">
-                    {product.name}
-                  </h3>
-
-                  <p className="mt-2 text-xs text-[#77716a]">
-                    {product.price.toLocaleString("en-EG")} EGP
-                  </p>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* COLLECTION STUDIO */}
-      {categories.length > 0 && (
-        <section className="bg-[#F4F0E9] px-4 py-14 sm:px-8 sm:py-20 md:px-14 md:py-24">
-          <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.35 }}
-            transition={{
-              duration: reducedMotion ? 0 : 0.55,
-              ease: EASE,
-            }}
-            className="mb-8 flex flex-col items-center text-center sm:mb-12"
-          >
-            <p className="mb-3 text-[9px] tracking-[4px] text-[#A18B70] sm:text-[10px] sm:tracking-[5px]">
-              THE TALA COLLECTION
-            </p>
-
-            <h2 className="font-serif text-3xl font-light tracking-[2px] text-[#292521] sm:text-5xl sm:tracking-[4px]">
-              A World of Elegance
-            </h2>
-
-            <p className="mt-3 max-w-md text-xs leading-6 text-[#81766B] sm:text-sm">
-              Two distinctive edits. One timeless point of view.
-            </p>
-          </motion.div>
-
-          <div className="mx-auto grid max-w-[1250px] grid-cols-2 gap-3 sm:gap-5 md:gap-7">
-            {categories.map((category, index) => (
-              <motion.div
-                key={category.id}
-                initial={reducedMotion ? false : { opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.15 }}
-                transition={{
-                  delay: reducedMotion ? 0 : index * 0.08,
-                  duration: reducedMotion ? 0 : 0.5,
-                  ease: EASE,
-                }}
-                className="group relative aspect-[4/5] min-h-0 overflow-hidden bg-[#DED5C9] sm:aspect-[5/4] md:aspect-[4/5]"
-              >
-                {category.image_url && (
-                  <picture>
-                    {category.mobile_image_url && (
-                      <source
-                        media="(max-width: 767px)"
-                        srcSet={category.mobile_image_url}
-                      />
-                    )}
-
-                    <img
-                      src={category.image_url}
-                      alt={category.name}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </picture>
-                )}
-
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundColor: `rgba(0, 0, 0, ${Math.min(
-                      0.55,
-                      Math.max(0.18, category.overlay_opacity / 100)
-                    )})`,
-                  }}
-                />
-
-                <div className="absolute inset-x-0 bottom-0 px-3 pb-5 pt-12 text-center text-white sm:px-6 sm:pb-9">
-                  {category.subtitle && (
-                    <p className="mb-2 text-[7px] uppercase tracking-[2px] text-white/80 sm:mb-3 sm:text-[9px] sm:tracking-[3px]">
-                      {category.subtitle}
-                    </p>
-                  )}
-
-                  <h3 className="font-serif text-xl font-light tracking-[1px] sm:text-3xl sm:tracking-[3px] md:text-4xl">
-                    {category.headline || category.name}
-                  </h3>
-
-                  <Link
-                    href={category.button_link}
-                    className="mt-4 inline-flex items-center gap-2 border-b border-white/75 pb-2 text-[8px] uppercase tracking-[1.5px] transition-all duration-300 hover:gap-4 sm:mt-6 sm:gap-3 sm:text-[9px] sm:tracking-[2px]"
-                  >
-                    {category.button_text || "EXPLORE"}
-                    <ArrowRight size={13} strokeWidth={1.2} />
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="mt-8 flex justify-center sm:mt-10">
-            <Link
-              href="/collections/all-pieces"
-              className="group inline-flex min-h-11 items-center gap-4 border border-[#292521] px-7 py-3 text-[9px] uppercase tracking-[2px] text-[#292521] transition-all duration-300 hover:bg-[#292521] hover:text-white sm:px-9"
-            >
-              Explore All Collection
-              <ArrowRight
-                size={14}
-                strokeWidth={1.2}
-                className="transition-transform duration-300 group-hover:translate-x-1"
-              />
-            </Link>
-          </div>
-        </section>
-      )}
-
-      {/* TALA PHILOSOPHY */}
-      <section className="relative overflow-hidden bg-[#292521] px-6 py-28 text-center text-white">
-        <motion.div
-          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{
-            duration: reducedMotion ? 0 : 0.6,
-            ease: EASE,
-          }}
-        >
-          <p className="text-[10px] tracking-[6px] text-[#c9bba8]">
-            THE TALA PHILOSOPHY
-          </p>
-
-          <h2 className="font-serif mx-auto mt-8 max-w-3xl text-4xl font-light leading-relaxed tracking-[2px] md:text-6xl">
-            Style is not about being noticed.
-            It is about being remembered.
-          </h2>
-
-          <Link
-            href="/about"
-            className="mt-12 inline-flex items-center gap-4 border border-white px-8 py-4 text-[10px] tracking-[3px] transition-all duration-500 hover:bg-white hover:text-[#292521]"
-          >
-            OUR STORY <ArrowRight size={15} />
-          </Link>
-        </motion.div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="bg-[#f4f0e9] px-6 py-16 text-center">
-        <h2 className="font-serif text-4xl font-light tracking-[12px]">
-          TALA
-        </h2>
-
-        <p className="mt-5 text-xs tracking-widest text-[#77716a]">
-          TIMELESS FASHION. YOUR SIGNATURE.
-        </p>
-
-        <div className="mt-8 flex justify-center gap-7 text-xs">
-          <Link
-            href="/about"
-            className="transition-opacity hover:opacity-50"
-          >
-            ABOUT
-          </Link>
-
-          <Link
-            href="/contact"
-            className="transition-opacity hover:opacity-50"
-          >
-            CONTACT
-          </Link>
-
-          <Link
-            href="/policies"
-            className="transition-opacity hover:opacity-50"
-          >
-            POLICIES
-          </Link>
-        </div>
-
-        <a
-          href="https://www.instagram.com/"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Instagram"
-          className="mt-8 inline-block transition-transform duration-300 hover:scale-110"
-        >
-          <Instagram size={19} />
-        </a>
-
-        <p className="mt-8 text-[10px] text-[#888078]">
-          © 2026 TALA. ALL RIGHTS RESERVED.
-        </p>
-      </footer>
     </main>
   );
 }
