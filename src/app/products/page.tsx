@@ -3203,19 +3203,38 @@ const categoryCounts = useMemo(() => {
             <span className="h-px w-10 bg-[#C9B8A4]" />
           </div>
 
-          <nav
+                    <nav
             aria-label="Shop TALA collections"
             className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3"
           >
             {[
-              { label: "All pieces", href: "/products", category: "All" as const },
-              { label: "Sets", href: "/products?category=sets", category: "Sets" as const },
-              { label: "Jackets", href: "/products?category=jackets", category: "Jackets" as const },
+              { label: "All pieces", category: "All" as const },
+              { label: "Sets", category: "Sets" as const },
+              { label: "Jackets", category: "Jackets" as const },
             ].map((item) => (
-              <Link
+              <button
                 key={item.category}
-                href={item.href}
+                type="button"
                 aria-current={selectedCategory === item.category ? "page" : undefined}
+                onClick={() => {
+                  const url = new URL(window.location.href);
+
+                  if (item.category === "All") {
+                    url.searchParams.delete("category");
+                  } else {
+                    url.searchParams.set("category", item.category.toLowerCase());
+                  }
+
+                  window.history.pushState(
+                    {},
+                    "",
+                    `${url.pathname}${url.search}${url.hash}`
+                  );
+
+                  setPageCategory(item.category);
+                  setSelectedCategory(item.category);
+                  setCurrentPage(1);
+                }}
                 className={`border-b pb-2 text-[9px] font-medium uppercase tracking-[0.22em] transition-colors ${
                   selectedCategory === item.category
                     ? "border-[#8F7358] text-[#40372F]"
@@ -3223,7 +3242,7 @@ const categoryCounts = useMemo(() => {
                 }`}
               >
                 {item.label}
-              </Link>
+              </button>
             ))}
           </nav>
 
