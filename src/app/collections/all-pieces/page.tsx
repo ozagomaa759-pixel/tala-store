@@ -11,6 +11,7 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
+  X,
 } from "lucide-react";
 
 import Header from "@/components/layout/Header";
@@ -18,13 +19,6 @@ import { getTalaProducts } from "@/lib/tala-products";
 import type { Product } from "@/data/products";
 
 type SortOption = "featured" | "price-low" | "price-high" | "newest";
-
-const COLORS = {
-  cream: "#F5F1EB",
-  ink: "#24221F",
-  lime: "#D8ED83",
-  muted: "#82796F",
-};
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-EG", {
@@ -88,6 +82,14 @@ export default function AllPiecesCollectionPage() {
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<SortOption>("featured");
 
+  // Read the search query sent from the global header.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get("q") || "";
+
+    setSearch(query);
+  }, []);
+
   useEffect(() => {
     let active = true;
 
@@ -130,11 +132,19 @@ export default function AllPiecesCollectionPage() {
       const matchesCategory =
         category === "All" || product.category === category;
 
+      const searchableText = [
+        product.name,
+        product.category,
+        product.subtitle,
+        product.description,
+        ...(product.tags ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
       const matchesSearch =
-        !query ||
-        product.name.toLowerCase().includes(query) ||
-        product.category?.toLowerCase().includes(query) ||
-        product.subtitle?.toLowerCase().includes(query);
+        !query || searchableText.includes(query);
 
       return matchesCategory && matchesSearch;
     });
@@ -152,20 +162,34 @@ export default function AllPiecesCollectionPage() {
     }
 
     if (sort === "price-low") {
-      result = [...result].sort((a, b) => a.price - b.price);
+      result = [...result].sort(
+        (a, b) => a.price - b.price
+      );
     }
 
     if (sort === "price-high") {
-      result = [...result].sort((a, b) => b.price - a.price);
+      result = [...result].sort(
+        (a, b) => b.price - a.price
+      );
     }
 
     return result;
   }, [products, category, search, sort]);
 
-  // لا نستخدم صور Placeholders داخل الهيرو نهائياً.
   const heroImage = products
     .flatMap((product) => [product.image, ...(product.images ?? [])])
     .find((image) => isRealImage(image));
+
+  function resetFilters() {
+    setSearch("");
+    setCategory("All");
+
+    window.history.replaceState(
+      null,
+      "",
+      "/collections/all-pieces"
+    );
+  }
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#F5F1EB] text-[#24221F]">
@@ -291,11 +315,13 @@ export default function AllPiecesCollectionPage() {
           </div>
 
           <p className="text-[10px] uppercase tracking-[0.17em] text-[#82796F]">
-            {loading ? "Loading pieces..." : `${visibleProducts.length} PIECES`}
+            {loading
+              ? "Loading pieces..."
+              : `${visibleProducts.length} PIECES`}
           </p>
         </div>
 
-        {/* Search */}
+        {/* Search and filters */}
         <div className="mb-7 flex flex-col gap-5">
           <div className="relative w-full sm:max-w-sm">
             <Search
@@ -303,14 +329,26 @@ export default function AllPiecesCollectionPage() {
               strokeWidth={1.5}
               className="absolute left-0 top-1/2 -translate-y-1/2 text-[#82796F]"
             />
+
             <input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search the collection..."
               aria-label="Search the collection"
-              className="w-full border-b border-[#CFC6BA] bg-transparent py-3 pl-7 pr-3 text-xs outline-none placeholder:text-[#A49A8F] focus:border-[#24221F]"
+              className="w-full border-b border-[#CFC6BA] bg-transparent py-3 pl-7 pr-9 text-xs outline-none placeholder:text-[#A49A8F] focus:border-[#24221F]"
             />
+
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-[#82796F] transition hover:text-[#24221F]"
+              >
+                <X size={15} />
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col justify-between gap-4 border-b border-[#DCD5CB] pb-5 sm:flex-row sm:items-center">
@@ -352,6 +390,25 @@ export default function AllPiecesCollectionPage() {
               </select>
             </label>
           </div>
+
+          {search.trim() && (
+            <div className="flex flex-wrap items-center justify-between gap-3 text-[10px] text-[#82796F]">
+              <p>
+                SEARCH RESULTS FOR{" "}
+                <span className="font-semibold text-[#24221F]">
+                  “{search.trim()}”
+                </span>
+              </p>
+
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="border-b border-[#24221F]/50 pb-1 font-semibold uppercase tracking-[0.12em] text-[#24221F] transition hover:border-[#D8ED83]"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Loading */}
@@ -368,6 +425,7 @@ export default function AllPiecesCollectionPage() {
         ) : error ? (
           <div className="py-24 text-center">
             <p className="text-sm text-[#9A554B]">{error}</p>
+
             <button
               type="button"
               onClick={() => window.location.reload()}
@@ -379,18 +437,19 @@ export default function AllPiecesCollectionPage() {
         ) : visibleProducts.length === 0 ? (
           <div className="py-24 text-center">
             <span className="text-3xl text-[#A7BD62]">✳</span>
+
             <h3 className="mt-5 font-serif text-4xl font-light">
               No pieces found.
             </h3>
+
             <p className="mx-auto mt-4 max-w-sm text-xs leading-6 text-[#82796F]">
-              Try changing your search or selecting another category.
+              Try another name, change your category, or explore
+              the complete collection.
             </p>
+
             <button
               type="button"
-              onClick={() => {
-                setSearch("");
-                setCategory("All");
-              }}
+              onClick={resetFilters}
               className="mt-8 border-b border-[#24221F] pb-2 text-[9px] uppercase tracking-[0.2em]"
             >
               Reset filters
@@ -494,6 +553,7 @@ export default function AllPiecesCollectionPage() {
             <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#555D3D]">
               YOUR STYLE DOESN&apos;T STAND STILL
             </p>
+
             <h2 className="max-w-xl font-serif text-4xl font-light leading-[1.05] tracking-[-0.035em] sm:text-6xl">
               Keep exploring.
             </h2>
