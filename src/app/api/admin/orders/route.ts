@@ -5,6 +5,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+const ALLOWED_ORDER_STATUSES = new Set([
+  "new",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+]);
+
+const ALLOWED_PAYMENT_STATUSES = new Set([
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+]);
+
 function errorResponse(message: string, status = 400) {
   return NextResponse.json(
     { success: false, error: message },
@@ -94,17 +110,24 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Order ID is required.");
     }
 
+    const orderId = body.id.trim();
+
     if (
       body.status !== undefined &&
-      (typeof body.status !== "string" || !body.status.trim())
+      (
+        typeof body.status !== "string" ||
+        !ALLOWED_ORDER_STATUSES.has(body.status.trim())
+      )
     ) {
       return errorResponse("Invalid order status.");
     }
 
     if (
       body.payment_status !== undefined &&
-      (typeof body.payment_status !== "string" ||
-        !body.payment_status.trim())
+      (
+        typeof body.payment_status !== "string" ||
+        !ALLOWED_PAYMENT_STATUSES.has(body.payment_status.trim())
+      )
     ) {
       return errorResponse("Invalid payment status.");
     }
@@ -117,6 +140,16 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Invalid order notes.");
     }
 
+    const requestedStatus =
+      typeof body.status === "string"
+        ? body.status.trim()
+        : undefined;
+
+    const requestedPaymentStatus =
+      typeof body.payment_status === "string"
+        ? body.payment_status.trim()
+        : undefined;
+
     const supabase = createAdminClient();
 
     // Read the current order status before changing anything.
@@ -126,7 +159,7 @@ export async function PATCH(request: NextRequest) {
     } = await supabase
       .from("orders")
       .select("id, status")
-      .eq("id", body.id)
+      .eq("id", orderId)
       .maybeSingle();
 
     const currentOrder = currentOrderData as {
@@ -151,9 +184,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Delivered and cancelled orders cannot return to earlier states.
-    if (body.status !== undefined) {
+    if (requestedStatus !== undefined) {
       const currentStatus = currentOrder.status;
-      const requestedStatus = (body.status as string).trim();
 
       if (
         (currentStatus === "delivered" ||
@@ -178,7 +210,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Cancellation is handled by the database function.
-    if (body.status === "cancelled") {
+    if (requestedStatus === "cancelled") {
       const rpcClient = supabase as unknown as {
         rpc: (
           functionName: string,
@@ -191,7 +223,7 @@ export async function PATCH(request: NextRequest) {
 
       const { error } = await rpcClient.rpc(
         "cancel_tala_order",
-        { p_order_id: body.id }
+        { p_order_id: orderId }
       );
 
       if (error) {
@@ -221,9 +253,8 @@ export async function PATCH(request: NextRequest) {
         updated_at?: string;
       } = {};
 
-      if (body.payment_status !== undefined) {
-        extraUpdates.payment_status =
-          (body.payment_status as string).trim();
+      if (requestedPaymentStatus !== undefined) {
+        extraUpdates.payment_status = requestedPaymentStatus;
       }
 
       if (body.notes !== undefined) {
@@ -249,7 +280,7 @@ export async function PATCH(request: NextRequest) {
         const { error: extraError } = await ordersUpdater
           .from("orders")
           .update(extraUpdates)
-          .eq("id", body.id);
+          .eq("id", orderId);
 
         if (extraError) {
           console.error(
@@ -267,7 +298,7 @@ export async function PATCH(request: NextRequest) {
       const { data: order, error: fetchError } = await supabase
         .from("orders")
         .select("*, order_items(*)")
-        .eq("id", body.id)
+        .eq("id", orderId)
         .single();
 
       if (fetchError) {
@@ -291,13 +322,12 @@ export async function PATCH(request: NextRequest) {
       updated_at?: string;
     } = {};
 
-    if (body.status !== undefined) {
-      updates.status = (body.status as string).trim();
+    if (requestedStatus !== undefined) {
+      updates.status = requestedStatus;
     }
 
-    if (body.payment_status !== undefined) {
-      updates.payment_status =
-        (body.payment_status as string).trim();
+    if (requestedPaymentStatus !== undefined) {
+      updates.payment_status = requestedPaymentStatus;
     }
 
     if (body.notes !== undefined) {
@@ -331,7 +361,7 @@ export async function PATCH(request: NextRequest) {
     const { data, error } = await ordersUpdater
       .from("orders")
       .update(updates)
-      .eq("id", body.id)
+      .eq("id", orderId)
       .select()
       .single();
 
@@ -365,6 +395,7 @@ export async function DELETE(request: NextRequest) {
       return errorResponse("Order ID is required.");
     }
 
+    const orderId = body.id.trim();
     const supabase = createAdminClient();
 
     const rpcClient = supabase as unknown as {
@@ -379,7 +410,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data, error } = await rpcClient.rpc(
       "delete_tala_order",
-      { p_order_id: body.id }
+      { p_order_id: orderId }
     );
 
     if (error) {
