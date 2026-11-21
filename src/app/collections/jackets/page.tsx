@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -21,7 +20,6 @@ type CollectionData = {
   name?: string;
   slug?: string;
   image_url?: string | null;
-  mobile_image_url?: string | null;
   headline?: string | null;
   subtitle?: string | null;
   overlay_opacity?: number | null;
@@ -29,15 +27,58 @@ type CollectionData = {
 
 type SortOption = "featured" | "price-low" | "price-high";
 
-const FALLBACK_IMAGE =
-  "https://placehold.co/1600x1100/E8E2D9/332A23?text=TALA+JACKETS";
-
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-EG", {
     style: "currency",
     currency: "EGP",
     maximumFractionDigits: 0,
   }).format(price);
+}
+
+function isRealImage(src?: string | null) {
+  if (!src || typeof src !== "string") return false;
+
+  const value = src.trim().toLowerCase();
+
+  return (
+    (value.startsWith("https://") || value.startsWith("/")) &&
+    !value.includes("placehold.co") &&
+    !value.includes("placeholder")
+  );
+}
+
+function ProductImage({
+  src,
+  alt,
+}: {
+  src?: string;
+  alt: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!isRealImage(src) || failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[#E7E0D6]">
+        <span className="font-serif text-5xl tracking-[0.2em] text-[#A69B8D]">
+          T.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.045]"
+    />
+  );
 }
 
 export default function JacketsCollectionPage() {
@@ -61,22 +102,20 @@ export default function JacketsCollectionPage() {
           fetch("/api/categories", { cache: "no-store" }),
         ]);
 
-        if (!categoriesResponse.ok) {
-          throw new Error("Unable to load collection details.");
-        }
-
-        const categoriesData = await categoriesResponse.json();
+        const categoriesData = categoriesResponse.ok
+          ? await categoriesResponse.json()
+          : null;
 
         if (!active) return;
 
         setProducts(productsData);
 
         const jacketsCategory = (
-          categoriesData.categories ?? []
+          categoriesData?.categories ?? []
         ).find(
           (item: CollectionData) =>
-            item.slug?.toLowerCase() === "jackets" ||
-            item.name?.toLowerCase() === "jackets"
+            item.slug?.trim().toLowerCase() === "jackets" ||
+            item.name?.trim().toLowerCase() === "jackets"
         );
 
         setCollection(jacketsCategory ?? null);
@@ -101,38 +140,47 @@ export default function JacketsCollectionPage() {
   }, []);
 
   const jackets = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    const query = search.trim().toLowerCase();
 
-    const filtered = products.filter((product) => {
+    let result = products.filter((product) => {
       const isJacket =
         product.category?.trim().toLowerCase() === "jackets";
 
       const matchesSearch =
-        !normalizedSearch ||
-        product.name.toLowerCase().includes(normalizedSearch) ||
-        product.subtitle?.toLowerCase().includes(normalizedSearch);
+        !query ||
+        product.name.toLowerCase().includes(query) ||
+        product.subtitle?.toLowerCase().includes(query);
 
       return isJacket && matchesSearch;
     });
 
+    if (sort === "featured") {
+      result = [...result].sort(
+        (a, b) => Number(b.isFeatured) - Number(a.isFeatured)
+      );
+    }
+
     if (sort === "price-low") {
-      return [...filtered].sort((a, b) => a.price - b.price);
+      result = [...result].sort((a, b) => a.price - b.price);
     }
 
     if (sort === "price-high") {
-      return [...filtered].sort((a, b) => b.price - a.price);
+      result = [...result].sort((a, b) => b.price - a.price);
     }
 
-    return filtered;
+    return result;
   }, [products, search, sort]);
 
   const heroImage =
-    collection?.image_url ||
-    products.find(
-      (product) =>
-        product.category?.trim().toLowerCase() === "jackets"
-    )?.image ||
-    FALLBACK_IMAGE;
+    (isRealImage(collection?.image_url) && collection?.image_url) ||
+    products
+      .filter(
+        (product) =>
+          product.category?.trim().toLowerCase() === "jackets"
+      )
+      .flatMap((product) => [product.image, ...(product.images ?? [])])
+      .find((image) => isRealImage(image)) ||
+    null;
 
   const title =
     collection?.headline?.trim() || "THE JACKET EDIT";
@@ -143,7 +191,10 @@ export default function JacketsCollectionPage() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#F5F1EB] text-[#24221F]">
-      <div className="relative z-40 overflow-hidden bg-[#D8ED83] py-2.5">
+      <Header />
+
+      {/* Announcement */}
+      <div className="relative z-30 overflow-hidden bg-[#D8ED83] py-2.5">
         <div className="flex w-max animate-[tala-marquee_28s_linear_infinite] items-center gap-8 whitespace-nowrap">
           {Array.from({ length: 8 }).map((_, index) => (
             <span
@@ -161,49 +212,55 @@ export default function JacketsCollectionPage() {
         </div>
       </div>
 
-      <Header />
-
-      <section className="relative min-h-[570px] overflow-hidden bg-[#777168] sm:min-h-[690px]">
-        <Image
-          src={heroImage}
-          alt="TALA Jackets Collection"
-          fill
-          priority
-          unoptimized
-          sizes="100vw"
-          className="object-cover object-center"
-        />
+      {/* Hero */}
+      <section className="relative isolate flex min-h-[570px] items-end overflow-hidden bg-[#81786D] sm:min-h-[690px]">
+        {heroImage ? (
+          <img
+            src={heroImage}
+            alt="TALA Jackets Collection"
+            fetchPriority="high"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+          />
+        ) : (
+          <div className="absolute inset-0 -z-20 overflow-hidden bg-[#DCD5CA]">
+            <div className="absolute -right-20 -top-32 h-[500px] w-[500px] rounded-full border border-[#24221F]/10" />
+            <div className="absolute -right-4 -top-16 h-[370px] w-[370px] rounded-full border border-[#24221F]/10" />
+            <div className="absolute -bottom-48 left-[25%] h-[550px] w-[550px] rounded-full border border-[#24221F]/10" />
+            <span className="absolute right-[8%] top-[18%] font-serif text-[180px] font-light tracking-[-0.1em] text-[#24221F]/[0.08] sm:text-[280px]">
+              T.
+            </span>
+          </div>
+        )}
 
         <div
-          className="absolute inset-0 bg-black"
+          className="absolute inset-0 -z-10 bg-black"
           style={{
             opacity: (collection?.overlay_opacity ?? 38) / 100,
           }}
         />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/65 via-black/10 to-black/10" />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-black/10" />
-
-        <div className="relative z-10 mx-auto flex min-h-[570px] max-w-[1600px] flex-col justify-end px-6 pb-14 pt-28 text-white sm:min-h-[690px] sm:px-12 sm:pb-20 lg:px-20">
+        <div className="mx-auto w-full max-w-[1600px] px-5 pb-14 pt-32 text-white sm:px-12 sm:pb-20 lg:px-16">
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="max-w-4xl"
+            className="max-w-5xl"
           >
-            <div className="mb-6 flex items-center gap-3">
+            <div className="mb-7 flex items-center gap-3">
               <span className="h-px w-9 bg-[#D8ED83]" />
-              <p className="text-[9px] uppercase tracking-[0.35em] text-white/80">
-                TALA / COLLECTION 02
+              <p className="text-[9px] font-semibold uppercase tracking-[0.35em] text-white/75">
+                TALA / COLLECTION 02 / JACKETS
               </p>
             </div>
 
-            <h1 className="max-w-4xl font-serif text-6xl font-light leading-[0.98] tracking-[-0.045em] sm:text-8xl lg:text-[112px]">
+            <h1 className="font-serif text-[clamp(3.8rem,10vw,9rem)] font-normal leading-[0.86] tracking-[-0.06em]">
               {title}
               <span className="text-[#D8ED83]">.</span>
             </h1>
 
-            <div className="mt-7 flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
-              <p className="max-w-md text-sm leading-7 text-white/80 sm:text-base">
+            <div className="mt-8 flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
+              <p className="max-w-md text-sm leading-7 text-white/85 sm:text-base">
                 {subtitle}
               </p>
 
@@ -221,16 +278,17 @@ export default function JacketsCollectionPage() {
           </motion.div>
 
           <div className="absolute right-7 top-10 hidden text-right sm:block">
-            <p className="text-[9px] uppercase tracking-[0.25em] text-white/60">
-              STYLE IS
+            <p className="text-[8px] uppercase tracking-[0.25em] text-white/60">
+              TALA LUXURY FASHION
             </p>
-            <p className="mt-1 font-serif text-2xl italic text-white">
-              an attitude.
+            <p className="mt-2 font-serif text-2xl italic text-white/85">
+              Style is an attitude.
             </p>
           </div>
         </div>
       </section>
 
+      {/* Products */}
       <section
         id="jackets-products"
         className="mx-auto max-w-[1600px] px-5 py-16 sm:px-10 sm:py-24 lg:px-16"
@@ -241,7 +299,7 @@ export default function JacketsCollectionPage() {
               NOT JUST ANOTHER LAYER
             </p>
 
-            <h2 className="font-serif text-4xl font-light tracking-[-0.035em] sm:text-6xl">
+            <h2 className="font-serif text-4xl font-light tracking-[-0.045em] sm:text-6xl">
               Jackets
               <span className="ml-2 text-[#A7BD62]">edit.</span>
             </h2>
@@ -256,8 +314,9 @@ export default function JacketsCollectionPage() {
           </p>
         </div>
 
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-xs">
+        {/* Search and sorting */}
+        <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
             <Search
               size={16}
               strokeWidth={1.5}
@@ -268,6 +327,7 @@ export default function JacketsCollectionPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Find your next favourite..."
+              aria-label="Search jackets"
               className="w-full border-b border-[#CFC6BA] bg-transparent py-3 pl-7 pr-3 text-xs outline-none placeholder:text-[#A49A8F] focus:border-[#24221F]"
             />
           </div>
@@ -280,7 +340,7 @@ export default function JacketsCollectionPage() {
               onChange={(event) =>
                 setSort(event.target.value as SortOption)
               }
-              className="min-w-[125px] border-b border-[#CFC6BA] bg-transparent py-2 text-[10px] text-[#24221F] outline-none"
+              className="min-w-[135px] border-b border-[#CFC6BA] bg-transparent py-2 text-[10px] text-[#24221F] outline-none"
             >
               <option value="featured">Featured</option>
               <option value="price-low">Price: Low to High</option>
@@ -303,6 +363,7 @@ export default function JacketsCollectionPage() {
           <div className="py-24 text-center">
             <p className="text-sm text-[#9A554B]">{error}</p>
             <button
+              type="button"
               onClick={() => window.location.reload()}
               className="mt-6 border-b border-[#24221F] pb-2 text-[9px] uppercase tracking-[0.2em]"
             >
@@ -313,16 +374,17 @@ export default function JacketsCollectionPage() {
           <div className="py-24 text-center">
             <span className="text-3xl text-[#A7BD62]">✳</span>
             <h3 className="mt-5 font-serif text-4xl font-light">
-              Nothing here. Yet.
+              {search ? "No matches found." : "The next layer is coming."}
             </h3>
-            <p className="mx-auto mt-4 max-w-sm text-xs leading-6 text-[#82796F]">
+            <p className="mx-auto mt-4 max-w-sm text-xs leading-7 text-[#82796F]">
               {search
                 ? "No jackets match your search. Try another name."
-                : "New pieces are on their way. Keep an eye on this space."}
+                : "New pieces are being prepared. In the meantime, explore the full TALA collection."}
             </p>
 
             {search ? (
               <button
+                type="button"
                 onClick={() => setSearch("")}
                 className="mt-8 border-b border-[#24221F] pb-2 text-[9px] uppercase tracking-[0.2em]"
               >
@@ -359,11 +421,9 @@ export default function JacketsCollectionPage() {
                   className="block"
                 >
                   <div className="relative aspect-[3/4] overflow-hidden bg-[#EAE4DB]">
-                    <img
+                    <ProductImage
                       src={product.image}
                       alt={product.name}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.045]"
                     />
 
                     {!product.isAvailable && (
@@ -399,7 +459,7 @@ export default function JacketsCollectionPage() {
                         {formatPrice(product.price)}
                       </span>
 
-                      {product.oldPrice &&
+                      {product.oldPrice != null &&
                         product.oldPrice > product.price && (
                           <span className="text-[10px] text-[#A49A90] line-through">
                             {formatPrice(product.oldPrice)}
@@ -427,6 +487,7 @@ export default function JacketsCollectionPage() {
         )}
       </section>
 
+      {/* Closing CTA */}
       <section className="mx-5 mb-16 overflow-hidden bg-[#D8ED83] sm:mx-10 lg:mx-16">
         <div className="flex flex-col justify-between gap-8 px-7 py-10 sm:flex-row sm:items-end sm:px-12 sm:py-14">
           <div>
@@ -451,6 +512,7 @@ export default function JacketsCollectionPage() {
         </div>
       </section>
 
+      {/* Footer */}
       <footer className="bg-[#24221F] px-6 py-12 text-center text-[#F5F1EB]">
         <Link
           href="/"
