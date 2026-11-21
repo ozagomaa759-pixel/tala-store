@@ -20,6 +20,8 @@ import {
   Loader2,
   Trash2,
   XCircle,
+  TrendingUp,
+  Clock,
 } from "lucide-react";
 
 type OrderItem = {
@@ -51,7 +53,36 @@ type Order = {
   status: string | null;
   notes: string | null;
   created_at: string;
+  delivered_at: string | null;
   order_items: OrderItem[];
+};
+
+type PeriodStats = {
+  orders: number;
+  revenue: number;
+};
+
+type Analytics = {
+  success: boolean;
+  timeZone: string;
+  currency: string;
+  sales: {
+    today: PeriodStats;
+    week: PeriodStats;
+    month: PeriodStats;
+  };
+  orders: {
+    total: number;
+    delivered: number;
+    pending: number;
+    cancelled: number;
+    deliveredWithoutDate: number;
+  };
+  pending: {
+    orders: number;
+    value: number;
+  };
+  generatedAt: string;
 };
 
 const ORDER_STATUSES = [
@@ -76,6 +107,7 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Africa/Cairo",
   });
 }
 
@@ -135,15 +167,86 @@ function statusStyle(value: string | null) {
   }
 }
 
+function SalesCard({
+  title,
+  stats,
+  icon,
+  loading,
+}: {
+  title: string;
+  stats: PeriodStats | null;
+  icon: React.ReactNode;
+  loading: boolean;
+}) {
+  return (
+    <div className="border border-[#E5DACE] bg-white/80 p-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-[#8A7969]">{title}</p>
+        <span className="text-[#A28A72]">{icon}</span>
+      </div>
+
+      {loading || !stats ? (
+        <div className="mt-5 h-8 w-28 animate-pulse bg-[#EEE6DD]" />
+      ) : (
+        <>
+          <p className="mt-4 text-3xl font-light">
+            {money(stats.revenue)}
+          </p>
+          <p className="mt-2 text-xs text-[#8A7969]">
+            {stats.orders.toLocaleString("en-US")} delivered orders
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+
   const [loading, setLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
   const [error, setError] = useState("");
+  const [analyticsError, setAnalyticsError] = useState("");
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
+
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null);
+
+  const fetchAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    setAnalyticsError("");
+
+    try {
+      const response = await fetch("/api/admin/analytics", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error || "Could not load sales analytics"
+        );
+      }
+
+      setAnalytics(result as Analytics);
+    } catch (err) {
+      setAnalyticsError(
+        err instanceof Error
+          ? err.message
+          : "Could not load sales analytics"
+      );
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -154,6 +257,7 @@ export default function AdminOrdersPage() {
 
       if (search.trim()) params.set("search", search.trim());
       if (statusFilter) params.set("status", statusFilter);
+
       if (paymentFilter) {
         params.set("payment_status", paymentFilter);
       }
@@ -182,9 +286,16 @@ export default function AdminOrdersPage() {
     }
   }, [search, statusFilter, paymentFilter]);
 
+  const refreshAll = useCallback(() => {
+    void Promise.all([
+      fetchOrders(),
+      fetchAnalytics(),
+    ]);
+  }, [fetchOrders, fetchAnalytics]);
+
   useEffect(() => {
-    void fetchOrders();
-  }, [fetchOrders]);
+    refreshAll();
+  }, [refreshAll]);
 
   async function updateOrder(
     id: string,
@@ -226,6 +337,9 @@ export default function AdminOrdersPage() {
             : order
         )
       );
+
+      // Refresh the independent sales statistics.
+      void fetchAnalytics();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Update failed"
@@ -267,6 +381,8 @@ export default function AdminOrdersPage() {
       if (expandedOrder === order.id) {
         setExpandedOrder(null);
       }
+
+      void fetchAnalytics();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Delete failed"
@@ -276,16 +392,8 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const totalOrders = orders.length;
-
   const newOrders = orders.filter(
     (order) => order.status === "new"
-  ).length;
-
-  const deliveredOrders = orders.filter(
-    (order) =>
-      order.status === "delivered" ||
-      order.status === "completed"
   ).length;
 
   return (
@@ -314,33 +422,140 @@ export default function AdminOrdersPage() {
 
           <button
             type="button"
-            onClick={() => void fetchOrders()}
-            disabled={loading}
+            onClick={refreshAll}
+            disabled={loading || analyticsLoading}
             className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#DCCFC1] px-5 text-xs uppercase tracking-widest transition hover:bg-white disabled:opacity-50"
           >
             <RefreshCw
               size={15}
-              className={loading ? "animate-spin" : ""}
+              className={
+                loading || analyticsLoading ? "animate-spin" : ""
+              }
             />
             Refresh
           </button>
         </div>
 
-        <section className="mt-10 grid gap-4 sm:grid-cols-3">
-          <div className="border border-[#E5DACE] bg-white/70 p-6">
-            <ShoppingBag size={23} strokeWidth={1} />
-            <p className="mt-4 text-sm text-[#8A7969]">
-              Total Orders
-            </p>
-            <p className="mt-1 text-3xl font-light">
-              {totalOrders}
-            </p>
+        {/* Sales analytics */}
+        <section className="mt-10">
+          <div className="mb-5 flex items-center gap-3">
+            <TrendingUp size={20} strokeWidth={1.5} />
+            <h2 className="text-xl font-light">
+              Sales Overview
+            </h2>
+            <span className="text-xs text-[#A28A72]">
+              Delivered orders only
+            </span>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-3">
+            <SalesCard
+              title="Today's Sales"
+              stats={analytics?.sales.today ?? null}
+              icon={<CalendarDays size={21} />}
+              loading={analyticsLoading}
+            />
+
+            <SalesCard
+              title="This Week"
+              stats={analytics?.sales.week ?? null}
+              icon={<TrendingUp size={21} />}
+              loading={analyticsLoading}
+            />
+
+            <SalesCard
+              title="This Month"
+              stats={analytics?.sales.month ?? null}
+              icon={<ShoppingBag size={21} />}
+              loading={analyticsLoading}
+            />
+          </div>
+
+          {analyticsError && (
+            <div className="mt-4 border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {analyticsError}
+              <button
+                type="button"
+                onClick={() => void fetchAnalytics()}
+                className="ml-2 underline"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {analytics && (
+            <>
+              <div className="mt-5 grid gap-4 sm:grid-cols-4">
+                <div className="border border-[#E5DACE] bg-white/70 p-5">
+                  <ShoppingBag size={20} strokeWidth={1} />
+                  <p className="mt-3 text-xs text-[#8A7969]">
+                    All Orders
+                  </p>
+                  <p className="mt-1 text-2xl font-light">
+                    {analytics.orders.total.toLocaleString("en-US")}
+                  </p>
+                </div>
+
+                <div className="border border-[#E5DACE] bg-white/70 p-5">
+                  <Package size={20} strokeWidth={1} />
+                  <p className="mt-3 text-xs text-[#8A7969]">
+                    Delivered Orders
+                  </p>
+                  <p className="mt-1 text-2xl font-light">
+                    {analytics.orders.delivered.toLocaleString("en-US")}
+                  </p>
+                </div>
+
+                <div className="border border-[#E5DACE] bg-white/70 p-5">
+                  <Clock size={20} strokeWidth={1} />
+                  <p className="mt-3 text-xs text-[#8A7969]">
+                    Pending Orders
+                  </p>
+                  <p className="mt-1 text-2xl font-light">
+                    {analytics.pending.orders.toLocaleString("en-US")}
+                  </p>
+                  <p className="mt-1 text-xs text-[#8A7969]">
+                    {money(analytics.pending.value)} potential value
+                  </p>
+                </div>
+
+                <div className="border border-[#E5DACE] bg-white/70 p-5">
+                  <XCircle size={20} strokeWidth={1} />
+                  <p className="mt-3 text-xs text-[#8A7969]">
+                    Cancelled Orders
+                  </p>
+                  <p className="mt-1 text-2xl font-light">
+                    {analytics.orders.cancelled.toLocaleString("en-US")}
+                  </p>
+                </div>
+              </div>
+
+              {analytics.orders.deliveredWithoutDate > 0 && (
+                <div className="mt-4 border border-[#E5DACE] bg-white/60 p-4 text-sm text-[#77695D]">
+                  <strong>
+                    {analytics.orders.deliveredWithoutDate}
+                  </strong>{" "}
+                  previously delivered orders have no recorded delivery
+                  date. They are counted in delivered orders, but excluded
+                  from dated sales periods.
+                </div>
+              )}
+
+              <p className="mt-3 text-xs text-[#A28A72]">
+                Sales periods use Cairo time. Pending orders are not
+                included in sales revenue.
+              </p>
+            </>
+          )}
+        </section>
+
+        {/* Orders summary */}
+        <section className="mt-10 grid gap-4 sm:grid-cols-2">
           <div className="border border-[#E5DACE] bg-white/70 p-6">
             <ClipboardList size={23} strokeWidth={1} />
             <p className="mt-4 text-sm text-[#8A7969]">
-              New Orders
+              New Orders In Current Results
             </p>
             <p className="mt-1 text-3xl font-light">
               {newOrders}
@@ -348,16 +563,17 @@ export default function AdminOrdersPage() {
           </div>
 
           <div className="border border-[#E5DACE] bg-white/70 p-6">
-            <Package size={23} strokeWidth={1} />
+            <Search size={23} strokeWidth={1} />
             <p className="mt-4 text-sm text-[#8A7969]">
-              Delivered Orders
+              Orders In Current Results
             </p>
             <p className="mt-1 text-3xl font-light">
-              {deliveredOrders}
+              {orders.length}
             </p>
           </div>
         </section>
 
+        {/* Search and filters */}
         <section className="mt-8 border border-[#E5DACE] bg-white/60 p-5 sm:p-6">
           <div className="grid gap-3 md:grid-cols-[1fr_200px_200px_auto]">
             <div className="relative">
@@ -418,6 +634,7 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
+        {/* Orders list */}
         <section className="mt-8">
           {loading ? (
             <div className="flex min-h-48 items-center justify-center gap-3 text-sm text-[#8A7969]">
@@ -445,9 +662,7 @@ export default function AdminOrdersPage() {
                 const isUpdating = updatingOrder === order.id;
 
                 const isCancelled = order.status === "cancelled";
-                const isDelivered =
-                  order.status === "delivered" ||
-                  order.status === "completed";
+                const isDelivered = order.status === "delivered";
 
                 const isFinalStatus = isCancelled || isDelivered;
 
@@ -467,8 +682,17 @@ export default function AdminOrdersPage() {
                           </h2>
                           <p className="mt-2 flex items-center gap-2 text-xs text-[#8A7969]">
                             <CalendarDays size={14} />
-                            {formatDate(order.created_at)}
+                            Ordered: {formatDate(order.created_at)}
                           </p>
+
+                          {order.status === "delivered" && (
+                            <p className="mt-2 flex items-center gap-2 text-xs text-green-700">
+                              <Package size={14} />
+                              {order.delivered_at
+                                ? `Delivered: ${formatDate(order.delivered_at)}`
+                                : "Delivery date unavailable"}
+                            </p>
+                          )}
                         </div>
 
                         <div className="text-left sm:text-right">
@@ -636,12 +860,43 @@ export default function AdminOrdersPage() {
                             </h3>
                             <div className="mt-3 space-y-2 text-sm text-[#77695D]">
                               <p>{order.customer_name}</p>
-                              <p>{order.customer_email || "No email provided"}</p>
+                              <p>
+                                {order.customer_email || "No email provided"}
+                              </p>
                               <p>{order.customer_phone}</p>
                               <p className="flex items-start gap-2">
                                 <MapPin size={15} className="mt-1 shrink-0" />
                                 {formatAddress(order.shipping_address)}
                               </p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <h3 className="text-sm font-medium">
+                              Order Timeline
+                            </h3>
+                            <div className="mt-3 space-y-3 border-l border-[#DCCFC1] pl-4 text-sm">
+                              <div>
+                                <p className="text-[#77695D]">
+                                  Order created
+                                </p>
+                                <p className="mt-1 text-xs text-[#A28A72]">
+                                  {formatDate(order.created_at)}
+                                </p>
+                              </div>
+
+                              {order.status === "delivered" && (
+                                <div>
+                                  <p className="text-green-700">
+                                    Order delivered
+                                  </p>
+                                  <p className="mt-1 text-xs text-[#A28A72]">
+                                    {order.delivered_at
+                                      ? formatDate(order.delivered_at)
+                                      : "Historical delivery date unavailable"}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
 
