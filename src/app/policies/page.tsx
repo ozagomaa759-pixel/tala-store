@@ -34,7 +34,7 @@ const policies = [
     number: "03",
     title: "Returns & Exchanges",
     description:
-      "Customers may inspect their order before accepting delivery. Once an order has been accepted, TALA's store policy does not offer returns, refunds, or exchanges. Please review your items carefully before accepting.",
+      "Customers may inspect their order before accepting delivery. Once an order has been accepted, TALA&apos;s store policy does not offer returns, refunds, or exchanges. Please review your items carefully before accepting.",
     icon: Package,
     link: "/returns",
     linkLabel: "Read the full policy",
@@ -170,7 +170,7 @@ export default function PoliciesPage() {
           <div className="mt-4 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
             <div>
               <h2 className="font-serif text-3xl font-light tracking-[-0.04em] sm:text-4xl">
-                We're here to help.
+                We&apos;re here to help.
               </h2>
 
               <p className="mt-3 max-w-lg text-xs leading-7 text-[#59633D]">
@@ -191,7 +191,7 @@ export default function PoliciesPage() {
         </div>
 
         <p className="mt-8 text-[10px] leading-6 text-[#9A9186]">
-          These pages describe TALA's current store policies
+          These pages describe TALA&apos;s current store policies
           and are not a substitute for applicable consumer
           protection laws. Where applicable law provides
           additional rights, those rights remain unaffected.
