@@ -31,6 +31,16 @@ type CollectionData = {
 
 type SortOption = "featured" | "price-low" | "price-high";
 
+const THEME = {
+  page: "#B8AA98",
+  surface: "#A99A88",
+  stone: "#958675",
+  ink: "#292923",
+  muted: "#625B50",
+  lime: "#D8ED83",
+  line: "rgba(41,41,35,0.2)",
+};
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-EG", {
     style: "currency",
@@ -66,10 +76,13 @@ function ProductImage({
 
   if (!isRealImage(src) || failed) {
     return (
-      <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#E7E0D6]">
-        <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full border border-[#24221F]/10" />
-        <div className="absolute -bottom-16 -left-12 h-56 w-56 rounded-full border border-[#24221F]/10" />
-        <span className="font-serif text-6xl font-light tracking-[-0.1em] text-[#A69B8D]">
+      <div
+        className="relative flex h-full w-full items-center justify-center overflow-hidden"
+        style={{ backgroundColor: THEME.surface }}
+      >
+        <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full border border-[#292923]/15" />
+        <div className="absolute -bottom-16 -left-12 h-56 w-56 rounded-full border border-[#292923]/15" />
+        <span className="font-serif text-6xl font-light tracking-[-0.1em] text-[#292923]/35">
           T.
         </span>
       </div>
@@ -96,11 +109,14 @@ function HeroImage({ src }: { src?: string | null }) {
 
   if (!isRealImage(src) || failed) {
     return (
-      <div className="absolute inset-0 -z-20 overflow-hidden bg-[#DCD5CA]">
-        <div className="absolute -right-24 -top-32 h-[500px] w-[500px] rounded-full border border-[#24221F]/10" />
-        <div className="absolute -right-8 -top-16 h-[360px] w-[360px] rounded-full border border-[#24221F]/10" />
-        <div className="absolute -bottom-48 left-[20%] h-[550px] w-[550px] rounded-full border border-[#24221F]/10" />
-        <span className="absolute right-[8%] top-[15%] font-serif text-[190px] font-light tracking-[-0.1em] text-[#24221F]/[0.08] sm:text-[280px]">
+      <div
+        className="absolute inset-0 -z-20 overflow-hidden"
+        style={{ backgroundColor: THEME.surface }}
+      >
+        <div className="absolute -right-24 -top-32 h-[500px] w-[500px] rounded-full border border-white/15" />
+        <div className="absolute -right-8 -top-16 h-[360px] w-[360px] rounded-full border border-white/15" />
+        <div className="absolute -bottom-48 left-[20%] h-[550px] w-[550px] rounded-full border border-white/15" />
+        <span className="absolute right-[8%] top-[15%] font-serif text-[190px] font-light tracking-[-0.1em] text-white/10 sm:text-[280px]">
           T.
         </span>
       </div>
@@ -109,7 +125,7 @@ function HeroImage({ src }: { src?: string | null }) {
 
   return (
     <img
-      src={src!}
+      src={src}
       alt="TALA Sets Collection"
       fetchPriority="high"
       onError={() => setFailed(true)}
@@ -229,11 +245,13 @@ export default function SetsCollectionPage() {
     "The pieces that just work together. Made for your everyday, styled your way.";
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#F5F1EB] text-[#24221F]">
+    <main
+      className="min-h-screen overflow-hidden text-[#292923]"
+      style={{ backgroundColor: THEME.page }}
+    >
       <Header />
 
-      {/* Announcement */}
-      <div className="overflow-hidden bg-[#D8ED83] py-2.5">
+      <div className="overflow-hidden border-y border-[#292923]/10 bg-[#D8ED83] py-2.5">
         <div className="flex w-max animate-[tala-marquee_28s_linear_infinite] items-center gap-9 whitespace-nowrap">
           {Array.from({ length: 8 }).map((_, index) => (
             <span
@@ -251,8 +269,10 @@ export default function SetsCollectionPage() {
         </div>
       </div>
 
-      {/* Hero */}
-      <section className="relative isolate flex min-h-[570px] items-end overflow-hidden bg-[#DCD5CA] sm:min-h-[690px]">
+      <section
+        className="relative isolate flex min-h-[570px] items-end overflow-hidden sm:min-h-[690px]"
+        style={{ backgroundColor: THEME.stone }}
+      >
         <HeroImage src={heroImage} />
 
         <div
@@ -312,40 +332,41 @@ export default function SetsCollectionPage() {
         </div>
       </section>
 
-      {/* Products */}
       <section
         id="collection-products"
         className="mx-auto max-w-[1600px] px-5 py-16 sm:px-10 sm:py-24 lg:px-16"
       >
-        <div className="mb-10 flex flex-col justify-between gap-7 border-b border-[#DCD5CB] pb-8 sm:flex-row sm:items-end">
+        <div
+          className="mb-10 flex flex-col justify-between gap-7 border-b pb-8 sm:flex-row sm:items-end"
+          style={{ borderColor: THEME.line }}
+        >
           <div>
-            <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8C806F]">
+            <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#625B50]">
               THE TALA EDIT / 01
             </p>
 
             <h2 className="font-serif text-4xl font-light tracking-[-0.045em] sm:text-6xl">
               The Sets
-              <span className="ml-2 text-[#A7BD62]">edit.</span>
+              <span className="ml-2 text-[#292923]">edit.</span>
             </h2>
 
-            <p className="mt-3 text-xs text-[#82796F]">
+            <p className="mt-3 text-xs text-[#625B50]">
               Matching pieces. Different ways to make them yours.
             </p>
           </div>
 
-          <p className="text-[10px] uppercase tracking-[0.17em] text-[#82796F]">
+          <p className="text-[10px] uppercase tracking-[0.17em] text-[#625B50]">
             {loading ? "LOADING PIECES..." : `${sets.length} PIECES`}
           </p>
         </div>
 
-        {/* Search and sorting */}
         {!loading && !error && sets.length > 0 && (
           <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-sm">
               <Search
                 size={16}
                 strokeWidth={1.5}
-                className="absolute left-0 top-1/2 -translate-y-1/2 text-[#82796F]"
+                className="absolute left-0 top-1/2 -translate-y-1/2 text-[#625B50]"
               />
 
               <input
@@ -354,11 +375,11 @@ export default function SetsCollectionPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Find your set..."
                 aria-label="Search sets"
-                className="w-full border-b border-[#CFC6BA] bg-transparent py-3 pl-7 pr-3 text-xs outline-none placeholder:text-[#A49A8F] focus:border-[#24221F]"
+                className="w-full border-b border-[#292923]/25 bg-transparent py-3 pl-7 pr-3 text-xs text-[#292923] outline-none placeholder:text-[#625B50]/70 focus:border-[#292923]"
               />
             </div>
 
-            <label className="flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#77716A]">
+            <label className="flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#625B50]">
               <SlidersHorizontal size={15} />
               Sort by
 
@@ -367,7 +388,7 @@ export default function SetsCollectionPage() {
                 onChange={(event) =>
                   setSort(event.target.value as SortOption)
                 }
-                className="min-w-[135px] border-b border-[#CFC6BA] bg-transparent py-2 text-[10px] text-[#24221F] outline-none"
+                className="min-w-[135px] border-b border-[#292923]/25 bg-transparent py-2 text-[10px] text-[#292923] outline-none"
               >
                 <option value="featured">Featured</option>
                 <option value="price-low">Price: Low to High</option>
@@ -381,33 +402,42 @@ export default function SetsCollectionPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="aspect-[3/4] bg-[#E7E0D6]" />
-                <div className="mt-4 h-3 w-2/3 bg-[#E7E0D6]" />
-                <div className="mt-3 h-3 w-1/3 bg-[#E7E0D6]" />
+                <div
+                  className="aspect-[3/4]"
+                  style={{ backgroundColor: THEME.surface }}
+                />
+                <div
+                  className="mt-4 h-3 w-2/3"
+                  style={{ backgroundColor: THEME.surface }}
+                />
+                <div
+                  className="mt-3 h-3 w-1/3"
+                  style={{ backgroundColor: THEME.surface }}
+                />
               </div>
             ))}
           </div>
         ) : error ? (
           <div className="py-24 text-center">
-            <p className="text-sm text-[#9A554B]">{error}</p>
+            <p className="text-sm text-[#713F36]">{error}</p>
 
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-6 border-b border-[#24221F] pb-2 text-[9px] font-bold uppercase tracking-[0.2em]"
+              className="mt-6 border-b border-[#292923] pb-2 text-[9px] font-bold uppercase tracking-[0.2em]"
             >
               Try again
             </button>
           </div>
         ) : visibleSets.length === 0 ? (
           <div className="py-24 text-center">
-            <span className="text-3xl text-[#A7BD62]">✳</span>
+            <span className="text-3xl text-[#292923]">✳</span>
 
             <h3 className="mt-5 font-serif text-4xl">
               {search ? "No matches found." : "A new edit is coming."}
             </h3>
 
-            <p className="mx-auto mt-4 max-w-sm text-xs leading-7 text-[#77716A]">
+            <p className="mx-auto mt-4 max-w-sm text-xs leading-7 text-[#625B50]">
               {search
                 ? "We couldn't find a set matching your search."
                 : "New pieces are being prepared. In the meantime, explore the full TALA collection."}
@@ -417,14 +447,14 @@ export default function SetsCollectionPage() {
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                className="mt-7 border-b border-[#24221F] pb-2 text-[9px] font-bold uppercase tracking-[0.2em]"
+                className="mt-7 border-b border-[#292923] pb-2 text-[9px] font-bold uppercase tracking-[0.2em]"
               >
                 Clear search
               </button>
             ) : (
               <Link
                 href="/collections/all-pieces"
-                className="mt-7 inline-flex items-center gap-3 border-b border-[#24221F] pb-2 text-[9px] font-bold uppercase tracking-[0.2em]"
+                className="mt-7 inline-flex items-center gap-3 border-b border-[#292923] pb-2 text-[9px] font-bold uppercase tracking-[0.2em]"
               >
                 Explore all pieces
                 <ArrowRight size={14} />
@@ -451,48 +481,51 @@ export default function SetsCollectionPage() {
                   )}`}
                   className="block"
                 >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-[#E7E0D6]">
+                  <div
+                    className="relative aspect-[3/4] overflow-hidden"
+                    style={{ backgroundColor: THEME.surface }}
+                  >
                     <ProductImage
                       src={product.image}
                       alt={product.name}
                     />
 
                     {!product.isAvailable && (
-                      <span className="absolute left-3 top-3 bg-[#F5F1EB] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.16em] text-[#24221F]">
+                      <span className="absolute left-3 top-3 bg-[#292923] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.16em] text-[#D8ED83]">
                         Sold Out
                       </span>
                     )}
 
                     {product.isNew && (
-                      <span className="absolute right-3 top-3 bg-[#D8ED83] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.16em] text-[#24221F]">
+                      <span className="absolute right-3 top-3 bg-[#D8ED83] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.16em] text-[#292923]">
                         New In
                       </span>
                     )}
 
-                    <span className="absolute bottom-3 right-3 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-[#F5F1EB] text-[#24221F] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                    <span className="absolute bottom-3 right-3 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-[#292923] text-[#D8ED83] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                       <ArrowUpRight size={17} />
                     </span>
                   </div>
 
                   <div className="pt-4">
-                    <h3 className="text-[11px] font-semibold tracking-[0.02em] text-[#24221F] sm:text-xs">
+                    <h3 className="text-[11px] font-semibold tracking-[0.02em] text-[#292923] sm:text-xs">
                       {product.name}
                     </h3>
 
                     {product.subtitle && (
-                      <p className="mt-1.5 line-clamp-1 text-[10px] text-[#81796E]">
+                      <p className="mt-1.5 line-clamp-1 text-[10px] text-[#625B50]">
                         {product.subtitle}
                       </p>
                     )}
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-semibold text-[#24221F]">
+                      <span className="text-[11px] font-semibold text-[#292923]">
                         {formatPrice(product.price)}
                       </span>
 
                       {product.oldPrice != null &&
                         product.oldPrice > product.price && (
-                          <span className="text-[10px] text-[#999188] line-through">
+                          <span className="text-[10px] text-[#625B50]/70 line-through">
                             {formatPrice(product.oldPrice)}
                           </span>
                         )}
@@ -504,7 +537,7 @@ export default function SetsCollectionPage() {
                           <span
                             key={color.name}
                             title={color.name}
-                            className="h-3 w-3 rounded-full border border-black/10"
+                            className="h-3 w-3 rounded-full border border-[#292923]/20"
                             style={{ backgroundColor: color.value }}
                           />
                         ))}
@@ -518,8 +551,7 @@ export default function SetsCollectionPage() {
         )}
       </section>
 
-      {/* Closing */}
-      <section className="bg-[#D8ED83] px-5 py-20 sm:py-28">
+      <section className="bg-[#D8ED83] px-5 py-20 text-[#292923] sm:py-28">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-5 text-[9px] font-bold uppercase tracking-[0.25em] text-[#555D3D]">
@@ -535,7 +567,7 @@ export default function SetsCollectionPage() {
 
           <Link
             href="/collections/all-pieces"
-            className="inline-flex w-fit items-center gap-4 border-b border-[#24221F] pb-3 text-[9px] font-bold uppercase tracking-[0.2em]"
+            className="inline-flex w-fit items-center gap-4 border-b border-[#292923] pb-3 text-[9px] font-bold uppercase tracking-[0.2em]"
           >
             Explore everything
             <ArrowUpRight size={16} />
@@ -543,11 +575,10 @@ export default function SetsCollectionPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-[#24221F] px-5 py-10 text-center text-[#F5F1EB]">
+      <footer className="bg-[#292923] px-5 py-10 text-center text-[#B8AA98]">
         <Link
           href="/"
-          className="font-serif text-3xl tracking-[0.22em]"
+          className="font-serif text-3xl tracking-[0.22em] text-[#B8AA98]"
         >
           TALA
         </Link>
