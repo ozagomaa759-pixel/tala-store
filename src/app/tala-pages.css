@@ -1,277 +1,36 @@
 
 /* =========================================
-   TALA — GLOBAL DESIGN SYSTEM
+   TALA — LEGACY TOKEN COMPATIBILITY
+   One unified design system
    ========================================= */
 
 :root {
-  --tala-bg: #f4f0e9;
-  --tala-surface: #fbf9f5;
-  --tala-surface-alt: #eee8de;
-  --tala-text: #29251f;
-  --tala-muted: #887f73;
-  --tala-accent: #a68b70;
-  --tala-accent-dark: #75604c;
-  --tala-border: #e5ded3;
+  /* Colors mapped to the new TALA palette */
+  --tala-bg: var(--background);
+  --tala-surface: var(--surface);
+  --tala-surface-alt: var(--surface-soft);
+
+  --tala-text: var(--foreground);
+  --tala-muted: var(--muted);
+
+  --tala-accent: var(--accent);
+  --tala-accent-dark: var(--foreground);
+
+  --tala-border: var(--border);
   --tala-white: #ffffff;
-  --tala-black: #171512;
+  --tala-black: var(--foreground);
 
-  --tala-radius-sm: 8px;
-  --tala-radius-md: 16px;
-  --tala-radius-lg: 26px;
-  --tala-radius-xl: 36px;
+  /* Shape */
+  --tala-radius-sm: 3px;
+  --tala-radius-md: 10px;
+  --tala-radius-lg: 20px;
+  --tala-radius-xl: 30px;
 
-  --tala-shadow-soft: 0 8px 30px rgba(41, 37, 31, 0.06);
-  --tala-shadow-medium: 0 18px 55px rgba(41, 37, 31, 0.10);
+  /* Shadows */
+  --tala-shadow-soft: var(--shadow-soft);
+  --tala-shadow-medium: var(--shadow-large);
 
+  /* Motion */
   --tala-transition:
-    350ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Base */
-
-.tala-page {
-  min-height: 100vh;
-  background: var(--tala-bg);
-  color: var(--tala-text);
-  font-family: inherit;
-}
-
-.tala-container {
-  width: min(100% - 48px, 1440px);
-  margin-inline: auto;
-}
-
-.tala-section {
-  padding-block: clamp(48px, 8vw, 110px);
-}
-
-.tala-eyebrow {
-  color: var(--tala-accent-dark);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
-
-.tala-heading {
-  color: var(--tala-text);
-  font-size: clamp(32px, 5vw, 68px);
-  font-weight: 400;
-  line-height: 1.12;
-  letter-spacing: -0.045em;
-}
-
-.tala-description {
-  max-width: 580px;
-  color: var(--tala-muted);
-  font-size: 14px;
-  line-height: 1.9;
-}
-
-/* Buttons */
-
-.tala-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 0 26px;
-  border: 1px solid var(--tala-black);
-  background: var(--tala-black);
-  color: var(--tala-white);
-  font-size: 11px;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: var(--tala-transition);
-}
-
-.tala-button:hover {
-  background: transparent;
-  color: var(--tala-black);
-}
-
-.tala-button-outline {
-  background: transparent;
-  color: var(--tala-black);
-}
-
-.tala-button-outline:hover {
-  background: var(--tala-black);
-  color: var(--tala-white);
-}
-
-/* Product Cards */
-
-.tala-product-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 26px;
-}
-
-.tala-product-card {
-  min-width: 0;
-  background: transparent;
-}
-
-.tala-product-image {
-  position: relative;
-  overflow: hidden;
-  background: var(--tala-surface-alt);
-  border-radius: var(--tala-radius-sm);
-  aspect-ratio: 3 / 4;
-}
-
-.tala-product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 800ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.tala-product-card:hover .tala-product-image img {
-  transform: scale(1.045);
-}
-
-.tala-product-info {
-  padding-top: 15px;
-}
-
-.tala-product-name {
-  color: var(--tala-text);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.tala-product-price {
-  margin-top: 7px;
-  color: var(--tala-muted);
-  font-size: 12px;
-}
-
-/* Color Experience */
-
-.tala-color-experience {
-  transition:
-    background-color 600ms ease,
-    color 600ms ease,
-    border-color 600ms ease;
-}
-
-.tala-color-option {
-  width: 27px;
-  height: 27px;
-  border: 2px solid transparent;
-  outline: 1px solid transparent;
-  outline-offset: 3px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: var(--tala-transition);
-}
-
-.tala-color-option:hover,
-.tala-color-option[aria-pressed="true"] {
-  outline-color: var(--tala-accent);
-  transform: scale(1.08);
-}
-
-.tala-image-transition {
-  animation: tala-image-enter 550ms ease both;
-}
-
-@keyframes tala-image-enter {
-  from {
-    opacity: 0.35;
-    transform: scale(1.025);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Forms */
-
-.tala-input {
-  width: 100%;
-  min-height: 48px;
-  padding: 12px 15px;
-  border: 1px solid var(--tala-border);
-  border-radius: 0;
-  background: var(--tala-surface);
-  color: var(--tala-text);
-  outline: none;
-  transition: border-color var(--tala-transition);
-}
-
-.tala-input:focus {
-  border-color: var(--tala-accent);
-}
-
-/* Animations */
-
-.tala-reveal {
-  animation: tala-reveal 750ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-
-@keyframes tala-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(22px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.tala-fade {
-  animation: tala-fade 500ms ease both;
-}
-
-@keyframes tala-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Responsive */
-
-@media (max-width: 1024px) {
-  .tala-product-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-  }
-}
-
-@media (max-width: 640px) {
-  .tala-container {
-    width: min(100% - 30px, 1440px);
-  }
-
-  .tala-product-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 13px;
-  }
-
-  .tala-section {
-    padding-block: 48px;
-  }
-
-  .tala-button {
-    min-height: 44px;
-    padding-inline: 18px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tala-page *,
-  .tala-page *::before,
-  .tala-page *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+    350ms var(--ease-luxury);
 }
