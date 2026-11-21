@@ -1,3 +1,4 @@
+
 import type { Product, ProductVariantStock } from "@/data/products";
 
 type ProductRow = {
@@ -37,32 +38,10 @@ type ProductsApiResponse = {
   variants?: VariantRow[];
 };
 
-const PLACEHOLDER_IMAGE =
-  "https://placehold.co/600x800/F5F0E8/332A23?text=TALA";
-
-const NEW_ARRIVAL_DAYS = 15;
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
-
-function isWithinNewArrivalPeriod(
-  createdAt: string | null | undefined
-): boolean {
-  if (!createdAt) return false;
-
-  const createdTime = new Date(createdAt).getTime();
-
-  if (!Number.isFinite(createdTime)) return false;
-
-  const age = Date.now() - createdTime;
-
-  return age >= 0 && age < NEW_ARRIVAL_DAYS * DAY_IN_MS;
-}
-
 function normalizeCategory(
   categoryName: string | undefined
 ): Product["category"] | null {
   const normalized = categoryName?.trim().toLowerCase();
-
-  if (!normalized) return null;
 
   if (normalized === "sets" || normalized === "set") {
     return "Sets";
@@ -85,19 +64,33 @@ function normalizeImages(
   const allImages = [
     mainImage,
     ...(Array.isArray(images) ? images : []),
-  ].filter(
-    (image): image is string =>
-      typeof image === "string" &&
-      image.trim().length > 0
-  );
+  ]
+    .filter(
+      (image): image is string =>
+        typeof image === "string" &&
+        image.trim().length > 0
+    )
+    .map((image) => image.trim());
 
   return [...new Set(allImages)];
 }
 
-function normalizePrice(value: number | string | null | undefined): number {
+function normalizePrice(
+  value: number | string | null | undefined
+): number {
   const price = Number(value ?? 0);
 
-  return Number.isFinite(price) && price >= 0 ? price : 0;
+  return Number.isFinite(price) && price >= 0
+    ? price
+    : 0;
+}
+
+function normalizeStock(value: unknown): number {
+  const stock = Number(value ?? 0);
+
+  return Number.isFinite(stock)
+    ? Math.max(0, Math.floor(stock))
+    : 0;
 }
 
 function normalizeVariant(
@@ -108,9 +101,8 @@ function normalizeVariant(
     size: variant.size ?? "",
     color: variant.color ?? "Default",
     color_code: variant.color_code ?? null,
-    stock_quantity: Math.max(
-      0,
-      Number(variant.stock_quantity ?? 0)
+    stock_quantity: normalizeStock(
+      variant.stock_quantity
     ),
     price_override:
       variant.price_override == null
@@ -141,9 +133,17 @@ export async function getTalaProducts(): Promise<Product[]> {
     );
   }
 
-  const products = result.products ?? [];
-  const categories = result.categories ?? [];
-  const variants = result.variants ?? [];
+  const products = Array.isArray(result.products)
+    ? result.products
+    : [];
+
+  const categories = Array.isArray(result.categories)
+    ? result.categories
+    : [];
+
+  const variants = Array.isArray(result.variants)
+    ? result.variants
+    : [];
 
   const categoryMap = new Map(
     categories.map((category) => [
@@ -176,27 +176,21 @@ export async function getTalaProducts(): Promise<Product[]> {
       product.category_id ?? ""
     );
 
-    // لا ننسب المنتج تلقائياً إلى Sets إذا كان القسم
-    // مفقوداً أو غير معروف؛ هذا يمنع ظهوره في قسم خاطئ.
     const category = normalizeCategory(categoryName);
 
+    // لا نعرض منتجات غير مصنفة ضمن Sets أو Jackets.
     if (!category) {
       console.warn(
-        `TALA: Product "${product.name}" was skipped because its category is not Sets or Jackets.`
+        `TALA: Product "${product.name}" skipped because its category is not Sets or Jackets.`
       );
+
       return [];
     }
 
     const productVariants =
       variantsByProduct.get(product.id) ?? [];
 
-    // نعرض كل المقاسات والألوان النشطة،
-    // حتى لو المخزون الخاص بها أصبح صفراً.
-    const activeVariants = productVariants.filter(
-      (variant) => variant.is_active
-    );
-
-    const availableVariants = activeVariants.filter(
+    const availableVariants = productVariants.filter(
       (variant) => variant.stock_quantity > 0
     );
 
@@ -205,17 +199,17 @@ export async function getTalaProducts(): Promise<Product[]> {
       product.images
     );
 
-    const uniqueSizes = [
+    const sizes = [
       ...new Set(
-        activeVariants
+        productVariants
           .map((variant) => variant.size.trim())
           .filter(Boolean)
       ),
     ];
 
-    const uniqueColors = [
+    const colors = [
       ...new Map(
-        activeVariants
+        productVariants
           .filter((variant) => variant.color.trim())
           .map((variant) => [
             variant.color.trim(),
@@ -228,57 +222,58 @@ export async function getTalaProducts(): Promise<Product[]> {
       ).values(),
     ];
 
-    const isNewArrival =
-      Boolean(product.is_new) ||
-      Boolean(product.is_new_arrival);
-
-    const isNew =
-      isNewArrival &&
-      isWithinNewArrivalPeriod(product.created_at);
-
     const price = normalizePrice(product.price);
 
     const oldPrice =
-      product.compare_at_price != null
-        ? normalizePrice(product.compare_at_price)
-        : undefined;
+      product.compare_at_price == null
+        ? undefined
+        : normalizePrice(product.compare_at_price);
 
-    const hasStock = availableVariants.length > 0;
+    // نحترم اختيار الإدارة لعلامة New مباشرة.
+    const isNew =
+      Boolean(product.is_new) ||
+      Boolean(product.is_new_arrival);
 
-    return [{
-      id: product.id,
-      slug: product.slug,
+    // المنتج يظل ظاهراً حتى لو نفد المخزون.
+    // لكن لا يمكن شراؤه بدون مقاس/لون متاح ومخزون فعلي.
+    const isAvailable =
+      product.is_available !== false &&
+      availableVariants.length > 0;
 
-      variants: productVariants,
+    return [
+      {
+        id: product.id,
+        slug: product.slug,
 
-      name: product.name,
-      subtitle: product.subtitle ?? "",
-      description: product.description ?? "",
+        variants: productVariants,
 
-      price,
-      oldPrice,
+        name: product.name,
+        subtitle: product.subtitle ?? "",
+        description: product.description ?? "",
 
-      category,
+        price,
+        oldPrice,
 
-      image: images[0] ?? PLACEHOLDER_IMAGE,
-      images,
+        category,
 
-      colors: uniqueColors,
-      sizes: uniqueSizes,
+        // لا نستخدم صور Placeholder خارجية.
+        // مكونات عرض الصور تتولى إظهار البديل عند غياب الصورة.
+        image: images[0] ?? "",
+        images,
 
-      rating: 0,
-      reviews: 0,
+        colors,
+        sizes,
 
-      isNew,
-      isBestSeller: Boolean(product.is_best_seller),
-      isFeatured: Boolean(product.is_featured),
+        rating: 0,
+        reviews: 0,
 
-      // المنتج يظل ظاهراً حتى لو نفد المخزون.
-      // هذه القيمة تتحكم في إمكانية الشراء.
-      isAvailable:
-        product.is_available !== false && hasStock,
+        isNew,
+        isBestSeller: Boolean(product.is_best_seller),
+        isFeatured: Boolean(product.is_featured),
+        isAvailable,
 
-      tags: product.tags ?? [],
-    }];
+        tags: product.tags ?? [],
+      },
+    ];
   });
 }
