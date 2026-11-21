@@ -488,21 +488,24 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      
-      {/* SPLIT EDITORIAL HERO */}
-      <section className="relative h-[calc(100svh-34px)] min-h-[650px] max-h-[1100px] overflow-hidden bg-[#292521] text-white">
-        {/* Background image */}
+      {/* RESPONSIVE EDITORIAL HERO */}
+      <section className="relative min-h-[760px] h-[calc(100svh-34px)] max-h-[1100px] overflow-hidden bg-[#292521] text-white sm:min-h-[720px] md:min-h-[680px]">
+        {/* Hero image */}
         {hero?.image ? (
           <AnimatePresence mode="sync" initial={false}>
             <motion.div
               key={hero.image}
-              initial={reducedMotion ? false : { opacity: 0, scale: 1.035 }}
+              initial={
+                reducedMotion
+                  ? false
+                  : { opacity: 0, scale: 1.025 }
+              }
               animate={{ opacity: 1, scale: 1 }}
               exit={reducedMotion ? undefined : { opacity: 0 }}
               transition={
                 reducedMotion
                   ? { duration: 0 }
-                  : { duration: 1, ease: EASE }
+                  : { duration: 0.9, ease: EASE }
               }
               className="absolute inset-0"
             >
@@ -513,6 +516,7 @@ export default function HomePage() {
                     srcSet={hero.mobileImage}
                   />
                 )}
+
                 <img
                   src={hero.image}
                   alt={hero.title}
@@ -531,70 +535,72 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#817568] via-[#65594f] to-[#292521]" />
         )}
 
-        {/* Image contrast */}
-        <div className="absolute inset-0 bg-black/15" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent" />
+        {/* Image overlays */}
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/20" />
 
-        {/* Editorial text panel */}
+        {/* Desktop editorial panel */}
         {hero && (
           <AnimatePresence mode="sync" initial={false}>
             <motion.div
-              key={`${hero.id}-split-editorial`}
+              key={`${hero.id}-editorial-panel`}
               initial={
                 reducedMotion
                   ? false
-                  : { opacity: 0, x: 28 }
+                  : { opacity: 0, x: 22 }
               }
               animate={{ opacity: 1, x: 0 }}
               exit={
                 reducedMotion
                   ? undefined
-                  : { opacity: 0, x: 18 }
+                  : { opacity: 0, x: 14 }
               }
               transition={
                 reducedMotion
                   ? { duration: 0 }
-                  : { duration: 0.65, ease: EASE }
+                  : { duration: 0.6, ease: EASE }
               }
-              className="absolute inset-x-4 bottom-[82px] z-10 mx-auto max-w-[540px] bg-[#F4F0E9] px-6 py-8 text-[#292521] shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:inset-x-auto sm:right-8 sm:bottom-[100px] sm:px-10 sm:py-11 md:right-[7%] md:top-1/2 md:bottom-auto md:w-[39%] md:-translate-y-1/2 md:px-12 md:py-14 lg:right-[9%] lg:px-16 lg:py-20"
+              className="absolute left-4 right-4 bottom-[105px] z-10 mx-auto max-h-[calc(100%-190px)] w-auto max-w-[540px] overflow-y-auto bg-[#F4F0E9] px-6 py-7 text-[#292521] shadow-[0_18px_60px_rgba(0,0,0,0.16)] sm:left-auto sm:right-8 sm:bottom-[105px] sm:w-[min(540px,calc(100vw-4rem))] sm:px-10 sm:py-10 md:right-[7%] md:top-1/2 md:bottom-auto md:w-[min(39%,560px)] md:min-w-[340px] md:max-h-[calc(100%-150px)] md:-translate-y-1/2 md:px-10 md:py-12 lg:right-[9%] lg:px-14 lg:py-16"
             >
-              <div className="mb-7 flex items-center gap-3 sm:mb-10">
-                <span className="h-px w-8 bg-[#A18B70]" />
-                <p className="text-[8px] uppercase tracking-[3px] text-[#8D7962] sm:text-[9px] sm:tracking-[4px]">
+              <div className="mb-6 flex items-center gap-3 sm:mb-8">
+                <span className="h-px w-8 shrink-0 bg-[#A18B70]" />
+
+                <p className="min-w-0 break-words text-[8px] uppercase leading-5 tracking-[2px] text-[#8D7962] sm:text-[9px] sm:tracking-[3px]">
                   {hero.subtitle}
                 </p>
               </div>
 
-              <h1 className="max-w-full break-words font-serif text-5xl font-normal leading-[0.98] tracking-[1px] sm:text-6xl md:text-7xl lg:text-[88px]">
+              <h1 className="break-words font-serif text-5xl font-normal leading-[0.98] tracking-[1px] sm:text-6xl md:text-6xl lg:text-[76px]">
                 {hero.title}
               </h1>
 
               {hero.description && (
-                <p className="mt-6 max-w-sm text-[11px] font-light leading-7 tracking-[0.5px] text-[#77716A] sm:mt-8 sm:text-xs sm:leading-8">
+                <p className="mt-5 max-w-sm break-words text-[11px] font-light leading-7 tracking-[0.3px] text-[#77716A] sm:mt-7 sm:text-xs sm:leading-8">
                   {hero.description}
                 </p>
               )}
 
-              <div className="mt-8 flex flex-wrap items-center gap-5 sm:mt-10">
+              <div className="mt-7 flex flex-wrap items-center gap-4 sm:mt-9">
                 <Link
                   href={hero.buttonLink}
-                  className="group inline-flex min-h-12 items-center gap-7 bg-[#292521] px-6 py-4 text-[8px] uppercase tracking-[2px] text-white transition-all duration-500 hover:bg-[#8D7962] sm:px-8 sm:text-[9px]"
+                  className="group inline-flex min-h-11 max-w-full items-center justify-center gap-5 bg-[#292521] px-5 py-3 text-[8px] uppercase tracking-[1.5px] text-white transition-all duration-500 hover:bg-[#8D7962] sm:px-7 sm:text-[9px] sm:tracking-[2px]"
                 >
-                  {hero.buttonText}
+                  <span className="break-words">{hero.buttonText}</span>
+
                   <ArrowRight
                     size={14}
                     strokeWidth={1.2}
-                    className="transition-transform duration-300 group-hover:translate-x-1"
+                    className="shrink-0 transition-transform duration-300 group-hover:translate-x-1"
                   />
                 </Link>
 
-                <span className="hidden text-[8px] tracking-[2px] text-[#A69A8C] sm:inline">
+                <span className="hidden text-[8px] tracking-[2px] text-[#A69A8C] lg:inline">
                   TALA LUXURY FASHION
                 </span>
               </div>
 
-              <div className="mt-8 border-t border-[#DED5C9] pt-5 sm:mt-12">
-                <p className="text-[8px] uppercase tracking-[3px] text-[#A18B70]">
+              <div className="mt-7 border-t border-[#DED5C9] pt-4 sm:mt-9 sm:pt-5">
+                <p className="text-[8px] uppercase tracking-[2px] text-[#A18B70] sm:tracking-[3px]">
                   A QUIETER KIND OF ELEGANCE
                 </p>
               </div>
@@ -604,8 +610,8 @@ export default function HomePage() {
 
         {/* Slide controls */}
         {heroSlides.length > 1 && (
-          <div className="absolute bottom-7 right-6 z-20 flex items-center gap-4 sm:bottom-10 sm:right-10 md:right-14">
-            <span className="text-[10px] tracking-[2px] text-white">
+          <div className="absolute bottom-7 right-5 z-20 flex items-center gap-3 sm:bottom-9 sm:right-9 sm:gap-4 md:right-14">
+            <span className="text-[9px] tracking-[2px] text-white">
               {String(heroIndex + 1).padStart(2, "0")}
             </span>
 
@@ -619,21 +625,21 @@ export default function HomePage() {
                   aria-current={heroIndex === index}
                   className={`h-[2px] transition-all duration-500 ${
                     heroIndex === index
-                      ? "w-9 bg-white"
+                      ? "w-8 bg-white"
                       : "w-4 bg-white/50 hover:bg-white"
                   }`}
                 />
               ))}
             </div>
 
-            <span className="text-[10px] tracking-[2px] text-white/70">
+            <span className="text-[9px] tracking-[2px] text-white/70">
               {String(heroSlides.length).padStart(2, "0")}
             </span>
           </div>
         )}
 
         {/* Discover indicator */}
-        <div className="absolute bottom-7 left-6 z-20 flex items-center gap-3 text-white sm:bottom-10 sm:left-10 md:left-14">
+        <div className="absolute bottom-7 left-5 z-20 flex items-center gap-3 text-white sm:bottom-9 sm:left-9 md:left-14">
           <motion.span
             animate={
               reducedMotion
@@ -648,6 +654,7 @@ export default function HomePage() {
           >
             <ArrowDown size={15} strokeWidth={1} />
           </motion.span>
+
           <span className="text-[8px] uppercase tracking-[3px]">
             Discover
           </span>
@@ -668,7 +675,6 @@ export default function HomePage() {
           </div>
         )}
       </section>
-
 
       {/* NEW ARRIVALS */}
       <section className="bg-[#e9e2d8] px-5 py-24 md:px-14">
