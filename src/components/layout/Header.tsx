@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Search,
   ShoppingBag,
@@ -23,6 +23,7 @@ const navigation = [
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const cartCount = useCartCount();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -59,11 +60,23 @@ export default function Header() {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setSearchOpen(false);
+    setMobileMenuOpen(false);
+
+    router.push(
+      `/collections/all-pieces?q=${encodeURIComponent(query)}`
+    );
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#24221F]/10 bg-[#F5F1EB]/95 text-[#24221F] backdrop-blur-xl">
-
       <div className="mx-auto flex h-[72px] max-w-[1600px] items-center justify-between px-5 sm:px-8 lg:h-[84px] lg:px-14">
-
         {/* Mobile menu */}
         <button
           type="button"
@@ -83,7 +96,10 @@ export default function Header() {
         </button>
 
         {/* Desktop navigation */}
-        <nav className="hidden flex-1 items-center gap-6 lg:flex xl:gap-9">
+        <nav
+          aria-label="Main navigation"
+          className="hidden flex-1 items-center gap-6 lg:flex xl:gap-9"
+        >
           {navigation.map((item) => (
             <Link
               key={item.href}
@@ -125,7 +141,6 @@ export default function Header() {
 
         {/* Actions */}
         <div className="flex flex-1 items-center justify-end gap-4 sm:gap-6">
-
           <button
             type="button"
             onClick={() => {
@@ -156,16 +171,15 @@ export default function Header() {
               </span>
             )}
           </Link>
-
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search panel */}
       {searchOpen && (
         <div className="absolute left-0 top-full z-50 w-full border-t border-[#24221F]/10 bg-[#F5F1EB] px-5 py-6 shadow-lg sm:px-10">
           <form
-            action="/products"
-            method="GET"
+            onSubmit={handleSearch}
+            role="search"
             className="mx-auto flex max-w-[850px] items-center gap-4 border-b border-[#24221F]/30 pb-3"
           >
             <Search
@@ -180,6 +194,7 @@ export default function Header() {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Find your next favourite..."
+              aria-label="Search TALA products"
               autoFocus
               className="w-full bg-transparent py-2 text-sm text-[#24221F] outline-none placeholder:text-[#999188]"
             />
@@ -193,13 +208,16 @@ export default function Header() {
               <ArrowRight size={14} />
             </button>
           </form>
+
+          <p className="mx-auto mt-4 max-w-[850px] text-[8px] uppercase tracking-[0.2em] text-[#999188]">
+            SEARCH THE TALA COLLECTION
+          </p>
         </div>
       )}
 
       {/* Mobile navigation */}
       {mobileMenuOpen && (
         <div className="absolute left-0 top-full z-50 max-h-[calc(100dvh-72px)] w-full overflow-y-auto border-t border-[#24221F]/10 bg-[#F5F1EB] px-6 pb-10 pt-8 shadow-xl lg:hidden">
-
           <div className="mb-8 flex items-center justify-between">
             <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[#77716A]">
               YOUR NEXT TALA FIND
@@ -210,7 +228,7 @@ export default function Header() {
             </span>
           </div>
 
-          <nav className="flex flex-col">
+          <nav aria-label="Mobile navigation" className="flex flex-col">
             {navigation.map((item, index) => (
               <Link
                 key={item.href}
@@ -256,7 +274,6 @@ export default function Header() {
           <p className="mt-9 text-center text-[8px] tracking-[0.35em] text-[#999188]">
             TALA — LUXURY FASHION
           </p>
-
         </div>
       )}
     </header>
