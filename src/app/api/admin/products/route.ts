@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const ALLOWED_STATUSES = ["draft", "published", "archived"] as const;
+const ALLOWED_COLLECTIONS = ["sets", "jackets"] as const;
 
 type ProductStatus = (typeof ALLOWED_STATUSES)[number];
-
 type ProductUpdate = Record<string, unknown>;
 
 function errorResponse(error: string, status = 400) {
@@ -26,7 +26,7 @@ function makeSlug(value: string) {
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-|-+$/g, "");
 }
 
 function isValidPrice(value: unknown): value is number {
@@ -62,11 +62,7 @@ function isValidImageUrl(value: unknown): value is string {
 }
 
 function validateImages(value: unknown): string[] | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-
-  if (value.length > 20) {
+  if (!Array.isArray(value) || value.length > 20) {
     return null;
   }
 
@@ -99,9 +95,25 @@ async function getProductCategory(
 ) {
   return db
     .from("categories")
-    .select("id")
+    .select("id, slug, name, is_active")
     .eq("id", categoryId)
     .maybeSingle();
+}
+
+function isAllowedProductCategory(category: {
+  slug: string | null;
+  name: string | null;
+  is_active: boolean | null;
+} | null) {
+  if (!category || category.is_active !== true) {
+    return false;
+  }
+
+  const slug = makeSlug(category.slug || category.name || "");
+
+  return ALLOWED_COLLECTIONS.includes(
+    slug as (typeof ALLOWED_COLLECTIONS)[number]
+  );
 }
 
 // GET: Fetch products
@@ -187,7 +199,9 @@ export async function POST(request: NextRequest) {
       typeof body.name === "string" ? body.name.trim() : "";
 
     if (!name || name.length > 160) {
-      return errorResponse("Product name is required (maximum 160 characters)");
+      return errorResponse(
+        "Product name is required (maximum 160 characters)"
+      );
     }
 
     const price = Number(body.price);
@@ -236,10 +250,17 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: category, error: categoryError } =
-      await getProductCategory(db, body.category_id);
+      await getProductCategory(db, body.category_id.trim());
 
-    if (categoryError || !category) {
-      return errorResponse("The selected category does not exist");
+    if (categoryError) {
+      console.error("Product category lookup error:", categoryError);
+      return errorResponse("Could not verify the selected category", 500);
+    }
+
+    if (!isAllowedProductCategory(category)) {
+      return errorResponse(
+        "Choose an active TALA collection: Sets or Jackets."
+      );
     }
 
     const images =
@@ -293,7 +314,7 @@ export async function POST(request: NextRequest) {
     const productData = {
       name,
       slug,
-      category_id: body.category_id,
+      category_id: category.id,
       description:
         typeof body.description === "string"
           ? body.description.trim() || null
@@ -427,13 +448,20 @@ export async function PATCH(request: NextRequest) {
       }
 
       const { data: category, error: categoryError } =
-        await getProductCategory(db, body.category_id);
+        await getProductCategory(db, body.category_id.trim());
 
-      if (categoryError || !category) {
-        return errorResponse("The selected category does not exist");
+      if (categoryError) {
+        console.error("Product category lookup error:", categoryError);
+        return errorResponse("Could not verify the selected category", 500);
       }
 
-      updates.category_id = body.category_id;
+      if (!isAllowedProductCategory(category)) {
+        return errorResponse(
+          "Choose an active TALA collection: Sets or Jackets."
+        );
+      }
+
+      updates.category_id = category.id;
     }
 
     if (body.description !== undefined) {
