@@ -1,181 +1,95 @@
 
-export const CART_STORAGE_KEY = "tala-cart";
+/* =========================================
+   TALA — GLOBAL PAGE STYLES
+   Luxury storefront compatibility
+   ========================================= */
 
-export type CartItem = {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  image: string;
-  size: string;
-  color: string;
-  quantity: number;
-};
+:root {
+  --tala-bg: var(--background);
+  --tala-surface: var(--surface);
+  --tala-surface-alt: var(--surface-soft);
 
-export type NewCartItem = Omit<CartItem, "id" | "quantity"> & {
-  quantity?: number;
-};
+  --tala-text: var(--foreground);
+  --tala-muted: var(--muted);
 
-function isBrowser(): boolean {
-  return typeof window !== "undefined";
+  --tala-accent: var(--accent);
+  --tala-accent-dark: var(--foreground);
+
+  --tala-border: var(--border);
+  --tala-white: #ffffff;
+  --tala-black: var(--foreground);
+
+  --tala-radius-sm: 3px;
+  --tala-radius-md: 10px;
+  --tala-radius-lg: 20px;
+  --tala-radius-xl: 30px;
+
+  --tala-shadow-soft: var(--shadow-soft);
+  --tala-shadow-medium: var(--shadow-large);
+
+  --tala-transition: 350ms var(--ease-luxury);
 }
 
-function notifyCartUpdated(): void {
-  if (!isBrowser()) return;
+/* =========================================
+   INTERACTIVE ELEMENTS
+   Do not override component text colors
+   ========================================= */
 
-  window.dispatchEvent(new Event("tala-cart-updated"));
+button,
+a {
+  -webkit-text-size-adjust: 100%;
+  text-decoration-skip-ink: auto;
 }
 
-export function getCart(): CartItem[] {
-  if (!isBrowser()) return [];
+button {
+  cursor: pointer;
+}
 
-  try {
-    const stored = localStorage.getItem(CART_STORAGE_KEY);
+button:disabled {
+  cursor: not-allowed;
+}
 
-    if (!stored) return [];
+/* =========================================
+   PRODUCT CARDS — TOUCH VISIBILITY
+   ========================================= */
 
-    const parsed: unknown = JSON.parse(stored);
+a.group [class*="bottom-3"][class*="right-3"][class*="opacity-0"] {
+  opacity: 1;
+  transform: translateY(0);
+}
 
-    if (!Array.isArray(parsed)) return [];
+/* =========================================
+   DARK TALA CALL-TO-ACTION BUTTONS
+   ========================================= */
 
-    return parsed.filter((item): item is CartItem => {
-      return (
-        item !== null &&
-        typeof item === "object" &&
-        typeof item.id === "string" &&
-        typeof item.productId === "string" &&
-        typeof item.name === "string" &&
-        typeof item.price === "number" &&
-        Number.isFinite(item.price) &&
-        typeof item.quantity === "number" &&
-        Number.isFinite(item.quantity) &&
-        item.quantity > 0
-      );
-    });
-  } catch {
-    return [];
+a[class*="bg-[#24221F]"],
+button[class*="bg-[#24221F]"],
+a[class*="bg-[#282821]"],
+button[class*="bg-[#282821]"] {
+  color: #ffffff;
+}
+
+/* =========================================
+   KEYBOARD ACCESSIBILITY
+   ========================================= */
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #89965D;
+  outline-offset: 4px;
+}
+
+/* =========================================
+   REDUCED MOTION
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-}
-
-export function saveCart(items: CartItem[]): void {
-  if (!isBrowser()) return;
-
-  try {
-    localStorage.setItem(
-      CART_STORAGE_KEY,
-      JSON.stringify(items)
-    );
-
-    notifyCartUpdated();
-  } catch (error) {
-    console.error("TALA: Unable to save shopping bag.", error);
-  }
-}
-
-export function addToCart(item: NewCartItem): CartItem[] {
-  if (!isBrowser()) return [];
-
-  const cart = getCart();
-
-  const quantity = Math.max(
-    1,
-    Math.min(10, Math.floor(item.quantity ?? 1))
-  );
-
-  const existingIndex = cart.findIndex(
-    (existing) =>
-      existing.productId === item.productId &&
-      existing.size === item.size &&
-      existing.color === item.color
-  );
-
-  let updatedCart: CartItem[];
-
-  if (existingIndex !== -1) {
-    updatedCart = cart.map((existing, index) => {
-      if (index !== existingIndex) return existing;
-
-      return {
-        ...existing,
-        quantity: Math.min(10, existing.quantity + quantity),
-      };
-    });
-  } else {
-    const newItem: CartItem = {
-      ...item,
-      id: `${item.productId}-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`,
-      quantity,
-    };
-
-    updatedCart = [...cart, newItem];
-  }
-
-  saveCart(updatedCart);
-
-  return updatedCart;
-}
-
-export function updateCartQuantity(
-  itemId: string,
-  quantity: number
-): CartItem[] {
-  const cart = getCart();
-
-  const safeQuantity = Math.max(
-    1,
-    Math.min(10, Math.floor(quantity))
-  );
-
-  const updatedCart = cart.map((item) =>
-    item.id === itemId
-      ? { ...item, quantity: safeQuantity }
-      : item
-  );
-
-  saveCart(updatedCart);
-
-  return updatedCart;
-}
-
-export function removeFromCart(itemId: string): CartItem[] {
-  const updatedCart = getCart().filter(
-    (item) => item.id !== itemId
-  );
-
-  saveCart(updatedCart);
-
-  return updatedCart;
-}
-
-export function clearCart(): void {
-  saveCart([]);
-}
-
-export function getCartCount(): number {
-  return getCart().reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
-}
-
-export function getCartSubtotal(): number {
-  return getCart().reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
-}
-
-export function isInCart(
-  productId: string,
-  size: string,
-  color: string
-): boolean {
-  return getCart().some(
-    (item) =>
-      item.productId === productId &&
-      item.size === size &&
-      item.color === color
-  );
 }
