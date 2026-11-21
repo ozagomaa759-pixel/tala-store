@@ -68,9 +68,6 @@ if (
     404
   );
 }
-    if (!data) {
-      return errorResponse("We couldn't find an order matching those details. Please check them and try again.", 404);
-    }
 
     return NextResponse.json(
       {
