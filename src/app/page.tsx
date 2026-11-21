@@ -331,7 +331,7 @@ transition: TEXT_TRANSITION,
 };
 
 return (
-  <>
+  <main>
     {/* ANNOUNCEMENT */}
     <div className="announcement-bar">
       DISCOVER THE NEW TALA COLLECTION
