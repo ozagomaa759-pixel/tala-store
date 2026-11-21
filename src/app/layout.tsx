@@ -24,23 +24,42 @@ const talaSans = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://tala-fashion.vercel.app"),
   title: {
-    default: "TALA | Luxury Fashion",
+    default: "TALA — Contemporary Luxury Fashion",
     template: "%s | TALA",
   },
   description:
-    "Discover the TALA collection. Timeless fashion, elegant details, and effortless style.",
+    "Discover TALA. Contemporary fashion, expressive style, and effortless confidence.",
   applicationName: "TALA",
+  keywords: [
+    "TALA",
+    "TALA Fashion",
+    "Women's Fashion",
+    "Contemporary Fashion",
+    "Luxury Fashion",
+    "Sets",
+    "Jackets",
+  ],
   robots: {
     index: true,
     follow: true,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "TALA",
+    title: "TALA — Contemporary Luxury Fashion",
+    description:
+      "Contemporary fashion, expressive style, and effortless confidence.",
+    url: "https://tala-fashion.vercel.app",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f4f0e9",
+  themeColor: "#F5F1EB",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -50,8 +69,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${talaDisplay.variable} ${talaSans.variable}`}>
+      <body
+        className={`${talaDisplay.variable} ${talaSans.variable}`}
+      >
         <TalaOpening />
+
         <AnimationProvider>
           <AnnouncementBar />
           {children}
