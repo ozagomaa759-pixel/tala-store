@@ -1,13 +1,13 @@
-
 "use client";
 
 import { usePathname } from "next/navigation";
 
 const messages = [
-  "THE ART OF EVERYDAY ELEGANCE",
-  "A QUIETER KIND OF ELEGANCE",
-  "TALA LUXURY FASHION",
-  "DISCOVER THE COLLECTION",
+  "A LITTLE UNEXPECTED. ALWAYS TALA.",
+  "YOUR STYLE. YOUR RULES.",
+  "PLAYFUL BY NATURE. LUXURY BY CHOICE.",
+  "FIND YOUR NEXT FAVORITE PIECE.",
+  "NOT HERE TO BLEND IN.",
 ];
 
 function MessageGroup({ duplicate = false }: { duplicate?: boolean }) {
@@ -20,7 +20,7 @@ function MessageGroup({ duplicate = false }: { duplicate?: boolean }) {
         <span className="tala-marquee-item" key={message}>
           {message}
           <span className="tala-marquee-star" aria-hidden="true">
-            ✦
+            ✳
           </span>
         </span>
       ))}
