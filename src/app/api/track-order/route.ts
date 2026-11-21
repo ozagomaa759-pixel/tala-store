@@ -51,16 +51,23 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("orders")
-      .select("order_number, status, payment_status, created_at, updated_at")
+      .select("order_number, customer_phone, status, payment_status, created_at, updated_at")
       .eq("order_number", orderNumber)
-      .eq("customer_phone", cleanString(input.phone))
-      .maybeSingle();
+.maybeSingle();
 
     if (error) {
       console.error("Public order tracking lookup failed:", error.message);
       return errorResponse("We could not check your order right now. Please try again later.", 500);
     }
-
+if (
+  !data ||
+  normalizePhone(data.customer_phone) !== phone
+) {
+  return errorResponse(
+    "We couldn't find an order matching those details. Please check them and try again.",
+    404
+  );
+}
     if (!data) {
       return errorResponse("We couldn't find an order matching those details. Please check them and try again.", 404);
     }
