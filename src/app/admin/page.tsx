@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   Sparkles,
   Tags,
+  Users,
 } from "lucide-react";
 
 const sections = [
@@ -49,6 +50,15 @@ const sections = [
   },
   {
     number: "04",
+    title: "Customers",
+    description: "Explore customer records, find contact details and manage information.",
+    href: "/admin/customers",
+    icon: Users,
+    tag: "Customer relationships",
+    accent: "bg-[#EEE8F2] text-[#806B91]",
+  },
+  {
+    number: "05",
     title: "Inventory",
     description: "Keep track of sizes, colors, available stock and sold-out options.",
     href: "/admin/inventory",
@@ -57,13 +67,13 @@ const sections = [
     accent: "bg-[#F2EEDF] text-[#8C8051]",
   },
   {
-    number: "05",
+    number: "06",
     title: "Hero Management",
     description: "Manage homepage campaigns, visuals and featured slides.",
     href: "/admin/hero",
     icon: Images,
     tag: "Homepage experience",
-    accent: "bg-[#EEE8F2] text-[#806B91]",
+    accent: "bg-[#E9EDDF] text-[#687A50]",
   },
 ];
 
