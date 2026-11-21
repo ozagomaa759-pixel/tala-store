@@ -76,11 +76,6 @@ type ApiCategory = {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-const HERO_TRANSITION = {
-  duration: 0.65,
-  ease: EASE,
-};
-
 const TEXT_TRANSITION = {
   duration: 0.5,
   ease: EASE,
@@ -146,10 +141,13 @@ export default function HomePage() {
         const response = await fetch("/api/categories", {
           cache: "no-store",
         });
+
         if (!response.ok) {
           throw new Error("Unable to load categories");
         }
+
         const result = await response.json();
+
         if (
           !active ||
           !result.success ||
@@ -157,6 +155,7 @@ export default function HomePage() {
         ) {
           return;
         }
+
         const updatedCategories: Category[] = (
           result.categories as ApiCategory[]
         )
@@ -191,6 +190,7 @@ export default function HomePage() {
             sort_order: category.sort_order ?? 0,
           }))
           .sort((a, b) => a.sort_order - b.sort_order);
+
         if (active) {
           setCategories(updatedCategories);
         }
@@ -198,7 +198,9 @@ export default function HomePage() {
         console.error("TALA categories loading error:", error);
       }
     }
+
     loadCategories();
+
     return () => {
       active = false;
     };
@@ -213,10 +215,13 @@ export default function HomePage() {
         const response = await fetch("/api/hero", {
           cache: "no-store",
         });
+
         if (!response.ok) {
           throw new Error("Unable to load hero slides");
         }
+
         const result = await response.json();
+
         if (active && result.success && Array.isArray(result.slides)) {
           const validSlides = result.slides
             .filter(
@@ -230,11 +235,13 @@ export default function HomePage() {
               (a: HeroSlide, b: HeroSlide) =>
                 a.sort_order - b.sort_order
             );
+
           setHeroSlides(validSlides);
           setHeroIndex(0);
         }
       } catch (error) {
         console.error("TALA hero loading error:", error);
+
         if (active) {
           setHeroSlides([]);
         }
@@ -244,7 +251,9 @@ export default function HomePage() {
         }
       }
     }
+
     loadHeroSlides();
+
     return () => {
       active = false;
     };
@@ -256,9 +265,12 @@ export default function HomePage() {
 
     const nextIndex = (heroIndex + 1) % heroSlides.length;
     const nextSlide = heroSlides[nextIndex];
+
     if (!nextSlide) return;
+
     const desktopImage = new window.Image();
     desktopImage.src = nextSlide.image_url;
+
     if (nextSlide.mobile_image_url) {
       const mobileImage = new window.Image();
       mobileImage.src = nextSlide.mobile_image_url;
@@ -272,6 +284,7 @@ export default function HomePage() {
     const interval = window.setInterval(() => {
       setHeroIndex((current) => (current + 1) % heroSlides.length);
     }, 7000);
+
     return () => window.clearInterval(interval);
   }, [heroLoaded, heroSlides.length]);
 
@@ -283,12 +296,15 @@ export default function HomePage() {
       try {
         setLoading(true);
         setLoadError(false);
+
         const data = await getTalaProducts();
+
         if (active) {
           setProducts(data);
         }
       } catch (error) {
         console.error("TALA homepage products error:", error);
+
         if (active) {
           setLoadError(true);
           setProducts([]);
@@ -299,7 +315,9 @@ export default function HomePage() {
         }
       }
     }
+
     loadProducts();
+
     return () => {
       active = false;
     };
@@ -362,6 +380,7 @@ export default function HomePage() {
             </motion.span>
           </AnimatePresence>
         </button>
+
         <Link
           href="/"
           aria-label="TALA homepage"
@@ -369,6 +388,7 @@ export default function HomePage() {
         >
           TALA
         </Link>
+
         <Link
           href="/cart"
           aria-label={`Shopping bag, ${cartCount} items`}
@@ -398,6 +418,7 @@ export default function HomePage() {
               transition={{ duration: reducedMotion ? 0 : 0.25 }}
               className="fixed inset-0 z-20 cursor-default bg-black/25"
             />
+
             <motion.div
               initial={
                 reducedMotion
@@ -410,7 +431,9 @@ export default function HomePage() {
                   ? { opacity: 0 }
                   : { opacity: 0, y: -12 }
               }
-              transition={reducedMotion ? { duration: 0 } : MENU_TRANSITION}
+              transition={
+                reducedMotion ? { duration: 0 } : MENU_TRANSITION
+              }
               className="fixed inset-x-0 top-0 z-30 bg-[#f4f0e9] px-8 pb-12 pt-28 text-[#292521] shadow-xl"
             >
               <nav className="mx-auto flex max-w-5xl flex-col">
@@ -427,26 +450,14 @@ export default function HomePage() {
                   }}
                 >
                   {[
-                    {
-                      label: "SETS",
-                      href: "/collections/sets",
-                    },
-                    {
-                      label: "JACKETS",
-                      href: "/collections/jackets",
-                    },
+                    { label: "SETS", href: "/collections/sets" },
+                    { label: "JACKETS", href: "/collections/jackets" },
                     {
                       label: "ALL PIECES",
                       href: "/collections/all-pieces",
                     },
-                    {
-                      label: "OUR STORY",
-                      href: "/about",
-                    },
-                    {
-                      label: "CONTACT",
-                      href: "/contact",
-                    },
+                    { label: "OUR STORY", href: "/about" },
+                    { label: "CONTACT", href: "/contact" },
                   ].map((item) => (
                     <motion.div
                       key={`${item.label}-${item.href}`}
@@ -478,7 +489,7 @@ export default function HomePage() {
       </AnimatePresence>
 
       {/* EDITORIAL HERO */}
-      <section className="relative h-[calc(100svh-34px)] min-h-[650px] max-h-[1100px] overflow-hidden bg-[#75695e] text-white md:min-h-[720px]">
+      <section className="relative h-[calc(100svh-34px)] min-h-[650px] max-h-[1100px] overflow-hidden bg-[#75695e] text-white">
         {hero?.image ? (
           <AnimatePresence mode="sync" initial={false}>
             <motion.div
@@ -500,6 +511,7 @@ export default function HomePage() {
                     srcSet={hero.mobileImage}
                   />
                 )}
+
                 <img
                   src={hero.image}
                   alt={hero.title}
@@ -517,9 +529,11 @@ export default function HomePage() {
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[#817568] via-[#65594f] to-[#292521]" />
         )}
+
         <div className="absolute inset-0 bg-black/10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/20" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
+
         {hero && (
           <AnimatePresence mode="sync" initial={false}>
             <motion.div
@@ -533,9 +547,7 @@ export default function HomePage() {
               <div className="max-w-3xl text-center md:text-left">
                 <motion.p
                   initial={
-                    reducedMotion
-                      ? false
-                      : { opacity: 0, y: 8 }
+                    reducedMotion ? false : { opacity: 0, y: 8 }
                   }
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -547,6 +559,7 @@ export default function HomePage() {
                 >
                   {hero.subtitle}
                 </motion.p>
+
                 <motion.h1
                   initial={
                     reducedMotion
@@ -556,23 +569,22 @@ export default function HomePage() {
                   animate={{
                     opacity: 1,
                     y: 0,
-                    letterSpacing: "0.1em",
+                    letterSpacing: "0.04em",
                   }}
                   transition={{
                     duration: reducedMotion ? 0 : 0.55,
                     delay: reducedMotion ? 0 : 0.08,
                     ease: EASE,
                   }}
-                  className="text-5xl font-light leading-[1.08] tracking-[7px] sm:text-7xl sm:tracking-[10px] md:text-8xl lg:text-[112px]"
+                  className="font-serif text-6xl font-normal leading-[0.95] tracking-[2px] sm:text-8xl sm:tracking-[3px] md:text-9xl lg:text-[140px]"
                 >
                   {hero.title}
                 </motion.h1>
+
                 {hero.description && (
                   <motion.p
                     initial={
-                      reducedMotion
-                        ? false
-                        : { opacity: 0, y: 10 }
+                      reducedMotion ? false : { opacity: 0, y: 10 }
                     }
                     animate={{ opacity: 1, y: 0 }}
                     transition={{
@@ -585,11 +597,10 @@ export default function HomePage() {
                     {hero.description}
                   </motion.p>
                 )}
+
                 <motion.div
                   initial={
-                    reducedMotion
-                      ? false
-                      : { opacity: 0, y: 10 }
+                    reducedMotion ? false : { opacity: 0, y: 10 }
                   }
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -614,11 +625,13 @@ export default function HomePage() {
             </motion.div>
           </AnimatePresence>
         )}
+
         {heroSlides.length > 1 && (
           <div className="absolute bottom-9 right-6 z-20 flex items-center gap-4 sm:bottom-12 sm:right-12 md:right-16">
             <span className="text-[10px] tracking-[3px] text-white">
               {String(heroIndex + 1).padStart(2, "0")}
             </span>
+
             <div className="flex items-center gap-2">
               {heroSlides.map((slide, index) => (
                 <button
@@ -635,11 +648,13 @@ export default function HomePage() {
                 />
               ))}
             </div>
+
             <span className="text-[10px] tracking-[3px] text-white/65">
               {String(heroSlides.length).padStart(2, "0")}
             </span>
           </div>
         )}
+
         <div className="absolute bottom-9 left-6 z-20 flex items-center gap-3 text-white/80 sm:bottom-12 sm:left-12 md:left-16">
           <motion.span
             animate={
@@ -655,10 +670,12 @@ export default function HomePage() {
           >
             <ArrowDown size={16} strokeWidth={1} />
           </motion.span>
+
           <span className="hidden text-[9px] uppercase tracking-[3px] sm:inline">
             Discover
           </span>
         </div>
+
         {!heroLoaded && (
           <div className="absolute inset-x-0 bottom-0 z-20 h-[2px] overflow-hidden bg-white/10">
             <motion.div
@@ -682,10 +699,12 @@ export default function HomePage() {
             <p className="mb-4 text-[10px] tracking-[5px] text-[#a18b70]">
               SELECTED FOR YOU
             </p>
-            <h2 className="text-4xl font-light tracking-[4px]">
+
+            <h2 className="font-serif text-4xl font-light tracking-[2px]">
               New Arrivals
             </h2>
           </div>
+
           <Link
             href="/products"
             className="flex items-center gap-3 text-xs tracking-widest transition-opacity hover:opacity-60"
@@ -693,6 +712,7 @@ export default function HomePage() {
             VIEW ALL <ArrowRight size={16} />
           </Link>
         </div>
+
         {loading ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-7">
             {[1, 2, 3, 4].map((item) => (
@@ -717,9 +737,7 @@ export default function HomePage() {
               <motion.div
                 key={product.id}
                 initial={
-                  reducedMotion
-                    ? false
-                    : { opacity: 0, y: 16 }
+                  reducedMotion ? false : { opacity: 0, y: 16 }
                 }
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.15 }}
@@ -730,7 +748,9 @@ export default function HomePage() {
                 }}
               >
                 <Link
-                  href={`/products/${encodeURIComponent(String(product.slug || product.id))}`}
+                  href={`/products/${encodeURIComponent(
+                    String(product.slug || product.id)
+                  )}`}
                   className="group block"
                 >
                   <div className="aspect-[3/4] overflow-hidden bg-[#d7cec2]">
@@ -742,9 +762,11 @@ export default function HomePage() {
                       decoding="async"
                     />
                   </div>
+
                   <h3 className="mt-5 text-sm tracking-wide transition-colors duration-300 group-hover:text-[#8d7962]">
                     {product.name}
                   </h3>
+
                   <p className="mt-2 text-xs text-[#77716a]">
                     {product.price.toLocaleString("en-EG")} EGP
                   </p>
@@ -755,7 +777,6 @@ export default function HomePage() {
         )}
       </section>
 
-      
       {/* COLLECTION STUDIO */}
       {categories.length > 0 && (
         <section className="bg-[#F4F0E9] px-4 py-14 sm:px-8 sm:py-20 md:px-14 md:py-24">
@@ -804,6 +825,7 @@ export default function HomePage() {
                         srcSet={category.mobile_image_url}
                       />
                     )}
+
                     <img
                       src={category.image_url}
                       alt={category.name}
@@ -863,15 +885,10 @@ export default function HomePage() {
         </section>
       )}
 
-
       {/* TALA PHILOSOPHY */}
       <section className="relative overflow-hidden bg-[#292521] px-6 py-28 text-center text-white">
         <motion.div
-          initial={
-            reducedMotion
-              ? false
-              : { opacity: 0, y: 20 }
-          }
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{
@@ -882,10 +899,12 @@ export default function HomePage() {
           <p className="text-[10px] tracking-[6px] text-[#c9bba8]">
             THE TALA PHILOSOPHY
           </p>
-          <h2 className="mx-auto mt-8 max-w-3xl text-4xl font-light leading-relaxed tracking-[3px] md:text-6xl">
+
+          <h2 className="font-serif mx-auto mt-8 max-w-3xl text-4xl font-light leading-relaxed tracking-[2px] md:text-6xl">
             Style is not about being noticed.
             It is about being remembered.
           </h2>
+
           <Link
             href="/about"
             className="mt-12 inline-flex items-center gap-4 border border-white px-8 py-4 text-[10px] tracking-[3px] transition-all duration-500 hover:bg-white hover:text-[#292521]"
@@ -897,10 +916,14 @@ export default function HomePage() {
 
       {/* FOOTER */}
       <footer className="bg-[#f4f0e9] px-6 py-16 text-center">
-        <h2 className="text-4xl font-light tracking-[12px]">TALA</h2>
+        <h2 className="font-serif text-4xl font-light tracking-[12px]">
+          TALA
+        </h2>
+
         <p className="mt-5 text-xs tracking-widest text-[#77716a]">
           TIMELESS FASHION. YOUR SIGNATURE.
         </p>
+
         <div className="mt-8 flex justify-center gap-7 text-xs">
           <Link
             href="/about"
@@ -908,12 +931,14 @@ export default function HomePage() {
           >
             ABOUT
           </Link>
+
           <Link
             href="/contact"
             className="transition-opacity hover:opacity-50"
           >
             CONTACT
           </Link>
+
           <Link
             href="/policies"
             className="transition-opacity hover:opacity-50"
@@ -921,6 +946,7 @@ export default function HomePage() {
             POLICIES
           </Link>
         </div>
+
         <a
           href="https://www.instagram.com/"
           target="_blank"
@@ -930,6 +956,7 @@ export default function HomePage() {
         >
           <Instagram size={19} />
         </a>
+
         <p className="mt-8 text-[10px] text-[#888078]">
           © 2026 TALA. ALL RIGHTS RESERVED.
         </p>
