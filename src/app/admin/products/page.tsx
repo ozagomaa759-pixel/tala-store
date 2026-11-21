@@ -133,6 +133,16 @@ export default function AdminProductsPage() {
     [categories]
   );
 
+  // Only show the two collections used by TALA.
+  const collectionCategories = useMemo(
+    () =>
+      activeCategories.filter((category) => {
+        const categorySlug = makeSlug(category.slug || category.name);
+        return categorySlug === "sets" || categorySlug === "jackets";
+      }),
+    [activeCategories]
+  );
+
   const previews = useMemo(
     () => selectedFiles.map((file) => URL.createObjectURL(file)),
     [selectedFiles]
@@ -192,7 +202,7 @@ export default function AdminProductsPage() {
     setEditingProductId(null);
     setName("");
     setDescription("");
-    setCategoryId(activeCategories[0]?.id || "");
+    setCategoryId(collectionCategories[0]?.id || "");
     setPrice("");
     setCompareAtPrice("");
     setStatus("draft");
@@ -703,7 +713,7 @@ export default function AdminProductsPage() {
       if (
         savedProduct.main_image !== finalMainImage ||
         !Array.isArray(savedProduct.images) ||
-        finalImages.some((url) => !savedProduct.images.includes(url))
+        finalImages.some((url: string) => !savedProduct.images.includes(url))
       ) {
         throw new Error(
           "The server response does not confirm that all product images were saved. Please try again."
@@ -924,6 +934,10 @@ export default function AdminProductsPage() {
     product: Product;
     section: "published" | "draft" | "archived";
   }) {
+    const productCategory = categories.find(
+      (category) => category.id === product.category_id
+    );
+
     return (
       <div
         key={product.id}
@@ -946,6 +960,12 @@ export default function AdminProductsPage() {
           <p className="mt-1 text-xs text-[#8A7969]">
             EGP {Number(product.price || 0).toLocaleString("en-EG")}
           </p>
+
+          {productCategory && (
+            <p className="mt-1 text-[10px] uppercase tracking-wider text-[#806744]">
+              {productCategory.name}
+            </p>
+          )}
 
           <p className="mt-1 text-[10px] uppercase tracking-wider text-[#9B8A7A]">
             {section === "published"
@@ -1172,24 +1192,55 @@ export default function AdminProductsPage() {
                 />
               </label>
 
-              <label className={labelClass}>
-                Category *
+              <div>
+                <p className={labelClass}>Choose Collection *</p>
 
-                <select
-                  className={inputClass}
-                  value={categoryId}
-                  onChange={(event) => setCategoryId(event.target.value)}
-                  required
-                >
-                  <option value="">Choose category</option>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  {(["sets", "jackets"] as const).map((slug) => {
+                    const category = collectionCategories.find(
+                      (item) =>
+                        makeSlug(item.slug || item.name) === slug
+                    );
 
-                  {activeCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                    const selected = categoryId === category?.id;
+
+                    return (
+                      <button
+                        key={slug}
+                        type="button"
+                        disabled={!category}
+                        onClick={() => {
+                          if (category) setCategoryId(category.id);
+                        }}
+                        aria-pressed={selected}
+                        className={`min-h-24 border p-4 text-center transition ${
+                          selected
+                            ? "border-[#806744] bg-[#F8F3E9] text-[#59483B]"
+                            : "border-[#E5DACE] bg-white text-[#8A7969] hover:border-[#A28A72]"
+                        } disabled:cursor-not-allowed disabled:opacity-40`}
+                      >
+                        <span className="block text-sm tracking-[0.2em]">
+                          {slug === "sets" ? "SETS" : "JACKETS"}
+                        </span>
+
+                        <span className="mt-2 block text-[10px] uppercase tracking-wider">
+                          {selected
+                            ? "Selected"
+                            : category
+                              ? "Choose collection"
+                              : "Not available"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {!categoryId && (
+                  <p className="mt-2 text-xs text-[#9A5145]">
+                    Please choose Sets or Jackets.
+                  </p>
+                )}
+              </div>
 
               <label className={labelClass}>
                 Price *
