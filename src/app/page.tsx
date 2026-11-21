@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -680,6 +679,86 @@ export default function HomePage() {
         )}
       </section>
 
+      {/* NEW ARRIVALS */}
+      <section className="bg-[#e9e2d8] px-5 py-24 md:px-14">
+        <div className="mb-14 flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="mb-4 text-[10px] tracking-[5px] text-[#a18b70]">
+              SELECTED FOR YOU
+            </p>
+            <h2 className="text-4xl font-light tracking-[4px]">
+              New Arrivals
+            </h2>
+          </div>
+          <Link
+            href="/products"
+            className="flex items-center gap-3 text-xs tracking-widest transition-opacity hover:opacity-60"
+          >
+            VIEW ALL <ArrowRight size={16} />
+          </Link>
+        </div>
+        {loading ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-7">
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="space-y-4">
+                <div className="aspect-[3/4] animate-pulse bg-[#d7cec2]" />
+                <div className="h-3 w-3/4 animate-pulse bg-[#d7cec2]" />
+                <div className="h-3 w-1/3 animate-pulse bg-[#d7cec2]" />
+              </div>
+            ))}
+          </div>
+        ) : loadError ? (
+          <p className="py-16 text-center text-sm text-[#77716a]">
+            Products could not be loaded. Please try again later.
+          </p>
+        ) : displayedProducts.length === 0 ? (
+          <p className="py-16 text-center text-sm text-[#77716a]">
+            Our collection is coming soon.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-7">
+            {displayedProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={
+                  reducedMotion
+                    ? false
+                    : { opacity: 0, y: 16 }
+                }
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{
+                  delay: reducedMotion ? 0 : index * 0.07,
+                  duration: reducedMotion ? 0 : 0.5,
+                  ease: EASE,
+                }}
+              >
+                <Link
+                  href={`/products/${encodeURIComponent(String(product.slug || product.id))}`}
+                  className="group block"
+                >
+                  <div className="aspect-[3/4] overflow-hidden bg-[#d7cec2]">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                  <h3 className="mt-5 text-sm tracking-wide transition-colors duration-300 group-hover:text-[#8d7962]">
+                    {product.name}
+                  </h3>
+                  <p className="mt-2 text-xs text-[#77716a]">
+                    {product.price.toLocaleString("en-EG")} EGP
+                  </p>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* COLLECTION STUDIO */}
       {categories.length > 0 && (
         <section className="px-5 py-24 md:px-14 md:py-32">
@@ -781,86 +860,6 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
-      {/* NEW ARRIVALS */}
-      <section className="bg-[#e9e2d8] px-5 py-24 md:px-14">
-        <div className="mb-14 flex flex-wrap items-end justify-between gap-5">
-          <div>
-            <p className="mb-4 text-[10px] tracking-[5px] text-[#a18b70]">
-              SELECTED FOR YOU
-            </p>
-            <h2 className="text-4xl font-light tracking-[4px]">
-              New Arrivals
-            </h2>
-          </div>
-          <Link
-            href="/products"
-            className="flex items-center gap-3 text-xs tracking-widest transition-opacity hover:opacity-60"
-          >
-            VIEW ALL <ArrowRight size={16} />
-          </Link>
-        </div>
-        {loading ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-7">
-            {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="space-y-4">
-                <div className="aspect-[3/4] animate-pulse bg-[#d7cec2]" />
-                <div className="h-3 w-3/4 animate-pulse bg-[#d7cec2]" />
-                <div className="h-3 w-1/3 animate-pulse bg-[#d7cec2]" />
-              </div>
-            ))}
-          </div>
-        ) : loadError ? (
-          <p className="py-16 text-center text-sm text-[#77716a]">
-            Products could not be loaded. Please try again later.
-          </p>
-        ) : displayedProducts.length === 0 ? (
-          <p className="py-16 text-center text-sm text-[#77716a]">
-            Our collection is coming soon.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-7">
-            {displayedProducts.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={
-                  reducedMotion
-                    ? false
-                    : { opacity: 0, y: 16 }
-                }
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.15 }}
-                transition={{
-                  delay: reducedMotion ? 0 : index * 0.07,
-                  duration: reducedMotion ? 0 : 0.5,
-                  ease: EASE,
-                }}
-              >
-                <Link
-                  href={`/products/${encodeURIComponent(String(product.slug || product.id))}`}
-                  className="group block"
-                >
-                  <div className="aspect-[3/4] overflow-hidden bg-[#d7cec2]">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                  <h3 className="mt-5 text-sm tracking-wide transition-colors duration-300 group-hover:text-[#8d7962]">
-                    {product.name}
-                  </h3>
-                  <p className="mt-2 text-xs text-[#77716a]">
-                    {product.price.toLocaleString("en-EG")} EGP
-                  </p>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </section>
 
       {/* TALA PHILOSOPHY */}
       <section className="relative overflow-hidden bg-[#292521] px-6 py-28 text-center text-white">
