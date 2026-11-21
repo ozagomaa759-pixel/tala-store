@@ -1,11 +1,27 @@
 
 import type { Metadata, Viewport } from "next";
+import { Cormorant_Garamond, Manrope } from "next/font/google";
+
 import "./globals.css";
 import "./tala-pages.css";
 
 import AnimationProvider from "@/animations/AnimationProvider";
 import TalaOpening from "@/animations/TalaOpening";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
+
+const talaDisplay = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-tala-display",
+  display: "swap",
+});
+
+const talaSans = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-tala-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -34,7 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className={`${talaDisplay.variable} ${talaSans.variable}`}>
         <TalaOpening />
         <AnimationProvider>
           <AnnouncementBar />
