@@ -3,26 +3,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
-  ShoppingBag,
-  Trash2,
-  Plus,
+  Check,
   Minus,
-  ShieldCheck,
-  Truck,
-  RotateCcw,
-  Tag,
+  Plus,
+  ShoppingBag,
   ShoppingCart,
-  Sparkles,
-  PackageCheck,
+  ShieldCheck,
+  Tag,
+  Trash2,
+  Truck,
+  X,
 } from "lucide-react";
 
 import {
   getCart,
-  saveCart,
   updateCartQuantity,
   removeFromCart,
   clearCart as clearStoredCart,
@@ -42,9 +40,11 @@ const formatPrice = (price: number) =>
 export default function CartPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);
+
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError] = useState("");
+
   const [notice, setNotice] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -56,9 +56,11 @@ export default function CartPage() {
 
     syncCart();
 
-    const savedCoupon = window.localStorage.getItem("tala-coupon-code") || "";
-    if (savedCoupon === "TALA10") {
-      setCoupon(savedCoupon);
+    const savedCoupon =
+      window.localStorage.getItem("tala-coupon-code") || "";
+
+    if (savedCoupon.toUpperCase() === "TALA10") {
+      setCoupon("TALA10");
       setCouponApplied(true);
     }
 
@@ -71,16 +73,29 @@ export default function CartPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!notice) return;
+
+    const timeout = window.setTimeout(() => {
+      setNotice("");
+    }, 2600);
+
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+
   const subtotal = useMemo(
     () =>
       items.reduce(
-        (total, item) => total + item.price * item.quantity,
+        (total, item) =>
+          total + Number(item.price) * item.quantity,
         0
       ),
     [items]
   );
 
-  const discount = couponApplied ? subtotal * 0.1 : 0;
+  const discount = couponApplied
+    ? Math.round(subtotal * 0.1 * 100) / 100
+    : 0;
 
   const shipping =
     subtotal === 0 || subtotal >= FREE_DELIVERY_LIMIT
@@ -94,7 +109,17 @@ export default function CartPage() {
     0
   );
 
-  const updateQuantity = (id: string, change: number) => {
+  const deliveryProgress = Math.min(
+    100,
+    (subtotal / FREE_DELIVERY_LIMIT) * 100
+  );
+
+  const amountUntilFreeDelivery = Math.max(
+    0,
+    FREE_DELIVERY_LIMIT - subtotal
+  );
+
+  function updateQuantity(id: string, change: number) {
     const item = items.find((current) => current.id === id);
     if (!item) return;
 
@@ -105,58 +130,70 @@ export default function CartPage() {
 
     const updatedCart = updateCartQuantity(id, nextQuantity);
     setItems(updatedCart);
-  };
+  }
 
-  const removeItem = (id: string) => {
+  function removeItem(id: string) {
     const updatedCart = removeFromCart(id);
     setItems(updatedCart);
-
     setNotice("Product removed from your bag.");
+  }
 
-    window.setTimeout(() => setNotice(""), 2500);
-  };
-
-  const clearCart = () => {
+  function clearCart() {
     clearStoredCart();
     setItems([]);
-    setCouponApplied(false);
+
     window.localStorage.removeItem("tala-coupon-code");
+
     setCoupon("");
+    setCouponApplied(false);
     setCouponError("");
     setShowClearConfirm(false);
+
     setNotice("Your shopping bag has been cleared.");
+  }
 
-    window.setTimeout(() => setNotice(""), 2500);
-  };
+  function applyCoupon() {
+    const normalizedCoupon = coupon.trim().toUpperCase();
 
-  const applyCoupon = () => {
-    if (!coupon.trim()) {
+    if (!normalizedCoupon) {
       setCouponError("Please enter a coupon code.");
       return;
     }
 
-    if (coupon.trim().toUpperCase() === "TALA10") {
-      window.localStorage.setItem("tala-coupon-code", "TALA10");
+    if (normalizedCoupon === "TALA10") {
+      window.localStorage.setItem(
+        "tala-coupon-code",
+        "TALA10"
+      );
+
+      setCoupon("TALA10");
       setCouponApplied(true);
       setCouponError("");
-      setNotice("Coupon applied successfully!");
-    } else {
-      window.localStorage.removeItem("tala-coupon-code");
-      setCouponApplied(false);
-      setCouponError("This coupon code is not valid.");
+      setNotice("TALA10 discount applied successfully.");
+      return;
     }
 
-    window.setTimeout(() => setNotice(""), 2500);
-  };
+    window.localStorage.removeItem("tala-coupon-code");
+    setCouponApplied(false);
+    setCouponError("This coupon code is not valid.");
+  }
+
+  function removeCoupon() {
+    window.localStorage.removeItem("tala-coupon-code");
+    setCoupon("");
+    setCouponApplied(false);
+    setCouponError("");
+    setNotice("Discount code removed.");
+  }
 
   if (!loaded) {
     return (
-      <main className="min-h-screen bg-[#f4f0e9] flex items-center justify-center">
+      <main className="flex min-h-screen items-center justify-center bg-[#F5F1EB]">
         <div className="text-center">
-          <div className="text-4xl font-serif tracking-[0.3em] text-[#292521]">
+          <p className="font-serif text-4xl tracking-[0.3em] text-[#24221F]">
             TALA
-          </div>
-          <p className="mt-4 text-xs tracking-[0.3em] text-[#8b8175] uppercase">
+          </p>
+          <p className="mt-4 text-[9px] uppercase tracking-[0.3em] text-[#9B9084]">
             Preparing your bag
           </p>
         </div>
@@ -165,119 +202,166 @@ export default function CartPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f0e9] text-[#292521]">
-      <div className="bg-[#292521] text-white text-center py-3 px-4">
-        <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase">
-          Complimentary delivery on orders over EGP 3,000
-        </p>
+    <main className="min-h-screen bg-[#F5F1EB] text-[#24221F]">
+      {/* Announcement */}
+      <div className="bg-[#24221F] px-4 py-3 text-center text-[9px] uppercase tracking-[0.2em] text-white sm:text-[10px]">
+        Complimentary delivery on orders over EGP 3,000
       </div>
 
-      <header className="border-b border-[#dcd4c9]">
-        <div className="max-w-[1400px] mx-auto px-5 sm:px-8 py-6 flex items-center justify-between">
+      {/* Header */}
+      <header className="border-b border-[#E5DED4]">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-6 sm:px-10">
+          <Link
+            href="/collections"
+            className="flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-[#776E64] transition hover:text-[#24221F]"
+          >
+            <ArrowLeft size={15} strokeWidth={1.4} />
+            Continue shopping
+          </Link>
+
           <Link
             href="/"
-            className="text-3xl sm:text-4xl font-serif tracking-[0.25em] text-white [text-shadow:0_1px_3px_#777]"
+            className="text-2xl font-light tracking-[0.38em] sm:text-3xl"
           >
             TALA
           </Link>
 
-          <Link
-            href="/products"
-            className="flex items-center gap-2 text-xs tracking-widest uppercase hover:opacity-60 transition"
-          >
-            <ArrowLeft size={15} />
-            Continue shopping
-          </Link>
+          <div className="flex items-center gap-2 text-[9px] uppercase tracking-[0.15em] text-[#8D8378]">
+            <ShoppingBag size={17} strokeWidth={1.3} />
+            <span className="hidden sm:inline">Your bag</span>
+          </div>
         </div>
       </header>
 
-      <section className="max-w-[1400px] mx-auto px-5 sm:px-8 pt-12 pb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[#998a78] mb-4">
-            Your shopping experience
-          </p>
-
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <h1 className="text-4xl sm:text-6xl font-serif">
-                Shopping Bag
-              </h1>
-              <p className="text-sm text-[#81786f] mt-3">
-                Review your selected pieces before checkout.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs tracking-wider text-[#81786f]">
-              <ShoppingBag size={16} />
-              {totalQuantity} {totalQuantity === 1 ? "ITEM" : "ITEMS"}
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
+      {/* Notifications */}
       <AnimatePresence>
         {notice && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="fixed top-5 right-5 z-50 bg-[#292521] text-white px-6 py-4 shadow-xl text-sm"
+            exit={{ opacity: 0, y: -12 }}
+            className="fixed right-4 top-4 z-50 flex max-w-[calc(100%-2rem)] items-center gap-3 border border-white/10 bg-[#24221F] px-5 py-4 text-xs text-white shadow-2xl sm:right-7 sm:top-7"
             role="status"
             aria-live="polite"
           >
+            <Check size={15} className="shrink-0 text-[#D8ED83]" />
             {notice}
+            <button
+              type="button"
+              onClick={() => setNotice("")}
+              aria-label="Dismiss notification"
+              className="ml-2 text-white/50 transition hover:text-white"
+            >
+              <X size={14} />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {items.length === 0 ? (
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-[1400px] mx-auto px-5 sm:px-8 pb-24"
-        >
-          <div className="min-h-[430px] border border-[#ded6cb] flex flex-col items-center justify-center text-center px-6">
-            <div className="w-20 h-20 rounded-full border border-[#cfc4b6] flex items-center justify-center mb-7">
-              <ShoppingBag size={30} strokeWidth={1} />
-            </div>
-
-            <p className="text-[10px] tracking-[0.35em] uppercase text-[#a08d78] mb-4">
-              A little space for something beautiful
+      {/* Page Heading */}
+      <section className="mx-auto max-w-[1440px] px-5 pb-8 pt-12 sm:px-10 sm:pt-16">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <p className="mb-4 text-[9px] uppercase tracking-[0.35em] text-[#9A8975]">
+              Your TALA selection
             </p>
 
-            <h2 className="text-3xl sm:text-4xl font-serif mb-4">
+            <h1 className="font-serif text-4xl font-light tracking-tight sm:text-6xl">
+              Shopping Bag<span className="text-[#B4C58A]">.</span>
+            </h1>
+
+            <p className="mt-4 max-w-md text-sm leading-7 text-[#81786F]">
+              The pieces you love, collected in one place.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-[#81786F]">
+            <ShoppingBag size={17} strokeWidth={1.3} />
+            {totalQuantity} {totalQuantity === 1 ? "ITEM" : "ITEMS"}
+          </div>
+        </div>
+      </section>
+
+      {/* Empty State */}
+      {items.length === 0 ? (
+        <motion.section
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto max-w-[1440px] px-5 pb-28 sm:px-10"
+        >
+          <div className="flex min-h-[440px] flex-col items-center justify-center border border-[#E3DACE] px-6 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#D8CFC2]">
+              <ShoppingBag
+                size={29}
+                strokeWidth={1.1}
+                className="text-[#8D8174]"
+              />
+            </div>
+
+            <p className="mt-8 text-[9px] uppercase tracking-[0.3em] text-[#9A8975]">
+              A new favourite is waiting
+            </p>
+
+            <h2 className="mt-4 font-serif text-3xl font-light sm:text-4xl">
               Your bag is empty
             </h2>
 
-            <p className="text-sm text-[#827970] max-w-md leading-7 mb-8">
-              Discover timeless pieces and find something that feels
-              uniquely yours.
+            <p className="mt-4 max-w-sm text-sm leading-7 text-[#81786F]">
+              Explore the latest TALA pieces and discover something
+              that feels like you.
             </p>
 
             <Link
-              href="/products"
-              className="bg-[#292521] text-white px-9 py-4 text-[10px] tracking-[0.25em] uppercase hover:bg-[#51473d] transition flex items-center gap-3"
+              href="/collections"
+              className="mt-9 inline-flex min-h-[54px] items-center justify-center gap-4 bg-[#24221F] px-9 text-[9px] uppercase tracking-[0.22em] text-white transition hover:bg-[#444039]"
             >
-              Explore collection
+              Explore collections
               <ArrowRight size={15} />
             </Link>
           </div>
         </motion.section>
       ) : (
-        <section className="max-w-[1400px] mx-auto px-5 sm:px-8 pb-24">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_390px] gap-10 xl:gap-16">
+        <section className="mx-auto max-w-[1440px] px-5 pb-24 sm:px-10">
+          {/* Free delivery progress */}
+          <div className="mb-9 border border-[#E3DACE] bg-white/35 px-5 py-5 sm:px-7">
+            <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+              {shipping === 0 ? (
+                <p className="flex items-center gap-2 text-xs text-[#657B62]">
+                  <Check size={15} />
+                  You unlocked complimentary delivery.
+                </p>
+              ) : (
+                <p className="text-xs text-[#655D54]">
+                  You are {formatPrice(amountUntilFreeDelivery)} away
+                  from complimentary delivery.
+                </p>
+              )}
+
+              <span className="text-[9px] uppercase tracking-[0.15em] text-[#968A7D]">
+                {formatPrice(subtotal)} / {formatPrice(FREE_DELIVERY_LIMIT)}
+              </span>
+            </div>
+
+            <div className="h-[3px] overflow-hidden bg-[#E6DED3]">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${deliveryProgress}%` }}
+                transition={{ duration: 0.7, ease: "easeOut" }}
+                className="h-full bg-[#AAB7A0]"
+              />
+            </div>
+          </div>
+
+          <div className="grid items-start gap-10 lg:grid-cols-[1fr_390px] xl:gap-16">
+            {/* Items */}
             <div>
-              <div className="hidden sm:grid grid-cols-[1fr_120px_120px] gap-4 pb-5 border-b border-[#d8cfc3] text-[10px] tracking-[0.2em] uppercase text-[#928679]">
-                <span>Product details</span>
+              <div className="hidden grid-cols-[1fr_130px_110px] gap-5 border-b border-[#DED5C9] pb-5 text-[9px] uppercase tracking-[0.2em] text-[#978A7C] sm:grid">
+                <span>Selected pieces</span>
                 <span className="text-center">Quantity</span>
                 <span className="text-right">Total</span>
               </div>
 
-              <div className="divide-y divide-[#ded6cb]">
+              <div className="divide-y divide-[#E3DACE]">
                 <AnimatePresence mode="popLayout">
                   {items.map((item) => (
                     <motion.article
@@ -285,47 +369,56 @@ export default function CartPage() {
                       layout
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -30 }}
+                      exit={{ opacity: 0, x: -25 }}
                       transition={{ duration: 0.3 }}
-                      className="py-7 grid grid-cols-1 sm:grid-cols-[1fr_120px_120px] gap-5 sm:gap-4"
+                      className="grid grid-cols-1 gap-5 py-7 sm:grid-cols-[1fr_130px_110px] sm:items-center sm:gap-5"
                     >
-                      <div className="flex gap-5 min-w-0">
-                        <div className="w-28 h-36 sm:w-32 sm:h-40 bg-[#e8e1d7] shrink-0 overflow-hidden">
+                      {/* Product details */}
+                      <div className="flex min-w-0 gap-5">
+                        <Link
+                          href={
+                            item.productId
+                              ? `/products/${item.productId}`
+                              : "/collections"
+                          }
+                          className="h-[142px] w-[108px] shrink-0 overflow-hidden bg-[#EAE4DA] sm:h-[165px] sm:w-[126px]"
+                        >
                           {item.image ? (
                             <img
                               src={item.image}
                               alt={item.name}
-                              className="w-full h-full object-cover"
+                              className="h-full w-full object-cover transition duration-700 hover:scale-105"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ShoppingBag
-                                size={25}
-                                className="text-[#a99a89]"
-                              />
+                            <div className="flex h-full w-full items-center justify-center text-[#A99A89]">
+                              <ShoppingBag size={25} strokeWidth={1} />
                             </div>
                           )}
-                        </div>
+                        </Link>
 
-                        <div className="flex flex-col justify-between py-1 min-w-0">
+                        <div className="flex min-w-0 flex-col justify-between py-1">
                           <div>
-                            <p className="text-[9px] tracking-[0.2em] uppercase text-[#a08d78] mb-2">
+                            <p className="mb-2 text-[8px] uppercase tracking-[0.2em] text-[#9A8975]">
                               TALA COLLECTION
                             </p>
 
-                            <h3 className="font-serif text-lg sm:text-xl leading-snug">
+                            <Link
+                              href={
+                                item.productId
+                                  ? `/products/${item.productId}`
+                                  : "/collections"
+                              }
+                              className="line-clamp-2 font-serif text-lg leading-snug transition hover:text-[#8B765F] sm:text-xl"
+                            >
                               {item.name}
-                            </h3>
+                            </Link>
 
-                            <p className="text-xs text-[#81786f] mt-3">
-                              Size: {item.size || "Not selected"}
-                            </p>
+                            <div className="mt-3 space-y-1 text-[11px] text-[#81786F]">
+                              <p>Size: {item.size || "One Size"}</p>
+                              <p>Color: {item.color || "Default"}</p>
+                            </div>
 
-                            <p className="text-xs text-[#81786f] mt-1">
-                              Color: {item.color || "Not selected"}
-                            </p>
-
-                            <p className="text-sm mt-3 font-medium">
+                            <p className="mt-3 text-sm font-medium tabular-nums">
                               {formatPrice(item.price)}
                             </p>
                           </div>
@@ -333,7 +426,7 @@ export default function CartPage() {
                           <button
                             type="button"
                             onClick={() => removeItem(item.id)}
-                            className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#918477] hover:text-red-700 transition w-fit"
+                            className="mt-4 flex w-fit items-center gap-2 text-[9px] uppercase tracking-[0.15em] text-[#948779] transition hover:text-[#A45E51]"
                           >
                             <Trash2 size={13} />
                             Remove
@@ -341,19 +434,24 @@ export default function CartPage() {
                         </div>
                       </div>
 
-                      <div className="flex sm:justify-center items-center">
-                        <div className="flex items-center border border-[#d3c9bd] h-10">
+                      {/* Quantity */}
+                      <div className="flex items-center justify-between sm:justify-center">
+                        <span className="text-[9px] uppercase tracking-[0.15em] text-[#978A7C] sm:hidden">
+                          Quantity
+                        </span>
+
+                        <div className="flex h-10 items-center border border-[#D8CFC2] bg-white/35">
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, -1)}
                             disabled={item.quantity <= 1}
-                            className="px-3 h-full hover:bg-[#e9e2d8] disabled:opacity-30"
                             aria-label="Decrease quantity"
+                            className="flex h-full w-10 items-center justify-center text-[#746A60] transition hover:bg-[#EAE4DA] disabled:opacity-30"
                           >
                             <Minus size={13} />
                           </button>
 
-                          <span className="w-8 text-center text-sm tabular-nums">
+                          <span className="w-8 text-center text-xs tabular-nums">
                             {item.quantity}
                           </span>
 
@@ -361,19 +459,21 @@ export default function CartPage() {
                             type="button"
                             onClick={() => updateQuantity(item.id, 1)}
                             disabled={item.quantity >= 10}
-                            className="px-3 h-full hover:bg-[#e9e2d8] disabled:opacity-30"
                             aria-label="Increase quantity"
+                            className="flex h-full w-10 items-center justify-center text-[#746A60] transition hover:bg-[#EAE4DA] disabled:opacity-30"
                           >
                             <Plus size={13} />
                           </button>
                         </div>
                       </div>
 
-                      <div className="flex sm:justify-end items-center justify-between">
-                        <span className="sm:hidden text-[10px] uppercase tracking-wider text-[#928679]">
+                      {/* Line total */}
+                      <div className="flex items-center justify-between sm:justify-end">
+                        <span className="text-[9px] uppercase tracking-[0.15em] text-[#978A7C] sm:hidden">
                           Item total
                         </span>
-                        <span className="font-medium text-sm tabular-nums">
+
+                        <span className="text-sm font-medium tabular-nums">
                           {formatPrice(item.price * item.quantity)}
                         </span>
                       </div>
@@ -382,29 +482,34 @@ export default function CartPage() {
                 </AnimatePresence>
               </div>
 
-              <div className="flex justify-end pt-5">
+              {/* Clear bag */}
+              <div className="flex justify-end border-t border-[#E3DACE] pt-5">
                 {!showClearConfirm ? (
                   <button
                     type="button"
                     onClick={() => setShowClearConfirm(true)}
-                    className="text-[10px] uppercase tracking-widest text-[#918477] hover:text-red-700 transition"
+                    className="text-[9px] uppercase tracking-[0.16em] text-[#948779] transition hover:text-[#A45E51]"
                   >
                     Clear shopping bag
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 text-xs">
-                    <span>Remove all items?</span>
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                    <span className="text-[#756B61]">
+                      Remove all items?
+                    </span>
+
                     <button
                       type="button"
                       onClick={clearCart}
-                      className="text-red-700 font-medium"
+                      className="font-medium text-[#A45E51]"
                     >
-                      Yes
+                      Confirm
                     </button>
+
                     <button
                       type="button"
                       onClick={() => setShowClearConfirm(false)}
-                      className="text-[#827970]"
+                      className="text-[#81786F]"
                     >
                       Cancel
                     </button>
@@ -412,59 +517,91 @@ export default function CartPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-12 pt-8 border-t border-[#d8cfc3]">
+              {/* Service notes */}
+              <div className="mt-12 grid gap-6 border-t border-[#DED5C9] pt-8 sm:grid-cols-3">
                 <div className="flex gap-3">
-                  <Truck size={20} strokeWidth={1.3} />
+                  <Truck
+                    size={19}
+                    strokeWidth={1.3}
+                    className="shrink-0 text-[#8E806F]"
+                  />
                   <div>
-                    <p className="text-xs font-medium">Delivery</p>
-                    <p className="text-[10px] text-[#928679] mt-1">
-                      EGP 120 on orders below EGP 3,000
+                    <p className="text-[10px] uppercase tracking-[0.12em]">
+                      Delivery
+                    </p>
+                    <p className="mt-2 text-[10px] leading-5 text-[#918579]">
+                      EGP 120 below EGP 3,000.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex gap-3">
-                  <RotateCcw size={20} strokeWidth={1.3} />
+                  <ShieldCheck
+                    size={19}
+                    strokeWidth={1.3}
+                    className="shrink-0 text-[#8E806F]"
+                  />
                   <div>
-                    <p className="text-xs font-medium">Easy returns</p>
-                    <p className="text-[10px] text-[#928679] mt-1">
-                      Return policy information
+                    <p className="text-[10px] uppercase tracking-[0.12em]">
+                      Safe ordering
+                    </p>
+                    <p className="mt-2 text-[10px] leading-5 text-[#918579]">
+                      Your order is handled securely.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex gap-3">
-                  <ShieldCheck size={20} strokeWidth={1.3} />
+                  <ShoppingBag
+                    size={19}
+                    strokeWidth={1.3}
+                    className="shrink-0 text-[#8E806F]"
+                  />
                   <div>
-                    <p className="text-xs font-medium">Secure shopping</p>
-                    <p className="text-[10px] text-[#928679] mt-1">
-                      Secure shopping with TALA
+                    <p className="text-[10px] uppercase tracking-[0.12em]">
+                      Cash on delivery
+                    </p>
+                    <p className="mt-2 text-[10px] leading-5 text-[#918579]">
+                      Pay when your order arrives.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <aside className="lg:sticky lg:top-8 h-fit">
-              <div className="bg-[#ebe5dc] p-6 sm:p-8">
-                <div className="flex items-center justify-between mb-7">
-                  <h2 className="font-serif text-2xl">
-                    Order Summary
-                  </h2>
-                  <ShoppingCart size={19} strokeWidth={1.3} />
+            {/* Order Summary */}
+            <aside className="h-fit lg:sticky lg:top-8">
+              <div className="border border-[#E2D9CE] bg-[#EEE9E1] p-6 sm:p-8">
+                <div className="mb-7 flex items-center justify-between">
+                  <div>
+                    <p className="text-[8px] uppercase tracking-[0.25em] text-[#9A8975]">
+                      Almost yours
+                    </p>
+                    <h2 className="mt-2 font-serif text-2xl font-light">
+                      Order Summary
+                    </h2>
+                  </div>
+
+                  <ShoppingCart
+                    size={20}
+                    strokeWidth={1.2}
+                    className="text-[#82776B]"
+                  />
                 </div>
 
-                <div className="space-y-5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-[#81786f]">Subtotal</span>
+                <div className="space-y-5 text-xs">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[#81786F]">
+                      Subtotal ({totalQuantity} items)
+                    </span>
                     <span className="tabular-nums">
                       {formatPrice(subtotal)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between">
-                    <span className="text-[#81786f]">Delivery</span>
-                    <span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[#81786F]">Delivery</span>
+                    <span className="tabular-nums">
                       {shipping === 0
                         ? "Complimentary"
                         : formatPrice(shipping)}
@@ -472,103 +609,116 @@ export default function CartPage() {
                   </div>
 
                   {couponApplied && (
-                    <div className="flex justify-between text-green-800">
+                    <div className="flex justify-between gap-4 text-[#657B62]">
                       <span>Discount (10%)</span>
-                      <span>-{formatPrice(discount)}</span>
+                      <span className="tabular-nums">
+                        -{formatPrice(discount)}
+                      </span>
                     </div>
                   )}
                 </div>
 
-                <div className="border-t border-[#d2c8bc] my-7" />
+                {/* Coupon */}
+                <div className="my-7 border-t border-[#D8CFC2]" />
 
                 <div>
                   <label
                     htmlFor="tala-coupon"
-                    className="text-[10px] tracking-[0.2em] uppercase text-[#827970] flex items-center gap-2 mb-3"
+                    className="mb-3 flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-[#81786F]"
                   >
-                    <Tag size={14} />
+                    <Tag size={13} />
                     Discount code
                   </label>
 
-                  <div className="flex border border-[#cfc4b7]">
-                    <input
-                      id="tala-coupon"
-                      value={coupon}
-                      onChange={(event) => {
-                        setCoupon(event.target.value);
-                        setCouponError("");
-                      }}
-                      placeholder="Enter code"
-                      className="w-full min-w-0 bg-transparent px-4 py-3 text-xs outline-none"
-                    />
+                  {couponApplied ? (
+                    <div className="flex items-center justify-between border border-[#AAB7A0] bg-[#AAB7A0]/15 px-4 py-3">
+                      <div className="flex items-center gap-2 text-xs text-[#657B62]">
+                        <Check size={14} />
+                        <span>TALA10 applied</span>
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={applyCoupon}
-                      className="bg-[#292521] text-white px-5 text-[10px] uppercase tracking-wider hover:bg-[#51473d] transition"
-                    >
-                      Apply
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="text-[9px] uppercase tracking-[0.12em] text-[#81786F] transition hover:text-[#A45E51]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex border border-[#D1C7BB] bg-white/40">
+                        <input
+                          id="tala-coupon"
+                          value={coupon}
+                          onChange={(event) => {
+                            setCoupon(event.target.value);
+                            setCouponError("");
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              applyCoupon();
+                            }
+                          }}
+                          placeholder="Enter code"
+                          className="w-full min-w-0 bg-transparent px-4 py-3 text-xs outline-none placeholder:text-[#A69A8D]"
+                        />
 
-                  {couponError && (
-                    <p className="text-red-700 text-xs mt-2">
-                      {couponError}
-                    </p>
-                  )}
+                        <button
+                          type="button"
+                          onClick={applyCoupon}
+                          className="bg-[#24221F] px-5 text-[9px] uppercase tracking-[0.13em] text-white transition hover:bg-[#444039]"
+                        >
+                          Apply
+                        </button>
+                      </div>
 
-                  {couponApplied && (
-                    <p className="text-green-800 text-xs mt-2 flex items-center gap-2">
-                      <PackageCheck size={14} />
-                      TALA10 applied successfully
-                    </p>
+                      {couponError && (
+                        <p className="mt-2 text-[10px] text-[#A45E51]">
+                          {couponError}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
-                <div className="border-t border-[#d2c8bc] my-7" />
+                <div className="my-7 border-t border-[#D8CFC2]" />
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                   <span className="font-serif text-xl">Total</span>
                   <span className="text-xl font-medium tabular-nums">
                     {formatPrice(total)}
                   </span>
                 </div>
 
-                <p className="text-[10px] text-[#928679] mt-3">
-                  Delivery is free on orders of EGP 3,000 or more.
+                <p className="mt-3 text-[9px] leading-5 text-[#918579]">
+                  {shipping === 0
+                    ? "Your order qualifies for complimentary delivery."
+                    : `Add ${formatPrice(
+                        amountUntilFreeDelivery
+                      )} more for complimentary delivery.`}
                 </p>
 
                 <Link
                   href="/checkout"
-                  className="group relative w-full mt-7 min-h-[60px] bg-[#292521] text-[#ffffff] py-5 px-4 text-center text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300 hover:bg-[#51473d] flex items-center justify-center gap-3"
-                  style={{
-                    backgroundColor: "#292521",
-                    color: "#ffffff",
-                    WebkitTextFillColor: "#ffffff",
-                  }}
+                  className="mt-7 flex min-h-[58px] w-full items-center justify-center gap-3 bg-[#24221F] px-5 text-center text-[9px] font-medium uppercase tracking-[0.2em] text-white transition duration-300 hover:bg-[#444039]"
                 >
-                  <span className="relative z-10">
-                    Proceed to Checkout
-                  </span>
-                  <ArrowRight size={16} className="relative z-10" />
+                  Proceed to Checkout
+                  <ArrowRight size={16} />
                 </Link>
 
-                <div className="flex items-center justify-center gap-2 mt-5 text-[10px] text-[#928679]">
+                <div className="mt-5 flex items-center justify-center gap-2 text-[9px] uppercase tracking-[0.12em] text-[#8C8175]">
                   <ShieldCheck size={14} />
-                  Cash on Delivery Available
+                  Cash on delivery available
                 </div>
               </div>
 
-              <div className="mt-6 text-center px-5">
-                <Sparkles
-                  size={18}
-                  className="mx-auto text-[#a08d78] mb-3"
-                />
-                <p className="font-serif italic text-lg">
-                  Elegance is in every detail.
+              <div className="px-5 py-7 text-center">
+                <p className="font-serif text-lg italic text-[#766B60]">
+                  A little detail makes all the difference.
                 </p>
-                <p className="text-[9px] tracking-[0.3em] uppercase text-[#a08d78] mt-3">
-                  TALA — Timeless by design
+                <p className="mt-3 text-[8px] uppercase tracking-[0.25em] text-[#A19486]">
+                  TALA — Luxury Fashion
                 </p>
               </div>
             </aside>
@@ -576,34 +726,45 @@ export default function CartPage() {
         </section>
       )}
 
-      <footer className="bg-[#292521] text-white px-5 sm:px-8 py-12">
-        <div className="max-w-[1400px] mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-7">
-            <Link
-              href="/"
-              className="text-3xl font-serif tracking-[0.3em]"
-            >
-              TALA
+      {/* Footer */}
+      <footer className="bg-[#24221F] px-5 py-11 text-white sm:px-10">
+        <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-7 sm:flex-row">
+          <Link
+            href="/"
+            className="text-2xl font-light tracking-[0.38em]"
+          >
+            TALA
+          </Link>
+
+          <nav className="flex flex-wrap justify-center gap-6 text-[8px] uppercase tracking-[0.18em] text-white/55">
+            <Link href="/" className="transition hover:text-white">
+              Home
             </Link>
+            <Link
+              href="/collections"
+              className="transition hover:text-white"
+            >
+              Collections
+            </Link>
+            <Link
+              href="/collections/sets"
+              className="transition hover:text-white"
+            >
+              Sets
+            </Link>
+            <Link
+              href="/collections/jackets"
+              className="transition hover:text-white"
+            >
+              Jackets
+            </Link>
+          </nav>
+        </div>
 
-            <div className="flex flex-wrap justify-center gap-7 text-[9px] tracking-[0.2em] uppercase text-white/60">
-              <Link href="/" className="hover:text-white transition">
-                Home
-              </Link>
-              <Link href="/products" className="hover:text-white transition">
-                Collection
-              </Link>
-              <Link href="/cart" className="hover:text-white transition">
-                Shopping Bag
-              </Link>
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 mt-9 pt-6 text-center">
-            <p className="text-[9px] tracking-[0.2em] text-white/40 uppercase">
-              © {new Date().getFullYear()} TALA. All rights reserved.
-            </p>
-          </div>
+        <div className="mx-auto mt-8 max-w-[1440px] border-t border-white/10 pt-6 text-center">
+          <p className="text-[8px] uppercase tracking-[0.2em] text-white/35">
+            © {new Date().getFullYear()} TALA. All rights reserved.
+          </p>
         </div>
       </footer>
     </main>
