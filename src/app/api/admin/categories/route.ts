@@ -4,6 +4,14 @@ import { requireAdmin } from "@/lib/supabase/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const CORE_COLLECTIONS = {
+  sets: "Sets",
+  jackets: "Jackets",
+} as const;
+
+type CoreSlug = keyof typeof CORE_COLLECTIONS;
 
 function errorResponse(message: string, status = 400) {
   return NextResponse.json(
@@ -20,6 +28,10 @@ function makeSlug(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function isCoreSlug(value: string): value is CoreSlug {
+  return value in CORE_COLLECTIONS;
 }
 
 async function getAdminDatabase() {
@@ -65,7 +77,9 @@ export async function GET() {
     });
   } catch (error) {
     return errorResponse(
-      error instanceof Error ? error.message : "Failed to fetch categories",
+      error instanceof Error
+        ? error.message
+        : "Failed to fetch categories",
       500
     );
   }
@@ -87,17 +101,28 @@ export async function POST(request: NextRequest) {
       return errorResponse("Category name is required");
     }
 
-    const slug = makeSlug(
-      optionalText(body.slug) || name
-    );
+    const slug = makeSlug(optionalText(body.slug) || name);
 
     if (!slug) {
       return errorResponse("A valid category slug is required");
     }
 
-    const opacity = validOpacity(body.overlay_opacity)
-      ? body.overlay_opacity
-      : 20;
+    if (isCoreSlug(slug)) {
+      return errorResponse(
+        `${CORE_COLLECTIONS[slug]} is a protected TALA collection. It already exists.`
+      );
+    }
+
+    const { data: duplicate } = await supabase
+      .from("categories")
+      .select("id")
+      .or(`slug.eq.${slug},name.ilike.${name}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (duplicate) {
+      return errorResponse("A category with this name or slug already exists.");
+    }
 
     const category = {
       name,
@@ -108,8 +133,11 @@ export async function POST(request: NextRequest) {
       subtitle: optionalText(body.subtitle),
       headline: optionalText(body.headline),
       button_text: optionalText(body.button_text, "EXPLORE"),
-      button_link: optionalText(body.button_link) || `/products?category=${slug}`,
-      overlay_opacity: opacity,
+      button_link:
+        optionalText(body.button_link) || `/collections/${slug}`,
+      overlay_opacity: validOpacity(body.overlay_opacity)
+        ? body.overlay_opacity
+        : 20,
       show_on_homepage: body.show_on_homepage !== false,
       is_active: body.is_active !== false,
       sort_order:
@@ -133,7 +161,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     return errorResponse(
-      error instanceof Error ? error.message : "Failed to create category",
+      error instanceof Error
+        ? error.message
+        : "Failed to create category",
       500
     );
   }
@@ -153,12 +183,36 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Category ID is required");
     }
 
+    const { data: existing, error: lookupError } = await supabase
+      .from("categories")
+      .select("id,name,slug,is_active")
+      .eq("id", body.id)
+      .maybeSingle();
+
+    if (lookupError) {
+      return errorResponse(lookupError.message, 500);
+    }
+
+    if (!existing) {
+      return errorResponse("Category not found", 404);
+    }
+
+    const existingSlug = makeSlug(existing.slug || existing.name);
+    const protectedCollection = isCoreSlug(existingSlug);
+
     const updates: Record<string, unknown> = {};
 
     if (body.name !== undefined) {
       if (typeof body.name !== "string" || !body.name.trim()) {
         return errorResponse("Invalid category name");
       }
+
+      if (protectedCollection) {
+        return errorResponse(
+          "The name of a core TALA collection cannot be changed."
+        );
+      }
+
       updates.name = body.name.trim();
     }
 
@@ -169,7 +223,21 @@ export async function PATCH(request: NextRequest) {
 
       const slug = makeSlug(body.slug);
 
-      if (!slug) return errorResponse("Invalid category slug");
+      if (!slug) {
+        return errorResponse("Invalid category slug");
+      }
+
+      if (protectedCollection) {
+        return errorResponse(
+          "The slug of a core TALA collection cannot be changed."
+        );
+      }
+
+      if (isCoreSlug(slug)) {
+        return errorResponse(
+          "This slug is reserved for a core TALA collection."
+        );
+      }
 
       updates.slug = slug;
     }
@@ -204,6 +272,13 @@ export async function PATCH(request: NextRequest) {
       if (typeof body.is_active !== "boolean") {
         return errorResponse("Invalid active status");
       }
+
+      if (protectedCollection && body.is_active === false) {
+        return errorResponse(
+          "Sets and Jackets must remain active TALA collections."
+        );
+      }
+
       updates.is_active = body.is_active;
     }
 
@@ -211,6 +286,7 @@ export async function PATCH(request: NextRequest) {
       if (typeof body.show_on_homepage !== "boolean") {
         return errorResponse("Invalid homepage visibility");
       }
+
       updates.show_on_homepage = body.show_on_homepage;
     }
 
@@ -221,14 +297,22 @@ export async function PATCH(request: NextRequest) {
       ) {
         return errorResponse("Invalid sort order");
       }
+
       updates.sort_order = body.sort_order;
     }
 
     if (body.overlay_opacity !== undefined) {
       if (!validOpacity(body.overlay_opacity)) {
-        return errorResponse("Overlay opacity must be between 0 and 100");
+        return errorResponse(
+          "Overlay opacity must be between 0 and 100"
+        );
       }
+
       updates.overlay_opacity = body.overlay_opacity;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return errorResponse("No valid category changes were provided");
     }
 
     updates.updated_at = new Date().toISOString();
@@ -242,17 +326,15 @@ export async function PATCH(request: NextRequest) {
 
     if (error) return errorResponse(error.message, 400);
 
-    if (!data) {
-      return errorResponse("Category not found", 404);
-    }
-
     return NextResponse.json({
       success: true,
       category: data,
     });
   } catch (error) {
     return errorResponse(
-      error instanceof Error ? error.message : "Failed to update category",
+      error instanceof Error
+        ? error.message
+        : "Failed to update category",
       500
     );
   }
@@ -272,6 +354,28 @@ export async function DELETE(request: NextRequest) {
       return errorResponse("Category ID is required");
     }
 
+    const { data: existing, error: lookupError } = await supabase
+      .from("categories")
+      .select("id,name,slug")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (lookupError) {
+      return errorResponse(lookupError.message, 500);
+    }
+
+    if (!existing) {
+      return errorResponse("Category not found", 404);
+    }
+
+    const slug = makeSlug(existing.slug || existing.name);
+
+    if (isCoreSlug(slug)) {
+      return errorResponse(
+        "Sets and Jackets are permanent TALA collections and cannot be deleted."
+      );
+    }
+
     const { error } = await supabase
       .from("categories")
       .delete()
@@ -285,7 +389,9 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     return errorResponse(
-      error instanceof Error ? error.message : "Failed to delete category",
+      error instanceof Error
+        ? error.message
+        : "Failed to delete category",
       500
     );
   }
