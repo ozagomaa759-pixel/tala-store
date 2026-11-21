@@ -14,6 +14,17 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const safeSlug = slug?.trim();
+
+    if (!safeSlug || safeSlug.length > 200) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid product address.",
+        },
+        { status: 400 }
+      );
+    }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey =
@@ -43,8 +54,25 @@ export async function GET(
     const { data: product, error: productError } =
       await supabase
         .from("products")
-        .select("*")
-        .eq("slug", slug)
+        .select(
+          [
+            "id",
+            "category_id",
+            "name",
+            "slug",
+            "description",
+            "price",
+            "compare_at_price",
+            "main_image",
+            "images",
+            "is_featured",
+            "is_best_seller",
+            "is_new_arrival",
+            "sort_order",
+            "created_at",
+          ].join(", ")
+        )
+        .eq("slug", safeSlug)
         .eq("status", "published")
         .maybeSingle();
 
@@ -76,7 +104,20 @@ export async function GET(
     const { data: variants, error: variantsError } =
       await supabase
         .from("product_variants")
-        .select("*")
+        .select(
+          [
+            "id",
+            "product_id",
+            "size",
+            "color",
+            "color_code",
+            "sku",
+            "stock_quantity",
+            "price_override",
+            "image_url",
+            "is_active",
+          ].join(", ")
+        )
         .eq("product_id", product.id)
         .eq("is_active", true)
         .order("size", { ascending: true });
