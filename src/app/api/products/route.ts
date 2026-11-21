@@ -97,9 +97,18 @@ export async function GET() {
 
       if (error) {
         console.error("Public variants API:", error);
-      } else {
-        variants = data ?? [];
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Could not load product sizes, colors, and stock.",
+          },
+          { status: 500 }
+        );
       }
+
+      variants = data ?? [];
     }
 
     return NextResponse.json(
