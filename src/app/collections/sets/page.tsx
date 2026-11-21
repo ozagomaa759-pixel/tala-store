@@ -104,7 +104,8 @@ export default function SetsCollectionPage() {
     [products]
   );
 
-  const heroImage = collection?.image_url || sets[0]?.image || FALLBACK_IMAGE;
+  const heroImage =
+    collection?.image_url || sets[0]?.image || FALLBACK_IMAGE;
 
   const title = collection?.headline?.trim() || "THE ART OF THE SET";
   const subtitle =
@@ -113,10 +114,6 @@ export default function SetsCollectionPage() {
 
   return (
     <main className="min-h-screen bg-[#F8F5F0] text-[#332A23]">
-      <div className="bg-[#292521] px-4 py-2.5 text-center text-[9px] tracking-[0.25em] text-white">
-        DISCOVER THE NEW TALA COLLECTION
-      </div>
-
       <header className="relative z-20 flex h-[76px] items-center justify-between border-b border-[#E8E0D6] px-5 sm:px-10">
         <Link
           href="/collections"
@@ -159,8 +156,7 @@ export default function SetsCollectionPage() {
         <div
           className="absolute inset-0 bg-black"
           style={{
-            opacity:
-              (collection?.overlay_opacity ?? 35) / 100,
+            opacity: (collection?.overlay_opacity ?? 35) / 100,
           }}
         />
 
