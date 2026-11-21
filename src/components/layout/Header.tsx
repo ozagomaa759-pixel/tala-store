@@ -42,14 +42,18 @@ export default function Header() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setSearchQuery(params.get("q") || "");
-    closePanels();
+    setMobileMenuOpen(false);
+    setSearchOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     if (!mobileMenuOpen && !searchOpen) return;
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closePanels();
+      if (event.key === "Escape") {
+        setMobileMenuOpen(false);
+        setSearchOpen(false);
+      }
     };
 
     window.addEventListener("keydown", closeOnEscape);
@@ -192,13 +196,13 @@ export default function Header() {
         </div>
       </div>
 
-      {/* BACKDROP */}
+      {/* BACKDROP — BELOW HEADER */}
       {(searchOpen || mobileMenuOpen) && (
         <button
           type="button"
           aria-label="Close open menu"
           onClick={closePanels}
-          className="fixed inset-0 z-[60] bg-black/25 backdrop-blur-[2px]"
+          className="fixed inset-x-0 bottom-0 top-[72px] z-[60] bg-black/25 backdrop-blur-[2px] lg:top-[84px]"
         />
       )}
 
