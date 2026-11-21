@@ -266,7 +266,7 @@ export async function getTalaProducts(): Promise<Product[]> {
       colors: uniqueColors,
       sizes: uniqueSizes,
 
-      rating: 5,
+      rating: 0,
       reviews: 0,
 
       isNew,
