@@ -40,11 +40,7 @@ export default function NewArrivalsPage() {
 
         const newProducts = allProducts
           .filter((product) => product.isNew)
-          .sort((a, b) => {
-            return (
-              Number(b.isAvailable) - Number(a.isAvailable)
-            );
-          });
+          .sort((a, b) => Number(b.isAvailable) - Number(a.isAvailable));
 
         setProducts(newProducts);
       } catch (error) {
@@ -102,9 +98,7 @@ export default function NewArrivalsPage() {
           <h1 className="mt-8 max-w-5xl font-serif text-[clamp(3.5rem,10vw,9rem)] font-light leading-[0.88] tracking-[-0.065em]">
             JUST
             <br />
-            <span className="italic text-[#D8ED83]">
-              arrived.
-            </span>
+            <span className="italic text-[#D8ED83]">arrived.</span>
           </h1>
 
           <div className="mt-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
@@ -154,7 +148,7 @@ export default function NewArrivalsPage() {
         ) : hasError ? (
           <div className="border border-[#DED7CC] bg-white/50 px-6 py-16 text-center">
             <h3 className="font-serif text-2xl font-light">
-              We couldn't load the collection.
+              We couldn&apos;t load the collection.
             </h3>
 
             <p className="mt-4 text-sm text-[#82796F]">
