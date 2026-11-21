@@ -488,19 +488,21 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      {/* EDITORIAL HERO */}
-      <section className="relative h-[calc(100svh-34px)] min-h-[650px] max-h-[1100px] overflow-hidden bg-[#75695e] text-white">
+      
+      {/* SPLIT EDITORIAL HERO */}
+      <section className="relative h-[calc(100svh-34px)] min-h-[650px] max-h-[1100px] overflow-hidden bg-[#292521] text-white">
+        {/* Background image */}
         {hero?.image ? (
           <AnimatePresence mode="sync" initial={false}>
             <motion.div
               key={hero.image}
-              initial={reducedMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={reducedMotion ? false : { opacity: 0, scale: 1.035 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={reducedMotion ? undefined : { opacity: 0 }}
               transition={
                 reducedMotion
                   ? { duration: 0 }
-                  : { duration: 0.7, ease: "easeInOut" }
+                  : { duration: 1, ease: EASE }
               }
               className="absolute inset-0"
             >
@@ -511,7 +513,6 @@ export default function HomePage() {
                     srcSet={hero.mobileImage}
                   />
                 )}
-
                 <img
                   src={hero.image}
                   alt={hero.title}
@@ -530,105 +531,81 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#817568] via-[#65594f] to-[#292521]" />
         )}
 
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
+        {/* Image contrast */}
+        <div className="absolute inset-0 bg-black/15" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent" />
 
+        {/* Editorial text panel */}
         {hero && (
           <AnimatePresence mode="sync" initial={false}>
             <motion.div
-              key={`${hero.id}-editorial`}
-              initial={pageMotion.initial}
-              animate={pageMotion.animate}
-              exit={pageMotion.exit}
-              transition={pageMotion.transition}
-              className="absolute inset-x-0 bottom-28 z-10 mx-auto w-full max-w-[1500px] px-7 sm:bottom-32 sm:px-12 md:bottom-[19%] md:px-20 lg:px-28"
+              key={`${hero.id}-split-editorial`}
+              initial={
+                reducedMotion
+                  ? false
+                  : { opacity: 0, x: 28 }
+              }
+              animate={{ opacity: 1, x: 0 }}
+              exit={
+                reducedMotion
+                  ? undefined
+                  : { opacity: 0, x: 18 }
+              }
+              transition={
+                reducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.65, ease: EASE }
+              }
+              className="absolute inset-x-4 bottom-[82px] z-10 mx-auto max-w-[540px] bg-[#F4F0E9] px-6 py-8 text-[#292521] shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:inset-x-auto sm:right-8 sm:bottom-[100px] sm:px-10 sm:py-11 md:right-[7%] md:top-1/2 md:bottom-auto md:w-[39%] md:-translate-y-1/2 md:px-12 md:py-14 lg:right-[9%] lg:px-16 lg:py-20"
             >
-              <div className="max-w-3xl text-center md:text-left">
-                <motion.p
-                  initial={
-                    reducedMotion ? false : { opacity: 0, y: 8 }
-                  }
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: reducedMotion ? 0 : 0.4,
-                    delay: reducedMotion ? 0 : 0.04,
-                    ease: EASE,
-                  }}
-                  className="mb-6 text-[9px] uppercase tracking-[5px] text-white/85 sm:text-[10px] sm:tracking-[7px]"
-                >
+              <div className="mb-7 flex items-center gap-3 sm:mb-10">
+                <span className="h-px w-8 bg-[#A18B70]" />
+                <p className="text-[8px] uppercase tracking-[3px] text-[#8D7962] sm:text-[9px] sm:tracking-[4px]">
                   {hero.subtitle}
-                </motion.p>
+                </p>
+              </div>
 
-                <motion.h1
-                  initial={
-                    reducedMotion
-                      ? false
-                      : { opacity: 0, y: 18, letterSpacing: "0.2em" }
-                  }
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                    letterSpacing: "0.04em",
-                  }}
-                  transition={{
-                    duration: reducedMotion ? 0 : 0.55,
-                    delay: reducedMotion ? 0 : 0.08,
-                    ease: EASE,
-                  }}
-                  className="font-serif text-6xl font-normal leading-[0.95] tracking-[2px] sm:text-8xl sm:tracking-[3px] md:text-9xl lg:text-[140px]"
+              <h1 className="max-w-full break-words font-serif text-5xl font-normal leading-[0.98] tracking-[1px] sm:text-6xl md:text-7xl lg:text-[88px]">
+                {hero.title}
+              </h1>
+
+              {hero.description && (
+                <p className="mt-6 max-w-sm text-[11px] font-light leading-7 tracking-[0.5px] text-[#77716A] sm:mt-8 sm:text-xs sm:leading-8">
+                  {hero.description}
+                </p>
+              )}
+
+              <div className="mt-8 flex flex-wrap items-center gap-5 sm:mt-10">
+                <Link
+                  href={hero.buttonLink}
+                  className="group inline-flex min-h-12 items-center gap-7 bg-[#292521] px-6 py-4 text-[8px] uppercase tracking-[2px] text-white transition-all duration-500 hover:bg-[#8D7962] sm:px-8 sm:text-[9px]"
                 >
-                  {hero.title}
-                </motion.h1>
+                  {hero.buttonText}
+                  <ArrowRight
+                    size={14}
+                    strokeWidth={1.2}
+                    className="transition-transform duration-300 group-hover:translate-x-1"
+                  />
+                </Link>
 
-                {hero.description && (
-                  <motion.p
-                    initial={
-                      reducedMotion ? false : { opacity: 0, y: 10 }
-                    }
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: reducedMotion ? 0 : 0.4,
-                      delay: reducedMotion ? 0 : 0.16,
-                      ease: EASE,
-                    }}
-                    className="mx-auto mt-6 max-w-md text-xs font-light leading-7 tracking-[1.5px] text-white/90 sm:text-sm md:mx-0 md:mt-7"
-                  >
-                    {hero.description}
-                  </motion.p>
-                )}
+                <span className="hidden text-[8px] tracking-[2px] text-[#A69A8C] sm:inline">
+                  TALA LUXURY FASHION
+                </span>
+              </div>
 
-                <motion.div
-                  initial={
-                    reducedMotion ? false : { opacity: 0, y: 10 }
-                  }
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: reducedMotion ? 0 : 0.4,
-                    delay: reducedMotion ? 0 : 0.22,
-                    ease: EASE,
-                  }}
-                >
-                  <Link
-                    href={hero.buttonLink}
-                    className="group mt-9 inline-flex min-h-12 items-center gap-6 border border-white/80 px-7 py-4 text-[9px] uppercase tracking-[3px] transition duration-500 hover:bg-white hover:text-[#292521] sm:px-9 sm:text-[10px]"
-                  >
-                    {hero.buttonText}
-                    <ArrowRight
-                      size={15}
-                      strokeWidth={1.2}
-                      className="transition-transform duration-500 group-hover:translate-x-1"
-                    />
-                  </Link>
-                </motion.div>
+              <div className="mt-8 border-t border-[#DED5C9] pt-5 sm:mt-12">
+                <p className="text-[8px] uppercase tracking-[3px] text-[#A18B70]">
+                  A QUIETER KIND OF ELEGANCE
+                </p>
               </div>
             </motion.div>
           </AnimatePresence>
         )}
 
+        {/* Slide controls */}
         {heroSlides.length > 1 && (
-          <div className="absolute bottom-9 right-6 z-20 flex items-center gap-4 sm:bottom-12 sm:right-12 md:right-16">
-            <span className="text-[10px] tracking-[3px] text-white">
+          <div className="absolute bottom-7 right-6 z-20 flex items-center gap-4 sm:bottom-10 sm:right-10 md:right-14">
+            <span className="text-[10px] tracking-[2px] text-white">
               {String(heroIndex + 1).padStart(2, "0")}
             </span>
 
@@ -643,19 +620,20 @@ export default function HomePage() {
                   className={`h-[2px] transition-all duration-500 ${
                     heroIndex === index
                       ? "w-9 bg-white"
-                      : "w-4 bg-white/50 hover:bg-white/80"
+                      : "w-4 bg-white/50 hover:bg-white"
                   }`}
                 />
               ))}
             </div>
 
-            <span className="text-[10px] tracking-[3px] text-white/65">
+            <span className="text-[10px] tracking-[2px] text-white/70">
               {String(heroSlides.length).padStart(2, "0")}
             </span>
           </div>
         )}
 
-        <div className="absolute bottom-9 left-6 z-20 flex items-center gap-3 text-white/80 sm:bottom-12 sm:left-12 md:left-16">
+        {/* Discover indicator */}
+        <div className="absolute bottom-7 left-6 z-20 flex items-center gap-3 text-white sm:bottom-10 sm:left-10 md:left-14">
           <motion.span
             animate={
               reducedMotion
@@ -668,10 +646,9 @@ export default function HomePage() {
               ease: "easeInOut",
             }}
           >
-            <ArrowDown size={16} strokeWidth={1} />
+            <ArrowDown size={15} strokeWidth={1} />
           </motion.span>
-
-          <span className="hidden text-[9px] uppercase tracking-[3px] sm:inline">
+          <span className="text-[8px] uppercase tracking-[3px]">
             Discover
           </span>
         </div>
@@ -691,6 +668,7 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
 
       {/* NEW ARRIVALS */}
       <section className="bg-[#e9e2d8] px-5 py-24 md:px-14">
