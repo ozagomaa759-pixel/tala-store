@@ -23,6 +23,15 @@ type Category = {
   subtitle: string | null;
 };
 
+const THEME = {
+  page: "#B8AA98",
+  surface: "#A99A88",
+  stone: "#958675",
+  ink: "#292923",
+  muted: "#625B50",
+  lime: "#D8ED83",
+};
+
 const COLLECTIONS = [
   {
     number: "01",
@@ -98,7 +107,10 @@ function CollectionVisual({
   const showImage = isValidImage(image) && !failed;
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#DCD5CA]">
+    <div
+      className="absolute inset-0 overflow-hidden"
+      style={{ backgroundColor: THEME.surface }}
+    >
       {showImage ? (
         <img
           src={image!}
@@ -108,14 +120,17 @@ function CollectionVisual({
           className="h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.045]"
         />
       ) : (
-        <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#DCD5CA]">
-          <div className="absolute -right-16 -top-20 h-[340px] w-[340px] rounded-full border border-[#24221F]/10" />
-          <div className="absolute -right-4 -top-8 h-[240px] w-[240px] rounded-full border border-[#24221F]/10" />
-          <div className="absolute -bottom-32 -left-20 h-[360px] w-[360px] rounded-full border border-[#24221F]/10" />
-          <span className="font-serif text-[clamp(6rem,18vw,15rem)] font-light tracking-[-0.12em] text-[#24221F]/[0.09]">
+        <div
+          className="relative flex h-full w-full items-center justify-center overflow-hidden"
+          style={{ backgroundColor: THEME.surface }}
+        >
+          <div className="absolute -right-16 -top-20 h-[340px] w-[340px] rounded-full border border-[#292923]/15" />
+          <div className="absolute -right-4 -top-8 h-[240px] w-[240px] rounded-full border border-[#292923]/15" />
+          <div className="absolute -bottom-32 -left-20 h-[360px] w-[360px] rounded-full border border-[#292923]/15" />
+          <span className="font-serif text-[clamp(6rem,18vw,15rem)] font-light tracking-[-0.12em] text-[#292923]/10">
             T.
           </span>
-          <span className="absolute bottom-8 left-8 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#24221F]/45">
+          <span className="absolute bottom-8 left-8 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#292923]/55">
             TALA / {name}
           </span>
         </div>
@@ -214,11 +229,14 @@ export default function CollectionsPage() {
   }, [categories, products]);
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#F5F1EB] text-[#24221F]">
+    <main
+      className="min-h-screen overflow-hidden text-[#292923]"
+      style={{ backgroundColor: THEME.page }}
+    >
       <Header />
 
       {/* Announcement */}
-      <div className="overflow-hidden border-b border-[#24221F]/10 bg-[#D8ED83] py-2.5">
+      <div className="overflow-hidden border-b border-[#292923]/15 bg-[#D8ED83] py-2.5 text-[#292923]">
         <div className="flex w-max animate-[tala-marquee_28s_linear_infinite] items-center gap-9 whitespace-nowrap">
           {Array.from({ length: 8 }).map((_, index) => (
             <span
@@ -244,31 +262,31 @@ export default function CollectionsPage() {
           transition={{ duration: 0.7 }}
         >
           <div className="mb-8 flex items-center justify-between">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#77716A]">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#625B50]">
               TALA / THE COLLECTIONS
             </p>
 
-            <p className="hidden text-[9px] uppercase tracking-[0.2em] text-[#77716A] sm:block">
+            <p className="hidden text-[9px] uppercase tracking-[0.2em] text-[#625B50] sm:block">
               A LITTLE DIFFERENT. ALWAYS TALA.
             </p>
           </div>
 
           <div className="grid items-end gap-8 lg:grid-cols-[1.5fr_0.5fr]">
             <div>
-              <p className="mb-5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.25em] text-[#77716A]">
+              <p className="mb-5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.25em] text-[#625B50]">
                 <Sparkles size={13} />
                 THE WORLD OF TALA
               </p>
 
               <h1 className="max-w-5xl font-serif text-[clamp(3.8rem,10vw,9rem)] font-normal leading-[0.84] tracking-[-0.065em]">
                 Find your
-                <span className="ml-3 inline-block italic text-[#888078]">
+                <span className="ml-3 inline-block italic text-[#292923]/65">
                   kind.
                 </span>
               </h1>
 
               <div className="mt-9 flex items-center gap-3">
-                <span className="h-2 w-2 rounded-full bg-[#A7BD62]" />
+                <span className="h-2 w-2 rounded-full bg-[#D8ED83]" />
                 <p className="text-[9px] font-semibold uppercase tracking-[0.25em]">
                   THREE EDITS. ONE TALA.
                 </p>
@@ -276,7 +294,7 @@ export default function CollectionsPage() {
             </div>
 
             <div className="max-w-[280px] lg:justify-self-end lg:pb-2">
-              <p className="text-sm leading-7 text-[#77716A]">
+              <p className="text-sm leading-7 text-[#625B50]">
                 Not just what you wear.
                 <br />
                 It&apos;s how you make it yours.
@@ -295,12 +313,12 @@ export default function CollectionsPage() {
 
       {/* Collection cards */}
       <section className="mx-auto max-w-[1600px] px-5 pb-20 sm:px-10 sm:pb-28 lg:px-16">
-        <div className="mb-6 flex items-center justify-between border-t border-[#24221F]/15 pt-5">
+        <div className="mb-6 flex items-center justify-between border-t border-[#292923]/20 pt-5">
           <p className="text-[9px] font-bold uppercase tracking-[0.22em]">
             THE EDITS
           </p>
 
-          <p className="text-[9px] uppercase tracking-[0.16em] text-[#77716A]">
+          <p className="text-[9px] uppercase tracking-[0.16em] text-[#625B50]">
             {loading
               ? "LOADING..."
               : `${products.length} PIECES AVAILABLE`}
@@ -326,7 +344,8 @@ export default function CollectionsPage() {
                 aria-label={`Explore ${collection.name}`}
               >
                 <div
-                  className={`relative overflow-hidden bg-[#DCD5CA] ${collection.aspect}`}
+                  className={`relative overflow-hidden ${collection.aspect}`}
+                  style={{ backgroundColor: THEME.surface }}
                 >
                   <CollectionVisual
                     image={collection.image}
@@ -377,7 +396,7 @@ export default function CollectionsPage() {
                         </p>
                       </div>
 
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 transition-all duration-300 group-hover:border-[#D8ED83] group-hover:bg-[#D8ED83] group-hover:text-[#24221F]">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 transition-all duration-300 group-hover:border-[#D8ED83] group-hover:bg-[#D8ED83] group-hover:text-[#292923]">
                         <ArrowUpRight size={19} strokeWidth={1.4} />
                       </span>
                     </div>
@@ -390,26 +409,26 @@ export default function CollectionsPage() {
       </section>
 
       {/* Closing statement */}
-      <section className="border-t border-[#24221F]/10 bg-[#EDE8DF] px-5 py-20 text-center sm:py-28">
-        <p className="mb-5 text-[9px] font-bold uppercase tracking-[0.3em] text-[#77716A]">
+      <section className="border-t border-[#292923]/15 px-5 py-20 text-center sm:py-28" style={{ backgroundColor: THEME.surface }}>
+        <p className="mb-5 text-[9px] font-bold uppercase tracking-[0.3em] text-[#625B50]">
           MORE THAN A LOOK
         </p>
 
         <h2 className="font-serif text-4xl font-normal leading-tight tracking-[-0.04em] sm:text-6xl">
           Make it
-          <span className="ml-2 italic text-[#81796E]">your</span>
+          <span className="ml-2 italic text-[#292923]/60">your</span>
           <br />
           own thing.
         </h2>
 
-        <p className="mx-auto mt-6 max-w-sm text-xs leading-7 text-[#77716A]">
+        <p className="mx-auto mt-6 max-w-sm text-xs leading-7 text-[#625B50]">
           Your wardrobe, your mood, your way.
           Find the pieces that feel like you.
         </p>
 
         <Link
           href="/collections/all-pieces"
-          className="mt-8 inline-flex items-center gap-4 bg-[#24221F] px-7 py-4 text-[9px] font-bold uppercase tracking-[0.2em] text-[#F5F1EB] transition-colors hover:bg-[#D8ED83] hover:text-[#24221F]"
+          className="mt-8 inline-flex items-center gap-4 bg-[#292923] px-7 py-4 text-[9px] font-bold uppercase tracking-[0.2em] text-[#B8AA98] transition-colors hover:bg-[#D8ED83] hover:text-[#292923]"
         >
           SHOP ALL PIECES
           <ArrowUpRight size={15} />
@@ -417,10 +436,10 @@ export default function CollectionsPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#24221F] px-5 py-10 text-center text-[#F5F1EB]">
+      <footer className="bg-[#292923] px-5 py-10 text-center text-[#B8AA98]">
         <Link
           href="/"
-          className="font-serif text-3xl tracking-[0.22em]"
+          className="font-serif text-3xl tracking-[0.22em] text-white"
         >
           TALA
         </Link>
