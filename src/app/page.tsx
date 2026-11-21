@@ -755,50 +755,46 @@ export default function HomePage() {
         )}
       </section>
 
+      
       {/* COLLECTION STUDIO */}
       {categories.length > 0 && (
-        <section className="px-5 py-24 md:px-14 md:py-32">
+        <section className="bg-[#F4F0E9] px-4 py-14 sm:px-8 sm:py-20 md:px-14 md:py-24">
           <motion.div
-            initial={
-              reducedMotion
-                ? false
-                : { opacity: 0, y: 18 }
-            }
+            initial={reducedMotion ? false : { opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.35 }}
             transition={{
               duration: reducedMotion ? 0 : 0.55,
               ease: EASE,
             }}
-            className="mb-14 text-center"
+            className="mb-8 flex flex-col items-center text-center sm:mb-12"
           >
-            <p className="mb-4 text-[10px] tracking-[5px] text-[#a18b70]">
-              CURATED FOR YOU
+            <p className="mb-3 text-[9px] tracking-[4px] text-[#A18B70] sm:text-[10px] sm:tracking-[5px]">
+              THE TALA COLLECTION
             </p>
-            <h2 className="text-4xl font-light tracking-[5px] md:text-6xl">
-              Discover TALA
+
+            <h2 className="font-serif text-3xl font-light tracking-[2px] text-[#292521] sm:text-5xl sm:tracking-[4px]">
+              A World of Elegance
             </h2>
-            <p className="mt-5 text-sm text-[#77716a]">
-              Explore our world of timeless fashion.
+
+            <p className="mt-3 max-w-md text-xs leading-6 text-[#81766B] sm:text-sm">
+              Two distinctive edits. One timeless point of view.
             </p>
           </motion.div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+          <div className="mx-auto grid max-w-[1250px] grid-cols-2 gap-3 sm:gap-5 md:gap-7">
             {categories.map((category, index) => (
               <motion.div
                 key={category.id}
-                initial={
-                  reducedMotion
-                    ? false
-                    : { opacity: 0, y: 22 }
-                }
+                initial={reducedMotion ? false : { opacity: 0, y: 18 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.15 }}
                 transition={{
                   delay: reducedMotion ? 0 : index * 0.08,
-                  duration: reducedMotion ? 0 : 0.55,
+                  duration: reducedMotion ? 0 : 0.5,
                   ease: EASE,
                 }}
-                className="group relative h-[470px] overflow-hidden bg-[#ded5c9] md:h-[560px]"
+                className="group relative aspect-[4/5] min-h-0 overflow-hidden bg-[#DED5C9] sm:aspect-[5/4] md:aspect-[4/5]"
               >
                 {category.image_url && (
                   <picture>
@@ -811,51 +807,62 @@ export default function HomePage() {
                     <img
                       src={category.image_url}
                       alt={category.name}
-                      className="h-full w-full object-cover transition duration-1000 group-hover:scale-[1.04]"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                       loading="lazy"
                       decoding="async"
                     />
                   </picture>
                 )}
+
                 <div
-                  className="absolute inset-0 transition duration-700 group-hover:bg-black/10"
+                  className="absolute inset-0"
                   style={{
-                    backgroundColor: `rgba(0, 0, 0, ${
-                      category.overlay_opacity / 100
-                    })`,
+                    backgroundColor: `rgba(0, 0, 0, ${Math.min(
+                      0.55,
+                      Math.max(0.18, category.overlay_opacity / 100)
+                    )})`,
                   }}
                 />
-                <div className="absolute inset-x-0 bottom-0 px-6 pb-12 pt-20 text-center text-white">
+
+                <div className="absolute inset-x-0 bottom-0 px-3 pb-5 pt-12 text-center text-white sm:px-6 sm:pb-9">
                   {category.subtitle && (
-                    <p className="mb-4 text-[9px] uppercase tracking-[4px] text-white/85">
+                    <p className="mb-2 text-[7px] uppercase tracking-[2px] text-white/80 sm:mb-3 sm:text-[9px] sm:tracking-[3px]">
                       {category.subtitle}
                     </p>
                   )}
-                  <h3 className="text-3xl font-light tracking-[4px] sm:text-4xl">
+
+                  <h3 className="font-serif text-xl font-light tracking-[1px] sm:text-3xl sm:tracking-[3px] md:text-4xl">
                     {category.headline || category.name}
                   </h3>
-                  {category.description && (
-                    <p className="mx-auto mt-4 max-w-sm text-xs leading-6 tracking-wide text-white/90">
-                      {category.description}
-                    </p>
-                  )}
+
                   <Link
                     href={category.button_link}
-                    className="group/button mt-7 inline-flex items-center gap-4 border-b border-white/80 pb-2 text-[10px] tracking-[3px] transition-opacity hover:opacity-70"
+                    className="mt-4 inline-flex items-center gap-2 border-b border-white/75 pb-2 text-[8px] uppercase tracking-[1.5px] transition-all duration-300 hover:gap-4 sm:mt-6 sm:gap-3 sm:text-[9px] sm:tracking-[2px]"
                   >
-                    {category.button_text}
-                    <ArrowRight
-                      size={14}
-                      strokeWidth={1.2}
-                      className="transition-transform duration-300 group-hover/button:translate-x-1"
-                    />
+                    {category.button_text || "EXPLORE"}
+                    <ArrowRight size={13} strokeWidth={1.2} />
                   </Link>
                 </div>
               </motion.div>
             ))}
           </div>
+
+          <div className="mt-8 flex justify-center sm:mt-10">
+            <Link
+              href="/collections/all-pieces"
+              className="group inline-flex min-h-11 items-center gap-4 border border-[#292521] px-7 py-3 text-[9px] uppercase tracking-[2px] text-[#292521] transition-all duration-300 hover:bg-[#292521] hover:text-white sm:px-9"
+            >
+              Explore All Collection
+              <ArrowRight
+                size={14}
+                strokeWidth={1.2}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
+            </Link>
+          </div>
         </section>
       )}
+
 
       {/* TALA PHILOSOPHY */}
       <section className="relative overflow-hidden bg-[#292521] px-6 py-28 text-center text-white">
