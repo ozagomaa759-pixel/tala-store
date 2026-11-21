@@ -195,7 +195,7 @@ export default function TermsPage() {
           <div className="mt-4 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
             <div>
               <h2 className="font-serif text-3xl font-light tracking-[-0.04em] sm:text-4xl">
-                We're here to help.
+                We&apos;re here to help.
               </h2>
 
               <p className="mt-3 max-w-lg text-xs leading-7 text-[#59633D]">
@@ -238,7 +238,7 @@ export default function TermsPage() {
         </div>
 
         <p className="mt-8 text-[10px] leading-6 text-[#9A9186]">
-          These terms should be reviewed against TALA's
+          These terms should be reviewed against TALA&apos;s
           actual business practices and applicable laws.
           Nothing in these terms is intended to exclude
           rights that cannot legally be excluded.
