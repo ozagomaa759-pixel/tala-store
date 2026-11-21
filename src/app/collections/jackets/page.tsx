@@ -27,6 +27,16 @@ type CollectionData = {
 
 type SortOption = "featured" | "price-low" | "price-high";
 
+const THEME = {
+  page: "#B8AA98",
+  surface: "#A99A88",
+  stone: "#958675",
+  ink: "#292923",
+  muted: "#625B50",
+  lime: "#D8ED83",
+  line: "rgba(41,41,35,0.2)",
+};
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-EG", {
     style: "currency",
@@ -62,8 +72,11 @@ function ProductImage({
 
   if (!isRealImage(src) || failed) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-[#E7E0D6]">
-        <span className="font-serif text-5xl tracking-[0.2em] text-[#A69B8D]">
+      <div
+        className="flex h-full w-full items-center justify-center"
+        style={{ backgroundColor: THEME.surface }}
+      >
+        <span className="font-serif text-5xl tracking-[0.2em] text-[#292923]/35">
           T.
         </span>
       </div>
@@ -190,11 +203,14 @@ export default function JacketsCollectionPage() {
     "The finishing layer. Strong silhouettes, effortless energy, and pieces made to change the whole look.";
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#F5F1EB] text-[#24221F]">
+    <main
+      className="min-h-screen overflow-hidden text-[#292923]"
+      style={{ backgroundColor: THEME.page }}
+    >
       <Header />
 
       {/* Announcement */}
-      <div className="relative z-30 overflow-hidden bg-[#D8ED83] py-2.5">
+      <div className="relative z-30 overflow-hidden bg-[#D8ED83] py-2.5 text-[#292923]">
         <div className="flex w-max animate-[tala-marquee_28s_linear_infinite] items-center gap-8 whitespace-nowrap">
           {Array.from({ length: 8 }).map((_, index) => (
             <span
@@ -213,7 +229,10 @@ export default function JacketsCollectionPage() {
       </div>
 
       {/* Hero */}
-      <section className="relative isolate flex min-h-[570px] items-end overflow-hidden bg-[#81786D] sm:min-h-[690px]">
+      <section
+        className="relative isolate flex min-h-[570px] items-end overflow-hidden sm:min-h-[690px]"
+        style={{ backgroundColor: THEME.stone }}
+      >
         {heroImage ? (
           <img
             src={heroImage}
@@ -222,11 +241,14 @@ export default function JacketsCollectionPage() {
             className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
           />
         ) : (
-          <div className="absolute inset-0 -z-20 overflow-hidden bg-[#DCD5CA]">
-            <div className="absolute -right-20 -top-32 h-[500px] w-[500px] rounded-full border border-[#24221F]/10" />
-            <div className="absolute -right-4 -top-16 h-[370px] w-[370px] rounded-full border border-[#24221F]/10" />
-            <div className="absolute -bottom-48 left-[25%] h-[550px] w-[550px] rounded-full border border-[#24221F]/10" />
-            <span className="absolute right-[8%] top-[18%] font-serif text-[180px] font-light tracking-[-0.1em] text-[#24221F]/[0.08] sm:text-[280px]">
+          <div
+            className="absolute inset-0 -z-20 overflow-hidden"
+            style={{ backgroundColor: THEME.stone }}
+          >
+            <div className="absolute -right-20 -top-32 h-[500px] w-[500px] rounded-full border border-[#292923]/15" />
+            <div className="absolute -right-4 -top-16 h-[370px] w-[370px] rounded-full border border-[#292923]/15" />
+            <div className="absolute -bottom-48 left-[25%] h-[550px] w-[550px] rounded-full border border-[#292923]/15" />
+            <span className="absolute right-[8%] top-[18%] font-serif text-[180px] font-light tracking-[-0.1em] text-[#292923]/10 sm:text-[280px]">
               T.
             </span>
           </div>
@@ -293,23 +315,26 @@ export default function JacketsCollectionPage() {
         id="jackets-products"
         className="mx-auto max-w-[1600px] px-5 py-16 sm:px-10 sm:py-24 lg:px-16"
       >
-        <div className="mb-10 flex flex-col justify-between gap-7 border-b border-[#DCD5CB] pb-8 sm:flex-row sm:items-end">
+        <div
+          className="mb-10 flex flex-col justify-between gap-7 border-b pb-8 sm:flex-row sm:items-end"
+          style={{ borderColor: THEME.line }}
+        >
           <div>
-            <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#8C806F]">
+            <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#625B50]">
               NOT JUST ANOTHER LAYER
             </p>
 
             <h2 className="font-serif text-4xl font-light tracking-[-0.045em] sm:text-6xl">
               Jackets
-              <span className="ml-2 text-[#A7BD62]">edit.</span>
+              <span className="ml-2 text-[#D8ED83]">edit.</span>
             </h2>
 
-            <p className="mt-3 text-xs text-[#82796F]">
+            <p className="mt-3 text-xs text-[#625B50]">
               Find the piece that pulls it all together.
             </p>
           </div>
 
-          <p className="text-[10px] uppercase tracking-[0.17em] text-[#82796F]">
+          <p className="text-[10px] uppercase tracking-[0.17em] text-[#625B50]">
             {loading ? "Loading pieces..." : `${jackets.length} PIECES`}
           </p>
         </div>
@@ -320,7 +345,7 @@ export default function JacketsCollectionPage() {
             <Search
               size={16}
               strokeWidth={1.5}
-              className="absolute left-0 top-1/2 -translate-y-1/2 text-[#82796F]"
+              className="absolute left-0 top-1/2 -translate-y-1/2 text-[#625B50]"
             />
             <input
               type="search"
@@ -328,11 +353,11 @@ export default function JacketsCollectionPage() {
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Find your next favourite..."
               aria-label="Search jackets"
-              className="w-full border-b border-[#CFC6BA] bg-transparent py-3 pl-7 pr-3 text-xs outline-none placeholder:text-[#A49A8F] focus:border-[#24221F]"
+              className="w-full border-b border-[#292923]/30 bg-transparent py-3 pl-7 pr-3 text-xs text-[#292923] outline-none placeholder:text-[#625B50]/70 focus:border-[#292923]"
             />
           </div>
 
-          <label className="flex items-center gap-3 text-[9px] uppercase tracking-[0.16em] text-[#82796F]">
+          <label className="flex items-center gap-3 text-[9px] uppercase tracking-[0.16em] text-[#625B50]">
             <SlidersHorizontal size={15} strokeWidth={1.5} />
             Sort by
             <select
@@ -340,7 +365,7 @@ export default function JacketsCollectionPage() {
               onChange={(event) =>
                 setSort(event.target.value as SortOption)
               }
-              className="min-w-[135px] border-b border-[#CFC6BA] bg-transparent py-2 text-[10px] text-[#24221F] outline-none"
+              className="min-w-[135px] border-b border-[#292923]/30 bg-[#A99A88] py-2 text-[10px] text-[#292923] outline-none"
             >
               <option value="featured">Featured</option>
               <option value="price-low">Price: Low to High</option>
@@ -353,30 +378,33 @@ export default function JacketsCollectionPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="aspect-[3/4] bg-[#E7E1D8]" />
-                <div className="mt-4 h-3 w-2/3 bg-[#E7E1D8]" />
-                <div className="mt-3 h-3 w-1/3 bg-[#E7E1D8]" />
+                <div
+                  className="aspect-[3/4]"
+                  style={{ backgroundColor: THEME.surface }}
+                />
+                <div className="mt-4 h-3 w-2/3 bg-[#958675]" />
+                <div className="mt-3 h-3 w-1/3 bg-[#958675]" />
               </div>
             ))}
           </div>
         ) : error ? (
           <div className="py-24 text-center">
-            <p className="text-sm text-[#9A554B]">{error}</p>
+            <p className="text-sm text-[#7B4038]">{error}</p>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-6 border-b border-[#24221F] pb-2 text-[9px] uppercase tracking-[0.2em]"
+              className="mt-6 border-b border-[#292923] pb-2 text-[9px] uppercase tracking-[0.2em]"
             >
               Try again
             </button>
           </div>
         ) : jackets.length === 0 ? (
           <div className="py-24 text-center">
-            <span className="text-3xl text-[#A7BD62]">✳</span>
+            <span className="text-3xl text-[#292923]">✳</span>
             <h3 className="mt-5 font-serif text-4xl font-light">
               {search ? "No matches found." : "The next layer is coming."}
             </h3>
-            <p className="mx-auto mt-4 max-w-sm text-xs leading-7 text-[#82796F]">
+            <p className="mx-auto mt-4 max-w-sm text-xs leading-7 text-[#625B50]">
               {search
                 ? "No jackets match your search. Try another name."
                 : "New pieces are being prepared. In the meantime, explore the full TALA collection."}
@@ -386,14 +414,14 @@ export default function JacketsCollectionPage() {
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                className="mt-8 border-b border-[#24221F] pb-2 text-[9px] uppercase tracking-[0.2em]"
+                className="mt-8 border-b border-[#292923] pb-2 text-[9px] uppercase tracking-[0.2em]"
               >
                 Clear search
               </button>
             ) : (
               <Link
                 href="/collections/all-pieces"
-                className="mt-8 inline-flex items-center gap-3 border-b border-[#24221F] pb-2 text-[9px] uppercase tracking-[0.2em]"
+                className="mt-8 inline-flex items-center gap-3 border-b border-[#292923] pb-2 text-[9px] uppercase tracking-[0.2em]"
               >
                 Explore all pieces
                 <ArrowRight size={14} />
@@ -420,48 +448,51 @@ export default function JacketsCollectionPage() {
                   )}`}
                   className="block"
                 >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-[#EAE4DB]">
+                  <div
+                    className="relative aspect-[3/4] overflow-hidden"
+                    style={{ backgroundColor: THEME.surface }}
+                  >
                     <ProductImage
                       src={product.image}
                       alt={product.name}
                     />
 
                     {!product.isAvailable && (
-                      <span className="absolute left-3 top-3 bg-[#F5F1EB] px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#24221F]">
+                      <span className="absolute left-3 top-3 bg-[#292923] px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#D8ED83]">
                         Sold Out
                       </span>
                     )}
 
                     {product.isNew && (
-                      <span className="absolute right-3 top-3 bg-[#D8ED83] px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#24221F]">
+                      <span className="absolute right-3 top-3 bg-[#D8ED83] px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#292923]">
                         Just dropped
                       </span>
                     )}
 
-                    <span className="absolute bottom-3 right-3 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-[#F5F1EB] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                    <span className="absolute bottom-3 right-3 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-[#D8ED83] text-[#292923] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                       <ArrowUpRight size={17} strokeWidth={1.5} />
                     </span>
                   </div>
 
                   <div className="pt-4">
-                    <h3 className="text-[11px] font-semibold tracking-[0.025em] text-[#302B26] sm:text-xs">
+                    <h3 className="text-[11px] font-semibold tracking-[0.025em] text-[#292923] sm:text-xs">
                       {product.name}
                     </h3>
 
                     {product.subtitle && (
-                      <p className="mt-1.5 line-clamp-1 text-[10px] text-[#91877C]">
+                      <p className="mt-1.5 line-clamp-1 text-[10px] text-[#625B50]">
                         {product.subtitle}
                       </p>
                     )}
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-semibold text-[#302B26]">
+                      <span className="text-[11px] font-semibold text-[#292923]">
                         {formatPrice(product.price)}
                       </span>
 
                       {product.oldPrice != null &&
                         product.oldPrice > product.price && (
-                          <span className="text-[10px] text-[#A49A90] line-through">
+                          <span className="text-[10px] text-[#625B50]/70 line-through">
                             {formatPrice(product.oldPrice)}
                           </span>
                         )}
@@ -473,7 +504,7 @@ export default function JacketsCollectionPage() {
                           <span
                             key={color.name}
                             title={color.name}
-                            className="h-3 w-3 rounded-full border border-black/10"
+                            className="h-3 w-3 rounded-full border border-[#292923]/20"
                             style={{ backgroundColor: color.value }}
                           />
                         ))}
@@ -488,7 +519,7 @@ export default function JacketsCollectionPage() {
       </section>
 
       {/* Closing CTA */}
-      <section className="mx-5 mb-16 overflow-hidden bg-[#D8ED83] sm:mx-10 lg:mx-16">
+      <section className="mx-5 mb-16 overflow-hidden bg-[#D8ED83] text-[#292923] sm:mx-10 lg:mx-16">
         <div className="flex flex-col justify-between gap-8 px-7 py-10 sm:flex-row sm:items-end sm:px-12 sm:py-14">
           <div>
             <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#555D3D]">
@@ -501,7 +532,7 @@ export default function JacketsCollectionPage() {
 
           <Link
             href="/collections/all-pieces"
-            className="group inline-flex w-fit items-center gap-5 border-b border-[#24221F] pb-3 text-[9px] font-semibold uppercase tracking-[0.18em]"
+            className="group inline-flex w-fit items-center gap-5 border-b border-[#292923] pb-3 text-[9px] font-semibold uppercase tracking-[0.18em]"
           >
             Shop all pieces
             <ArrowUpRight
@@ -513,10 +544,10 @@ export default function JacketsCollectionPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#24221F] px-6 py-12 text-center text-[#F5F1EB]">
+      <footer className="bg-[#292923] px-6 py-12 text-center text-[#B8AA98]">
         <Link
           href="/"
-          className="font-serif text-3xl font-light tracking-[0.32em]"
+          className="font-serif text-3xl font-light tracking-[0.32em] text-white"
         >
           TALA
         </Link>
