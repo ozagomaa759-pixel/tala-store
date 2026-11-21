@@ -36,6 +36,86 @@ type Variant = {
   is_active: boolean;
 };
 
+type ColorTheme = {
+  page: string;
+  accent: string;
+  button: string;
+  buttonText: string;
+  border: string;
+};
+
+function getColorTheme(color: string | null | undefined): ColorTheme {
+  const value = (color ?? "").toLowerCase();
+
+  if (value.includes("black")) {
+    return {
+      page: "#F1F0ED",
+      accent: "#373633",
+      button: "#292825",
+      buttonText: "#FFFFFF",
+      border: "#C8C5BE",
+    };
+  }
+
+  if (value.includes("mint") || value.includes("sage") || value.includes("green")) {
+    return {
+      page: "#F1F4EF",
+      accent: "#758A72",
+      button: "#657B62",
+      buttonText: "#FFFFFF",
+      border: "#C8D3C4",
+    };
+  }
+
+  if (value.includes("pink") || value.includes("blush") || value.includes("rose")) {
+    return {
+      page: "#F7F0EF",
+      accent: "#B7837D",
+      button: "#A97570",
+      buttonText: "#FFFFFF",
+      border: "#E2C9C5",
+    };
+  }
+
+  if (value.includes("beige") || value.includes("cream") || value.includes("ivory")) {
+    return {
+      page: "#F6F2EB",
+      accent: "#A58B68",
+      button: "#8E7658",
+      buttonText: "#FFFFFF",
+      border: "#E2D8C9",
+    };
+  }
+
+  if (value.includes("white")) {
+    return {
+      page: "#F7F7F5",
+      accent: "#8A8982",
+      button: "#55544F",
+      buttonText: "#FFFFFF",
+      border: "#DADAD5",
+    };
+  }
+
+  if (value.includes("brown") || value.includes("chocolate") || value.includes("camel")) {
+    return {
+      page: "#F4F0EB",
+      accent: "#92745D",
+      button: "#765B46",
+      buttonText: "#FFFFFF",
+      border: "#DCCFC2",
+    };
+  }
+
+  return {
+    page: "#FAF8F5",
+    accent: "#A58B68",
+    button: "#292521",
+    buttonText: "#FFFFFF",
+    border: "#E5DDD2",
+  };
+}
+
 export default function ProductDetails({
   product,
   variants,
@@ -82,23 +162,6 @@ export default function ProductDetails({
     [activeVariants]
   );
 
-  const galleryImages = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          [
-            ...images,
-            ...activeVariants.map((variant) => variant.image_url),
-            product.main_image,
-          ].filter(
-            (image): image is string =>
-              typeof image === "string" && image.trim().length > 0
-          )
-        )
-      ),
-    [images, activeVariants, product.main_image]
-  );
-
   const [selectedVariant, setSelectedVariant] =
     useState<Variant | null>(
       availableVariants[0] ?? activeVariants[0] ?? null
@@ -110,14 +173,15 @@ export default function ProductDetails({
   const [isAdded, setIsAdded] = useState(false);
 
   useEffect(() => {
-    setSelectedVariant(
-      availableVariants[0] ?? activeVariants[0] ?? null
-    );
-    setSelectedImage("");
+    const initialVariant =
+      availableVariants[0] ?? activeVariants[0] ?? null;
+
+    setSelectedVariant(initialVariant);
+    setSelectedImage(initialVariant?.image_url ?? "");
     setQuantity(1);
     setMessage("");
     setIsAdded(false);
-  }, [product.id, variants]);
+  }, [product.id, variants, availableVariants, activeVariants]);
 
   useEffect(() => {
     if (!isAdded) return;
@@ -129,14 +193,48 @@ export default function ProductDetails({
     return () => window.clearTimeout(timeout);
   }, [isAdded]);
 
+  const selectedColor = selectedVariant?.color ?? null;
+
+  const colorTheme = useMemo(
+    () => getColorTheme(selectedColor),
+    [selectedColor]
+  );
+
+  const selectedColorImages = useMemo(
+    () =>
+      activeVariants
+        .filter(
+          (variant) =>
+            variant.color === selectedColor &&
+            typeof variant.image_url === "string" &&
+            variant.image_url.trim().length > 0
+        )
+        .map((variant) => variant.image_url as string),
+    [activeVariants, selectedColor]
+  );
+
+  const galleryImages = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...selectedColorImages,
+          ...images,
+        ])
+      ),
+    [selectedColorImages, images]
+  );
+
   const currentImage =
     selectedImage ||
     selectedVariant?.image_url ||
-    galleryImages[0] ||
+    selectedColorImages[0] ||
+    images[0] ||
     "";
 
   const currentPrice =
-    selectedVariant?.price_override ?? product.price;
+    Number(selectedVariant?.price_override) > 0
+      ? Number(selectedVariant?.price_override)
+      : Number(product.price);
 
   const availableStock = Math.max(
     0,
@@ -161,15 +259,24 @@ export default function ProductDetails({
         : activeVariants.filter((variant) => variant.size === size);
 
     const nextVariant =
-      options.find((variant) => variant.stock_quantity > 0) ??
+      options.find(
+        (variant) => Number(variant.stock_quantity) > 0
+      ) ??
       options[0] ??
       null;
 
     setSelectedVariant(nextVariant);
-    setSelectedImage(nextVariant?.image_url ?? "");
+    setSelectedImage(
+      nextVariant?.image_url ??
+      (nextVariant?.color === selectedColor
+        ? selectedColorImages[0]
+        : "") ??
+      images[0] ??
+      ""
+    );
     setQuantity(1);
     setMessage(
-      nextVariant && nextVariant.stock_quantity <= 0
+      nextVariant && Number(nextVariant.stock_quantity) <= 0
         ? "This size is currently unavailable."
         : ""
     );
@@ -186,18 +293,31 @@ export default function ProductDetails({
     const options =
       sameSize.length > 0
         ? sameSize
-        : activeVariants.filter((variant) => variant.color === color);
+        : activeVariants.filter(
+            (variant) => variant.color === color
+          );
 
     const nextVariant =
-      options.find((variant) => variant.stock_quantity > 0) ??
+      options.find(
+        (variant) => Number(variant.stock_quantity) > 0
+      ) ??
       options[0] ??
       null;
 
+    const nextColorImage =
+      nextVariant?.image_url ??
+      activeVariants.find(
+        (variant) =>
+          variant.color === color && variant.image_url
+      )?.image_url ??
+      images[0] ??
+      "";
+
     setSelectedVariant(nextVariant);
-    setSelectedImage(nextVariant?.image_url ?? "");
+    setSelectedImage(nextColorImage);
     setQuantity(1);
     setMessage(
-      nextVariant && nextVariant.stock_quantity <= 0
+      nextVariant && Number(nextVariant.stock_quantity) <= 0
         ? "This color and size are currently unavailable."
         : ""
     );
@@ -245,14 +365,17 @@ export default function ProductDetails({
   }
 
   return (
-    <main className="min-h-screen bg-[#FAF8F5] text-[#302A24]">
+    <main
+      className="min-h-screen text-[#302A24] transition-colors duration-700"
+      style={{ backgroundColor: colorTheme.page }}
+    >
       {/* Announcement */}
       <div className="bg-[#292521] px-4 py-2.5 text-center text-[9px] tracking-[0.25em] text-white">
         TALA LUXURY FASHION — A NEW WAY TO FEEL ELEGANT
       </div>
 
       {/* Header */}
-      <header className="relative flex h-[76px] items-center justify-between border-b border-[#EAE4DC] px-5 sm:px-10">
+      <header className="relative flex h-[76px] items-center justify-between border-b border-[#EAE4DC] px-5 transition-colors duration-500 sm:px-10">
         <Link
           href="/collections"
           className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-[#81766B] transition hover:text-[#292521]"
@@ -296,7 +419,7 @@ export default function ProductDetails({
       </div>
 
       {/* Product */}
-      <section className="mx-auto max-w-[1500px] px-5 pb-20 sm:px-10 sm:pb-28">
+      <section className="mx-auto max-w-[1500px] px-5 pb-20 transition-colors duration-700 sm:px-10 sm:pb-28">
         <div className="grid items-start gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:gap-20">
           {/* Gallery */}
           <div className="min-w-0">
@@ -305,8 +428,8 @@ export default function ProductDetails({
                 <img
                   key={currentImage}
                   src={currentImage}
-                  alt={product.name}
-                  className="aspect-[4/5] w-full object-cover transition-opacity duration-500"
+                  alt={`${product.name}${selectedColor ? ` - ${selectedColor}` : ""}`}
+                  className="aspect-[4/5] w-full object-cover transition-opacity duration-700"
                 />
               ) : (
                 <div className="flex aspect-[4/5] items-center justify-center text-sm text-[#897D70]">
@@ -317,6 +440,12 @@ export default function ProductDetails({
               <div className="pointer-events-none absolute bottom-5 left-5 text-[8px] uppercase tracking-[0.25em] text-white drop-shadow">
                 TALA — LUXURY FASHION
               </div>
+
+              {selectedColor && (
+                <div className="absolute right-5 top-5 rounded-full border border-white/50 bg-white/75 px-4 py-2 text-[9px] uppercase tracking-[0.18em] text-[#403A33] backdrop-blur-sm">
+                  {selectedColor}
+                </div>
+              )}
             </div>
 
             {galleryImages.length > 1 && (
@@ -328,11 +457,17 @@ export default function ProductDetails({
                     onClick={() => setSelectedImage(image)}
                     aria-label={`View product image ${index + 1}`}
                     aria-pressed={currentImage === image}
-                    className={`relative overflow-hidden border transition ${
+                    className={`relative overflow-hidden border transition duration-300 ${
                       currentImage === image
-                        ? "border-[#75604C]"
-                        : "border-transparent opacity-70 hover:opacity-100"
+                        ? "opacity-100"
+                        : "border-transparent opacity-65 hover:opacity-100"
                     }`}
+                    style={{
+                      borderColor:
+                        currentImage === image
+                          ? colorTheme.accent
+                          : "transparent",
+                    }}
                   >
                     <img
                       src={image}
@@ -348,7 +483,10 @@ export default function ProductDetails({
           {/* Product Information */}
           <div className="lg:sticky lg:top-10">
             <div className="border-b border-[#E5DDD2] pb-7">
-              <p className="mb-5 text-[9px] uppercase tracking-[0.35em] text-[#A58B68]">
+              <p
+                className="mb-5 text-[9px] uppercase tracking-[0.35em] transition-colors duration-500"
+                style={{ color: colorTheme.accent }}
+              >
                 TALA LUXURY FASHION
               </p>
 
@@ -389,7 +527,10 @@ export default function ProductDetails({
                       <h2 className="text-[10px] uppercase tracking-[0.2em]">
                         Select Color
                       </h2>
-                      <span className="text-xs text-[#81766B]">
+                      <span
+                        className="text-xs transition-colors duration-500"
+                        style={{ color: colorTheme.accent }}
+                      >
                         {selectedVariant?.color ?? ""}
                       </span>
                     </div>
@@ -410,7 +551,8 @@ export default function ProductDetails({
                           relevant.length > 0 ? relevant : matching;
 
                         const soldOut = !options.some(
-                          (variant) => variant.stock_quantity > 0
+                          (variant) =>
+                            Number(variant.stock_quantity) > 0
                         );
 
                         const colorCode =
@@ -427,17 +569,20 @@ export default function ProductDetails({
                             onClick={() => chooseColor(color)}
                             aria-label={`Select ${color}`}
                             aria-pressed={selected}
-                            className={`group flex items-center gap-2 rounded-full border px-3 py-2 text-xs transition ${
-                              selected
-                                ? "border-[#6D5B49] bg-white"
-                                : "border-[#E5DDD2] bg-transparent hover:border-[#A58B68]"
-                            }`}
+                            className="group flex items-center gap-2 rounded-full border bg-white/40 px-3 py-2 text-xs transition-all duration-300 hover:bg-white/80"
+                            style={{
+                              borderColor: selected
+                                ? colorTheme.accent
+                                : "#E5DDD2",
+                            }}
                           >
                             <span
                               className="h-4 w-4 rounded-full border border-black/10"
                               style={{ backgroundColor: colorCode }}
                             />
-                            <span className="text-[#62584E]">{color}</span>
+                            <span className="text-[#62584E]">
+                              {color}
+                            </span>
                             {soldOut && (
                               <span className="text-[9px] text-[#A66C60]">
                                 Sold out
@@ -457,7 +602,10 @@ export default function ProductDetails({
                       <h2 className="text-[10px] uppercase tracking-[0.2em]">
                         Select Size
                       </h2>
-                      <span className="text-[10px] uppercase tracking-[0.12em] text-[#A58B68]">
+                      <span
+                        className="text-[10px] uppercase tracking-[0.12em] transition-colors duration-500"
+                        style={{ color: colorTheme.accent }}
+                      >
                         Size selection
                       </span>
                     </div>
@@ -479,7 +627,8 @@ export default function ProductDetails({
                             : matching;
 
                         const soldOut = !relevant.some(
-                          (variant) => variant.stock_quantity > 0
+                          (variant) =>
+                            Number(variant.stock_quantity) > 0
                         );
 
                         const selected = selectedVariant?.size === size;
@@ -490,13 +639,21 @@ export default function ProductDetails({
                             type="button"
                             onClick={() => chooseSize(size)}
                             aria-pressed={selected}
-                            className={`relative min-w-[58px] border px-4 py-3 text-[11px] tracking-wide transition ${
+                            className={`relative min-w-[58px] border px-4 py-3 text-[11px] tracking-wide transition-all duration-300 ${
                               selected
-                                ? "border-[#292521] bg-[#292521] text-white"
+                                ? "text-white"
                                 : soldOut
-                                  ? "border-[#E4D7D0] bg-[#F1EAE5] text-[#A58B80]"
-                                  : "border-[#DED5CA] bg-white/50 text-[#51473D] hover:border-[#75604C]"
+                                  ? "bg-[#F1EAE5] text-[#A58B80]"
+                                  : "bg-white/50 text-[#51473D] hover:bg-white"
                             }`}
+                            style={{
+                              borderColor: selected
+                                ? colorTheme.button
+                                : colorTheme.border,
+                              backgroundColor: selected
+                                ? colorTheme.button
+                                : undefined,
+                            }}
                           >
                             <span
                               className={soldOut ? "line-through" : ""}
@@ -529,13 +686,17 @@ export default function ProductDetails({
                     Quantity
                   </h2>
 
-                  <div className="flex h-12 w-[145px] items-center justify-between border border-[#DED5CA] bg-white/50">
+                  <div className="flex h-12 w-[145px] items-center justify-between border bg-white/50 transition-colors duration-500"
+                    style={{ borderColor: colorTheme.border }}
+                  >
                     <button
                       type="button"
                       aria-label="Decrease quantity"
                       disabled={quantity <= 1}
                       onClick={() =>
-                        setQuantity((current) => Math.max(1, current - 1))
+                        setQuantity((current) =>
+                          Math.max(1, current - 1)
+                        )
                       }
                       className="flex h-full w-11 items-center justify-center text-[#75685B] transition hover:bg-[#EEE8DF] disabled:opacity-30"
                     >
@@ -571,11 +732,13 @@ export default function ProductDetails({
                   type="button"
                   onClick={addProductToCart}
                   disabled={selectedOptionUnavailable}
-                  className={`mt-8 flex min-h-[56px] w-full items-center justify-center gap-3 px-6 text-[10px] font-medium uppercase tracking-[0.25em] text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    isAdded
-                      ? "bg-[#71836B]"
-                      : "bg-[#292521] hover:bg-[#75604C]"
-                  }`}
+                  className="mt-8 flex min-h-[56px] w-full items-center justify-center gap-3 px-6 text-[10px] font-medium uppercase tracking-[0.25em] transition-all duration-500 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    backgroundColor: isAdded
+                      ? "#71836B"
+                      : colorTheme.button,
+                    color: colorTheme.buttonText,
+                  }}
                 >
                   {selectedOptionUnavailable ? (
                     "Sold Out"
