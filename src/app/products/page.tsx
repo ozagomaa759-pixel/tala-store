@@ -3239,7 +3239,7 @@ const categoryCounts = useMemo(() => {
     <button
       key={item.category}
       type="button"
-      onClick={() => setSelectedCategory(item.category)}
+      onClick={() => handleCategoryChange(item.category)}
       className={`border-b pb-1 text-[7px] font-medium uppercase tracking-[0.12em] transition-colors ${
         selectedCategory === item.category
           ? "border-[#8F7358] text-[#40372F]"
