@@ -30,6 +30,9 @@ function errorResponse(message: string, status = 400) {
   );
 }
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function GET() {
   try {
     const auth = await requireAdmin();
@@ -107,10 +110,29 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Unauthorized.", 401);
     }
 
-    const body = await request.json();
+    let body: unknown;
 
-    if (typeof body.id !== "string" || !body.id.trim()) {
-      return errorResponse("Variant ID is required.");
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse("Invalid request body.");
+    }
+
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body)
+    ) {
+      return errorResponse("Invalid request data.");
+    }
+
+    const payload = body as Record<string, unknown>;
+
+    if (
+      typeof payload.id !== "string" ||
+      !UUID_REGEX.test(payload.id.trim())
+    ) {
+      return errorResponse("A valid variant ID is required.");
     }
 
     const updates: {
@@ -118,25 +140,26 @@ export async function PATCH(request: NextRequest) {
       is_active?: boolean;
     } = {};
 
-    if (body.stock_quantity !== undefined) {
+    if (payload.stock_quantity !== undefined) {
       if (
-        !Number.isInteger(body.stock_quantity) ||
-        body.stock_quantity < 0
+        typeof payload.stock_quantity !== "number" ||
+        !Number.isSafeInteger(payload.stock_quantity) ||
+        payload.stock_quantity < 0
       ) {
         return errorResponse(
           "Stock must be a whole number of zero or more."
         );
       }
 
-      updates.stock_quantity = body.stock_quantity;
+      updates.stock_quantity = payload.stock_quantity;
     }
 
-    if (body.is_active !== undefined) {
-      if (typeof body.is_active !== "boolean") {
+    if (payload.is_active !== undefined) {
+      if (typeof payload.is_active !== "boolean") {
         return errorResponse("Invalid availability status.");
       }
 
-      updates.is_active = body.is_active;
+      updates.is_active = payload.is_active;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -148,15 +171,19 @@ export async function PATCH(request: NextRequest) {
     const { data, error } = await supabase
       .from("product_variants")
       .update(updates)
-      .eq("id", body.id.trim())
+      .eq("id", payload.id.trim())
       .select(
         "id, product_id, size, color, stock_quantity, is_active, updated_at"
       )
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Inventory PATCH error:", error);
-      return errorResponse("Could not update stock.", 400);
+      return errorResponse("Could not update stock.", 500);
+    }
+
+    if (!data) {
+      return errorResponse("Inventory option was not found.", 404);
     }
 
     return NextResponse.json({
