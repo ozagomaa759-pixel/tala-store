@@ -1,13 +1,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
-import { createAdminClient } from "@/lib/supabase/admin";
 import sharp from "sharp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_REQUEST_SIZE = MAX_FILE_SIZE + 256 * 1024;
 
 const ALLOWED_TYPES = {
   "image/jpeg": {
@@ -30,7 +30,11 @@ const ALLOWED_TYPES = {
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json(
-    { success: false, message },
+    {
+      success: false,
+      error: message,
+      message,
+    },
     {
       status,
       headers: {
@@ -68,17 +72,45 @@ export async function POST(request: NextRequest) {
       return errorResponse("Unauthorized.", 401);
     }
 
+    const contentLength = Number(
+      request.headers.get("content-length") || 0
+    );
+
+    if (
+      contentLength > 0 &&
+      contentLength > MAX_REQUEST_SIZE
+    ) {
+      return errorResponse(
+        "The upload request is too large.",
+        413
+      );
+    }
+
     const formData = await request.formData();
+
     const file = formData.get("file");
     const productId = formData.get("productId");
 
     if (!(file instanceof File)) {
-      return errorResponse("Image file is required.", 400);
+      return errorResponse(
+        "Image file is required.",
+        400
+      );
     }
 
     if (file.size === 0 || file.size > MAX_FILE_SIZE) {
       return errorResponse(
         "Image must be between 1 byte and 5 MB.",
+        400
+      );
+    }
+
+    if (
+      typeof productId !== "string" ||
+      !isValidProductId(productId)
+    ) {
+      return errorResponse(
+        "A valid product ID is required.",
         400
       );
     }
@@ -95,7 +127,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const { data: product, error: productError } =
+      await auth.supabase
+        .from("products")
+        .select("id")
+        .eq("id", productId)
+        .maybeSingle();
+
+    if (productError) {
+      console.error(
+        "TALA product lookup error:",
+        productError.message
+      );
+
+      return errorResponse(
+        "Could not verify the product.",
+        500
+      );
+    }
+
+    if (!product) {
+      return errorResponse(
+        "Product not found.",
+        404
+      );
+    }
+
+    const buffer = Buffer.from(
+      await file.arrayBuffer()
+    );
 
     let metadata;
 
@@ -112,7 +172,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (
-      !metadata.format ||
       metadata.format !== typeConfig.format ||
       !metadata.width ||
       !metadata.height ||
@@ -125,41 +184,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const safeProductId =
-      typeof productId === "string" &&
-      isValidProductId(productId)
-        ? productId
-        : "general";
-
-    if (safeProductId !== "general") {
-      const { data: product, error: productError } =
-        await auth.supabase
-          .from("products")
-          .select("id")
-          .eq("id", safeProductId)
-          .maybeSingle();
-
-      if (productError) {
-        console.error(
-          "Product lookup error:",
-          productError.message
-        );
-
-        return errorResponse(
-          "Could not verify product.",
-          500
-        );
-      }
-
-      if (!product) {
-        return errorResponse("Product not found.", 404);
-      }
-    }
-
-    const db = createAdminClient();
+    const db = auth.supabase;
 
     const fileName = `${crypto.randomUUID()}.${typeConfig.extension}`;
-    const filePath = `${safeProductId}/${fileName}`;
+    const filePath = `${productId}/${fileName}`;
 
     const { data, error } = await db.storage
       .from("products")
@@ -170,7 +198,10 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error("TALA upload error:", error.message);
+      console.error(
+        "TALA storage upload error:",
+        error.message
+      );
 
       return errorResponse(
         "Could not upload image. Please try again.",
@@ -181,6 +212,13 @@ export async function POST(request: NextRequest) {
     const { data: publicUrlData } = db.storage
       .from("products")
       .getPublicUrl(data.path);
+
+    if (!publicUrlData.publicUrl) {
+      return errorResponse(
+        "Image uploaded, but its public URL could not be generated.",
+        500
+      );
+    }
 
     return NextResponse.json(
       {
