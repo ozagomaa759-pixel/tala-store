@@ -8,9 +8,12 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
+  X,
   Minus,
   Plus,
   ShoppingBag,
+  ZoomIn,
+  Image as ImageIcon,
 } from "lucide-react";
 import { addToTalaCart } from "@/lib/tala-cart";
 
@@ -57,7 +60,11 @@ function getColorTheme(color: string | null | undefined): ColorTheme {
     };
   }
 
-  if (value.includes("mint") || value.includes("sage") || value.includes("green")) {
+  if (
+    value.includes("mint") ||
+    value.includes("sage") ||
+    value.includes("green")
+  ) {
     return {
       page: "#F1F4EF",
       accent: "#758A72",
@@ -67,7 +74,11 @@ function getColorTheme(color: string | null | undefined): ColorTheme {
     };
   }
 
-  if (value.includes("pink") || value.includes("blush") || value.includes("rose")) {
+  if (
+    value.includes("pink") ||
+    value.includes("blush") ||
+    value.includes("rose")
+  ) {
     return {
       page: "#F7F0EF",
       accent: "#B7837D",
@@ -77,7 +88,11 @@ function getColorTheme(color: string | null | undefined): ColorTheme {
     };
   }
 
-  if (value.includes("beige") || value.includes("cream") || value.includes("ivory")) {
+  if (
+    value.includes("beige") ||
+    value.includes("cream") ||
+    value.includes("ivory")
+  ) {
     return {
       page: "#F6F2EB",
       accent: "#A58B68",
@@ -97,7 +112,11 @@ function getColorTheme(color: string | null | undefined): ColorTheme {
     };
   }
 
-  if (value.includes("brown") || value.includes("chocolate") || value.includes("camel")) {
+  if (
+    value.includes("brown") ||
+    value.includes("chocolate") ||
+    value.includes("camel")
+  ) {
     return {
       page: "#F4F0EB",
       accent: "#92745D",
@@ -172,6 +191,10 @@ export default function ProductDetails({
   const [message, setMessage] = useState("");
   const [isAdded, setIsAdded] = useState(false);
 
+  // Gallery controls
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+
   useEffect(() => {
     const initialVariant =
       availableVariants[0] ?? activeVariants[0] ?? null;
@@ -200,36 +223,59 @@ export default function ProductDetails({
     [selectedColor]
   );
 
+  // Images assigned to the selected color through product variants.
   const selectedColorImages = useMemo(
     () =>
-      activeVariants
-        .filter(
-          (variant) =>
-            variant.color === selectedColor &&
-            typeof variant.image_url === "string" &&
-            variant.image_url.trim().length > 0
+      Array.from(
+        new Set(
+          activeVariants
+            .filter(
+              (variant) =>
+                variant.color === selectedColor &&
+                typeof variant.image_url === "string" &&
+                variant.image_url.trim().length > 0
+            )
+            .map((variant) => variant.image_url as string)
         )
-        .map((variant) => variant.image_url as string),
+      ),
     [activeVariants, selectedColor]
   );
 
-  const galleryImages = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          ...selectedColorImages,
-          ...images,
-        ])
-      ),
-    [selectedColorImages, images]
-  );
+  // If color-specific images exist, show those only.
+  // Otherwise use the product's general gallery.
+  const galleryImages = useMemo(() => {
+    const source =
+      selectedColorImages.length > 0
+        ? selectedColorImages
+        : [
+            ...(product.main_image ? [product.main_image] : []),
+            ...(product.images ?? []),
+            ...images,
+          ];
+
+    return Array.from(
+      new Set(source.filter((image) => Boolean(image?.trim())))
+    );
+  }, [
+    selectedColorImages,
+    product.main_image,
+    product.images,
+    images,
+  ]);
 
   const currentImage =
-    selectedImage ||
+    (selectedImage && galleryImages.includes(selectedImage)
+      ? selectedImage
+      : "") ||
     selectedVariant?.image_url ||
-    selectedColorImages[0] ||
-    images[0] ||
+    galleryImages[0] ||
+    product.main_image ||
     "";
+
+  const currentImageIndex = Math.max(
+    0,
+    galleryImages.indexOf(currentImage)
+  );
 
   const currentPrice =
     Number(selectedVariant?.price_override) > 0
@@ -245,6 +291,98 @@ export default function ProductDetails({
 
   const selectedOptionUnavailable =
     !selectedVariant || availableStock <= 0;
+
+  function selectGalleryImage(image: string) {
+    setSelectedImage(image);
+  }
+
+  function showNextImage() {
+    if (galleryImages.length < 2) return;
+
+    const nextIndex =
+      (currentImageIndex + 1) % galleryImages.length;
+
+    setSelectedImage(galleryImages[nextIndex]);
+  }
+
+  function showPreviousImage() {
+    if (galleryImages.length < 2) return;
+
+    const previousIndex =
+      (currentImageIndex - 1 + galleryImages.length) %
+      galleryImages.length;
+
+    setSelectedImage(galleryImages[previousIndex]);
+  }
+
+  function openGallery() {
+    if (galleryImages.length > 0) {
+      setIsGalleryOpen(true);
+    }
+  }
+
+  function closeGallery() {
+    setIsGalleryOpen(false);
+    setTouchStart(null);
+  }
+
+  // Keyboard navigation while the full-screen gallery is open.
+  useEffect(() => {
+    if (!isGalleryOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeGallery();
+      }
+
+      if (event.key === "ArrowRight") {
+        showNextImage();
+      }
+
+      if (event.key === "ArrowLeft") {
+        showPreviousImage();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isGalleryOpen, currentImageIndex, galleryImages]);
+
+  function handleTouchStart(
+    event: React.TouchEvent<HTMLDivElement>
+  ) {
+    setTouchStart(event.touches[0]?.clientX ?? null);
+  }
+
+  function handleTouchEnd(
+    event: React.TouchEvent<HTMLDivElement>
+  ) {
+    if (touchStart === null) return;
+
+    const touchEnd = event.changedTouches[0]?.clientX;
+
+    if (typeof touchEnd !== "number") {
+      setTouchStart(null);
+      return;
+    }
+
+    const distance = touchStart - touchEnd;
+
+    if (Math.abs(distance) > 45) {
+      if (distance > 0) {
+        showNextImage();
+      } else {
+        showPreviousImage();
+      }
+    }
+
+    setTouchStart(null);
+  }
 
   function chooseSize(size: string) {
     const sameColor = activeVariants.filter(
@@ -266,14 +404,17 @@ export default function ProductDetails({
       null;
 
     setSelectedVariant(nextVariant);
-    setSelectedImage(
-      nextVariant?.image_url ??
-      (nextVariant?.color === selectedColor
+
+    const nextImage =
+      nextVariant?.image_url ||
+      (nextVariant?.color === selectedVariant?.color
         ? selectedColorImages[0]
-        : "") ??
-      images[0] ??
-      ""
-    );
+        : "") ||
+      product.main_image ||
+      images[0] ||
+      "";
+
+    setSelectedImage(nextImage);
     setQuantity(1);
     setMessage(
       nextVariant && Number(nextVariant.stock_quantity) <= 0
@@ -305,12 +446,14 @@ export default function ProductDetails({
       null;
 
     const nextColorImage =
-      nextVariant?.image_url ??
+      nextVariant?.image_url ||
       activeVariants.find(
         (variant) =>
-          variant.color === color && variant.image_url
-      )?.image_url ??
-      images[0] ??
+          variant.color === color &&
+          Boolean(variant.image_url)
+      )?.image_url ||
+      product.main_image ||
+      images[0] ||
       "";
 
     setSelectedVariant(nextVariant);
@@ -421,18 +564,34 @@ export default function ProductDetails({
       {/* Product */}
       <section className="mx-auto max-w-[1500px] px-5 pb-20 transition-colors duration-700 sm:px-10 sm:pb-28">
         <div className="grid items-start gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:gap-20">
-          {/* Gallery */}
+          {/* Product Gallery */}
           <div className="min-w-0">
-            <div className="relative overflow-hidden bg-[#EEE9E2]">
+            <div
+              className="group relative overflow-hidden bg-[#EEE9E2]"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
               {currentImage ? (
-                <img
-                  key={currentImage}
-                  src={currentImage}
-                  alt={`${product.name}${selectedColor ? ` - ${selectedColor}` : ""}`}
-                  className="aspect-[4/5] w-full object-cover transition-opacity duration-700"
-                />
+                <button
+                  type="button"
+                  onClick={openGallery}
+                  aria-label="Open full-screen product gallery"
+                  className="relative block w-full cursor-zoom-in text-left"
+                >
+                  <img
+                    key={currentImage}
+                    src={currentImage}
+                    alt={`${product.name}${selectedColor ? ` - ${selectedColor}` : ""}`}
+                    className="aspect-[4/5] w-full object-cover transition duration-700 group-hover:scale-[1.015]"
+                  />
+
+                  <span className="absolute bottom-5 right-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/75 text-[#39342E] opacity-100 shadow-sm backdrop-blur-md transition group-hover:bg-white sm:opacity-0 sm:group-hover:opacity-100">
+                    <ZoomIn size={17} strokeWidth={1.4} />
+                  </span>
+                </button>
               ) : (
-                <div className="flex aspect-[4/5] items-center justify-center text-sm text-[#897D70]">
+                <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 text-sm text-[#897D70]">
+                  <ImageIcon size={28} strokeWidth={1} />
                   Image coming soon
                 </div>
               )}
@@ -446,38 +605,89 @@ export default function ProductDetails({
                   {selectedColor}
                 </div>
               )}
+
+              {galleryImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={showPreviousImage}
+                    aria-label="Previous product image"
+                    className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-white/75 text-[#39342E] opacity-100 shadow-sm backdrop-blur-md transition hover:bg-white sm:left-5 sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    <ArrowLeft size={17} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={showNextImage}
+                    aria-label="Next product image"
+                    className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-white/75 text-[#39342E] opacity-100 shadow-sm backdrop-blur-md transition hover:bg-white sm:right-5 sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    <ArrowRight size={17} />
+                  </button>
+
+                  <div className="absolute bottom-5 right-16 rounded-full bg-black/35 px-3 py-1.5 text-[9px] tracking-[0.15em] text-white backdrop-blur-sm">
+                    {currentImageIndex + 1} / {galleryImages.length}
+                  </div>
+                </>
+              )}
             </div>
 
+            {/* Thumbnails */}
             {galleryImages.length > 1 && (
               <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5">
-                {galleryImages.map((image, index) => (
-                  <button
-                    key={`${image}-${index}`}
-                    type="button"
-                    onClick={() => setSelectedImage(image)}
-                    aria-label={`View product image ${index + 1}`}
-                    aria-pressed={currentImage === image}
-                    className={`relative overflow-hidden border transition duration-300 ${
-                      currentImage === image
-                        ? "opacity-100"
-                        : "border-transparent opacity-65 hover:opacity-100"
-                    }`}
-                    style={{
-                      borderColor:
-                        currentImage === image
+                {galleryImages.map((image, index) => {
+                  const isActive = currentImage === image;
+
+                  return (
+                    <button
+                      key={`${image}-${index}`}
+                      type="button"
+                      onClick={() => selectGalleryImage(image)}
+                      aria-label={`View product image ${index + 1}`}
+                      aria-pressed={isActive}
+                      className="relative overflow-hidden border transition duration-300"
+                      style={{
+                        borderColor: isActive
                           ? colorTheme.accent
                           : "transparent",
-                    }}
-                  >
-                    <img
-                      src={image}
-                      alt={`${product.name} view ${index + 1}`}
-                      className="aspect-[4/5] w-full object-cover"
-                    />
-                  </button>
-                ))}
+                        opacity: isActive ? 1 : 0.62,
+                      }}
+                    >
+                      <img
+                        src={image}
+                        alt={`${product.name} view ${index + 1}`}
+                        className="aspect-[4/5] w-full object-cover transition duration-500 hover:scale-105"
+                      />
+                      {isActive && (
+                        <span
+                          className="absolute bottom-0 left-0 h-[2px] w-full"
+                          style={{ backgroundColor: colorTheme.accent }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
+
+            <div className="mt-4 flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#9B9084]">
+              <span>
+                {galleryImages.length > 0
+                  ? `${galleryImages.length} product view${galleryImages.length === 1 ? "" : "s"}`
+                  : "Product photography"}
+              </span>
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={openGallery}
+                  className="flex items-center gap-2 transition hover:text-[#302A24]"
+                >
+                  <ZoomIn size={13} />
+                  View gallery
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Product Information */}
@@ -686,7 +896,8 @@ export default function ProductDetails({
                     Quantity
                   </h2>
 
-                  <div className="flex h-12 w-[145px] items-center justify-between border bg-white/50 transition-colors duration-500"
+                  <div
+                    className="flex h-12 w-[145px] items-center justify-between border bg-white/50 transition-colors duration-500"
                     style={{ borderColor: colorTheme.border }}
                   >
                     <button
@@ -818,6 +1029,109 @@ export default function ProductDetails({
           </div>
         </div>
       </section>
+
+      {/* Full-screen Gallery */}
+      {isGalleryOpen && galleryImages.length > 0 && (
+        <div
+          className="fixed inset-0 z-[100] flex flex-col bg-[#171614]/[0.98] text-white"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Product image gallery"
+        >
+          {/* Gallery top bar */}
+          <div className="flex h-[68px] shrink-0 items-center justify-between border-b border-white/10 px-5 sm:px-8">
+            <div>
+              <p className="text-[9px] uppercase tracking-[0.25em] text-white/50">
+                TALA — PRODUCT GALLERY
+              </p>
+              <p className="mt-1 max-w-[200px] truncate text-xs tracking-wide text-white/90">
+                {product.name}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-5">
+              <span className="text-[10px] tracking-[0.2em] text-white/60">
+                {currentImageIndex + 1} / {galleryImages.length}
+              </span>
+              <button
+                type="button"
+                onClick={closeGallery}
+                aria-label="Close gallery"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 transition hover:bg-white/10"
+              >
+                <X size={19} strokeWidth={1.4} />
+              </button>
+            </div>
+          </div>
+
+          {/* Main lightbox image */}
+          <div
+            className="relative flex min-h-0 flex-1 items-center justify-center px-3 py-5 sm:px-16"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <button
+              type="button"
+              onClick={showPreviousImage}
+              aria-label="Previous image"
+              className="absolute left-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/5 transition hover:bg-white/15 sm:left-7 sm:h-14 sm:w-14"
+            >
+              <ArrowLeft size={20} strokeWidth={1.3} />
+            </button>
+
+            <img
+              key={`lightbox-${currentImage}`}
+              src={currentImage}
+              alt={`${product.name} image ${currentImageIndex + 1}`}
+              className="max-h-full max-w-full select-none object-contain"
+              draggable={false}
+            />
+
+            <button
+              type="button"
+              onClick={showNextImage}
+              aria-label="Next image"
+              className="absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/5 transition hover:bg-white/15 sm:right-7 sm:h-14 sm:w-14"
+            >
+              <ArrowRight size={20} strokeWidth={1.3} />
+            </button>
+          </div>
+
+          {/* Gallery thumbnails */}
+          <div className="flex shrink-0 items-center justify-center gap-2 overflow-x-auto border-t border-white/10 px-4 py-4">
+            {galleryImages.map((image, index) => {
+              const isActive = currentImage === image;
+
+              return (
+                <button
+                  key={`${image}-${index}`}
+                  type="button"
+                  onClick={() => selectGalleryImage(image)}
+                  aria-label={`Open image ${index + 1}`}
+                  aria-pressed={isActive}
+                  className="h-[58px] w-[46px] shrink-0 overflow-hidden border transition sm:h-[72px] sm:w-[56px]"
+                  style={{
+                    borderColor: isActive
+                      ? "#FFFFFF"
+                      : "rgba(255,255,255,0.12)",
+                    opacity: isActive ? 1 : 0.45,
+                  }}
+                >
+                  <img
+                    src={image}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="pb-4 text-center text-[8px] uppercase tracking-[0.2em] text-white/35">
+            Swipe to explore · Press ESC to close
+          </p>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-[#E5DDD2] px-5 py-10 text-center">
