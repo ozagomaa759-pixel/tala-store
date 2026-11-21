@@ -12,6 +12,7 @@ import {
   PackageCheck,
   ShoppingBag,
   Truck,
+  ShieldCheck,
 } from "lucide-react";
 import { getCart, clearCart, type CartItem } from "@/lib/cart";
 
@@ -35,12 +36,15 @@ export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
   const [couponCode, setCouponCode] = useState("");
+  const [policyAccepted, setPolicyAccepted] = useState(false);
+
   const [customer, setCustomer] = useState<Customer>({
     fullName: "",
     phone: "",
     city: "",
     address: "",
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState("");
 
@@ -56,6 +60,7 @@ export default function CheckoutPage() {
     };
 
     syncCart();
+
     setCouponCode(
       window.localStorage.getItem("tala-coupon-code") || ""
     );
@@ -89,6 +94,7 @@ export default function CheckoutPage() {
       : 0;
 
   const total = Math.max(0, subtotal - discount + deliveryFee);
+
   const remainingForFreeDelivery = Math.max(
     0,
     FREE_DELIVERY_LIMIT - subtotal
@@ -104,11 +110,19 @@ export default function CheckoutPage() {
       ...current,
       [field]: value,
     }));
+
     setOrderError("");
   };
 
   const handlePlaceOrder = async () => {
     if (isSubmitting) return;
+
+    if (!policyAccepted) {
+      setOrderError(
+        "Please read and accept the TALA order policy before placing your order."
+      );
+      return;
+    }
 
     const cleanCustomer = {
       fullName: customer.fullName.trim(),
@@ -155,6 +169,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customer: cleanCustomer,
           couponCode: couponCode.trim().toUpperCase(),
+          policyAccepted,
           items: latestCart.map((item) => ({
             productId: item.productId,
             size: item.size,
@@ -417,6 +432,38 @@ export default function CheckoutPage() {
                     Selected
                   </span>
                 </div>
+              </div>
+
+              <div className="rounded-[1.75rem] border border-[#E5DED4] bg-white p-5 sm:p-8">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F1F3E8] text-[#78845E]">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <p className="font-semibold">TALA Order Policy</p>
+                    <p className="mt-2 text-sm leading-7 text-[#817D72]">
+                      You may inspect your order before accepting delivery.
+                      Once you accept and receive the order, returns and
+                      exchanges are not available.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="mt-6 flex cursor-pointer items-start gap-3 border-t border-[#EEE9E1] pt-5 text-sm leading-6 text-[#555449]">
+                  <input
+                    type="checkbox"
+                    checked={policyAccepted}
+                    onChange={(event) => {
+                      setPolicyAccepted(event.target.checked);
+                      setOrderError("");
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 accent-[#78845E]"
+                  />
+                  <span>
+                    I have read and agree to the TALA order policy.
+                    <span className="ml-1 text-[#B17F73]">*</span>
+                  </span>
+                </label>
               </div>
             </section>
 
