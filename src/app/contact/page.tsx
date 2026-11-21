@@ -18,7 +18,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 // Replace this URL with TALA's official Instagram profile when ready.
-const INSTAGRAM_URL = "https://www.instagram.com/";
+const INSTAGRAM_URL = "https://www.instagram.com/tala__luxury/";
 
 const CONTACT_DETAILS = [
   {
