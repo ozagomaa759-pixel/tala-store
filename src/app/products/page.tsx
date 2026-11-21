@@ -3235,11 +3235,11 @@ const categoryCounts = useMemo(() => {
                   setSelectedCategory(item.category);
                   setCurrentPage(1);
                 }}
-                className={`border-b pb-2 text-[9px] font-medium uppercase tracking-[0.22em] transition-colors ${
-                  selectedCategory === item.category
-                    ? "border-[#8F7358] text-[#40372F]"
-                    : "border-transparent text-[#9A8C7D] hover:border-[#C9B8A4] hover:text-[#40372F]"
-                }`}
+                className={`border-b pb-1 text-[7px] font-medium uppercase tracking-[0.12em] transition-colors ${
+  selectedCategory === item.category
+    ? "border-[#8F7358] text-[#40372F]"
+    : "border-transparent text-[#9A8C7D] hover:border-[#C9B8A4] hover:text-[#40372F]"
+}`}
               >
                 {item.label}
               </button>
