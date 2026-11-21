@@ -2,41 +2,42 @@
 "use client";
 
 import {
-  ChangeEvent,
-  FormEvent,
   useEffect,
   useRef,
   useState,
+  type ChangeEvent,
+  type FormEvent,
 } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  ImagePlus,
-  Loader2,
+  ArrowUp,
+  ArrowDown,
   Plus,
-  RefreshCw,
   Pencil,
   Trash2,
   Eye,
   EyeOff,
-  Upload,
-  X,
-  ChevronUp,
-  ChevronDown,
+  ImagePlus,
   Monitor,
   Smartphone,
+  RefreshCw,
+  Upload,
+  X,
+  Loader2,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 
 type HeroSlide = {
   id: string;
-  title: string;
-  subtitle: string;
-  description: string;
+  title: string | null;
+  subtitle: string | null;
+  description: string | null;
   image_url: string;
   mobile_image_url: string | null;
-  button_text: string;
-  button_link: string;
+  button_text: string | null;
+  button_link: string | null;
   is_active: boolean;
   sort_order: number;
   created_at?: string;
@@ -48,18 +49,19 @@ type Notice = {
 };
 
 const inputClass =
-  "mt-2 w-full border border-[#E5DACE] bg-white px-4 py-3 text-sm text-[#332A23] outline-none transition focus:border-[#A28A72]";
+  "mt-2 w-full rounded-xl border border-[#E8E1D7] bg-white px-4 py-3.5 text-sm text-[#292720] outline-none transition placeholder:text-[#B4AA9D] focus:border-[#87936B] focus:ring-2 focus:ring-[#87936B]/10";
 
 const labelClass =
-  "text-xs uppercase tracking-[0.16em] text-[#8A7969]";
+  "block text-[10px] font-semibold uppercase tracking-[0.17em] text-[#81796D]";
+
+const buttonClass =
+  "inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.13em] transition disabled:cursor-not-allowed disabled:opacity-40";
 
 async function readJson(response: Response) {
   try {
     return await response.json();
   } catch {
-    throw new Error(
-      `Invalid server response (HTTP ${response.status}).`
-    );
+    throw new Error(`Invalid server response (${response.status}).`);
   }
 }
 
@@ -68,26 +70,25 @@ export default function AdminHeroPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [showForm, setShowForm] = useState(false);
+
+  const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const desktopInputRef = useRef<HTMLInputElement>(null);
-  const mobileInputRef = useRef<HTMLInputElement>(null);
+  const desktopInput = useRef<HTMLInputElement>(null);
+  const mobileInput = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [description, setDescription] = useState("");
   const [buttonText, setButtonText] = useState("Discover Collection");
-  const [buttonLink, setButtonLink] = useState("/products");
+  const [buttonLink, setButtonLink] = useState("/collections/all-pieces");
   const [sortOrder, setSortOrder] = useState("0");
   const [isActive, setIsActive] = useState(true);
 
   const [imageUrl, setImageUrl] = useState("");
   const [mobileImageUrl, setMobileImageUrl] = useState("");
-
   const [desktopFile, setDesktopFile] = useState<File | null>(null);
   const [mobileFile, setMobileFile] = useState<File | null>(null);
-
   const [desktopPreview, setDesktopPreview] = useState("");
   const [mobilePreview, setMobilePreview] = useState("");
 
@@ -99,7 +100,6 @@ export default function AdminHeroPage() {
 
     const url = URL.createObjectURL(desktopFile);
     setDesktopPreview(url);
-
     return () => URL.revokeObjectURL(url);
   }, [desktopFile]);
 
@@ -111,7 +111,6 @@ export default function AdminHeroPage() {
 
     const url = URL.createObjectURL(mobileFile);
     setMobilePreview(url);
-
     return () => URL.revokeObjectURL(url);
   }, [mobileFile]);
 
@@ -122,14 +121,20 @@ export default function AdminHeroPage() {
       const response = await fetch("/api/admin/hero", {
         cache: "no-store",
       });
-
       const data = await readJson(response);
 
       if (!response.ok || data.success === false) {
         throw new Error(data.error || "Could not load hero slides.");
       }
 
-      setSlides(Array.isArray(data.slides) ? data.slides : []);
+      const rows = Array.isArray(data.slides) ? data.slides : [];
+
+      setSlides(
+        rows.sort(
+          (a: HeroSlide, b: HeroSlide) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0)
+        )
+      );
     } catch (error) {
       setNotice({
         type: "error",
@@ -153,30 +158,47 @@ export default function AdminHeroPage() {
     setSubtitle("");
     setDescription("");
     setButtonText("Discover Collection");
-    setButtonLink("/products");
+    setButtonLink("/collections/all-pieces");
     setSortOrder(String(slides.length));
     setIsActive(true);
-
     setImageUrl("");
     setMobileImageUrl("");
-
     setDesktopFile(null);
     setMobileFile(null);
 
-    if (desktopInputRef.current) {
-      desktopInputRef.current.value = "";
-    }
-
-    if (mobileInputRef.current) {
-      mobileInputRef.current.value = "";
-    }
+    if (desktopInput.current) desktopInput.current.value = "";
+    if (mobileInput.current) mobileInput.current.value = "";
   }
 
   function closeForm() {
     if (saving) return;
-
-    setShowForm(false);
+    setFormOpen(false);
     resetForm();
+  }
+
+  function openCreateForm() {
+    setNotice(null);
+    resetForm();
+    setFormOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openEditForm(slide: HeroSlide) {
+    setNotice(null);
+    setEditingId(slide.id);
+    setTitle(slide.title || "");
+    setSubtitle(slide.subtitle || "");
+    setDescription(slide.description || "");
+    setButtonText(slide.button_text || "Discover Collection");
+    setButtonLink(slide.button_link || "/collections/all-pieces");
+    setSortOrder(String(slide.sort_order ?? 0));
+    setIsActive(slide.is_active);
+    setImageUrl(slide.image_url || "");
+    setMobileImageUrl(slide.mobile_image_url || "");
+    setDesktopFile(null);
+    setMobileFile(null);
+    setFormOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function validateFile(file: File) {
@@ -190,7 +212,7 @@ export default function AdminHeroPage() {
     if (!allowed.includes(file.type)) {
       setNotice({
         type: "error",
-        text: "Use JPG, PNG, WEBP, or AVIF images only.",
+        text: "Use JPG, PNG, WEBP or AVIF images only.",
       });
       return false;
     }
@@ -209,29 +231,21 @@ export default function AdminHeroPage() {
 
   function handleDesktopFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
-    if (validateFile(file)) {
-      setDesktopFile(file);
-    }
-
+    if (validateFile(file)) setDesktopFile(file);
     event.target.value = "";
   }
 
   function handleMobileFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
-    if (validateFile(file)) {
-      setMobileFile(file);
-    }
-
+    if (validateFile(file)) setMobileFile(file);
     event.target.value = "";
   }
 
-  async function uploadHeroImage(file: File): Promise<string> {
+  async function uploadImage(file: File): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
 
@@ -243,7 +257,7 @@ export default function AdminHeroPage() {
     const data = await readJson(response);
 
     if (!response.ok || !data.success || !data.url) {
-      throw new Error(data.error || "Could not upload hero image.");
+      throw new Error(data.error || "Image upload failed.");
     }
 
     if (
@@ -256,32 +270,6 @@ export default function AdminHeroPage() {
     return data.url;
   }
 
-  function openEditForm(slide: HeroSlide) {
-    setNotice(null);
-    setEditingId(slide.id);
-
-    setTitle(slide.title || "");
-    setSubtitle(slide.subtitle || "");
-    setDescription(slide.description || "");
-    setButtonText(slide.button_text || "Discover Collection");
-    setButtonLink(slide.button_link || "/products");
-    setSortOrder(String(slide.sort_order ?? 0));
-    setIsActive(slide.is_active);
-
-    setImageUrl(slide.image_url);
-    setMobileImageUrl(slide.mobile_image_url || "");
-
-    setDesktopFile(null);
-    setMobileFile(null);
-
-    setShowForm(true);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
@@ -289,7 +277,7 @@ export default function AdminHeroPage() {
     if (!editingId && !desktopFile) {
       setNotice({
         type: "error",
-        text: "Please select a desktop hero image.",
+        text: "Please choose a desktop hero image.",
       });
       return;
     }
@@ -312,13 +300,12 @@ export default function AdminHeroPage() {
       return;
     }
 
-    if (
-      !buttonLink.trim().startsWith("/") ||
-      buttonLink.trim().startsWith("//")
-    ) {
+    const cleanLink = buttonLink.trim();
+
+    if (!cleanLink.startsWith("/") || cleanLink.startsWith("//")) {
       setNotice({
         type: "error",
-        text: "Use a valid internal link such as /products.",
+        text: "Use an internal link such as /collections/sets.",
       });
       return;
     }
@@ -327,14 +314,14 @@ export default function AdminHeroPage() {
 
     try {
       let finalImageUrl = imageUrl;
-      let finalMobileImageUrl = mobileImageUrl || null;
+      let finalMobileImageUrl: string | null = mobileImageUrl || null;
 
       if (desktopFile) {
-        finalImageUrl = await uploadHeroImage(desktopFile);
+        finalImageUrl = await uploadImage(desktopFile);
       }
 
       if (mobileFile) {
-        finalMobileImageUrl = await uploadHeroImage(mobileFile);
+        finalMobileImageUrl = await uploadImage(mobileFile);
       }
 
       const payload = {
@@ -344,20 +331,16 @@ export default function AdminHeroPage() {
         image_url: finalImageUrl,
         mobile_image_url: finalMobileImageUrl,
         button_text: buttonText.trim() || "Discover Collection",
-        button_link: buttonLink.trim(),
+        button_link: cleanLink,
         sort_order: order,
         is_active: isActive,
       };
 
       const response = await fetch("/api/admin/hero", {
         method: editingId ? "PATCH" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          editingId
-            ? { id: editingId, ...payload }
-            : payload
+          editingId ? { id: editingId, ...payload } : payload
         ),
       });
 
@@ -370,13 +353,12 @@ export default function AdminHeroPage() {
       setNotice({
         type: "success",
         text: editingId
-          ? "Hero slide updated successfully."
-          : "Hero slide created successfully.",
+          ? "Your campaign has been updated."
+          : "Your new campaign has been created.",
       });
 
-      setShowForm(false);
+      setFormOpen(false);
       resetForm();
-
       await loadSlides();
     } catch (error) {
       setNotice({
@@ -402,26 +384,17 @@ export default function AdminHeroPage() {
     try {
       const response = await fetch("/api/admin/hero", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: slide.id,
-          ...updates,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: slide.id, ...updates }),
       });
 
       const data = await readJson(response);
 
       if (!response.ok || data.success === false) {
-        throw new Error(data.error || "Could not update hero slide.");
+        throw new Error(data.error || "Could not update slide.");
       }
 
-      setNotice({
-        type: "success",
-        text: successMessage,
-      });
-
+      setNotice({ type: "success", text: successMessage });
       await loadSlides();
     } catch (error) {
       setNotice({
@@ -429,7 +402,7 @@ export default function AdminHeroPage() {
         text:
           error instanceof Error
             ? error.message
-            : "Could not update hero slide.",
+            : "Could not update slide.",
       });
     } finally {
       setSaving(false);
@@ -438,7 +411,7 @@ export default function AdminHeroPage() {
 
   async function deleteSlide(slide: HeroSlide) {
     const confirmed = window.confirm(
-      `Permanently delete this hero slide?`
+      "Permanently delete this homepage campaign?"
     );
 
     if (!confirmed) return;
@@ -455,14 +428,10 @@ export default function AdminHeroPage() {
       const data = await readJson(response);
 
       if (!response.ok || data.success === false) {
-        throw new Error(data.error || "Could not delete hero slide.");
+        throw new Error(data.error || "Could not delete slide.");
       }
 
-      setNotice({
-        type: "success",
-        text: "Hero slide deleted successfully.",
-      });
-
+      setNotice({ type: "success", text: "Campaign deleted successfully." });
       await loadSlides();
     } catch (error) {
       setNotice({
@@ -470,7 +439,7 @@ export default function AdminHeroPage() {
         text:
           error instanceof Error
             ? error.message
-            : "Could not delete hero slide.",
+            : "Could not delete slide.",
       });
     } finally {
       setSaving(false);
@@ -507,7 +476,7 @@ export default function AdminHeroPage() {
       const firstData = await readJson(firstResponse);
 
       if (!firstResponse.ok || firstData.success === false) {
-        throw new Error(firstData.error || "Could not change slide order.");
+        throw new Error(firstData.error || "Could not update slide order.");
       }
 
       const secondResponse = await fetch("/api/admin/hero", {
@@ -522,14 +491,10 @@ export default function AdminHeroPage() {
       const secondData = await readJson(secondResponse);
 
       if (!secondResponse.ok || secondData.success === false) {
-        throw new Error(secondData.error || "Could not finish changing slide order.");
+        throw new Error(secondData.error || "Could not finish slide ordering.");
       }
 
-      setNotice({
-        type: "success",
-        text: "Hero order updated successfully.",
-      });
-
+      setNotice({ type: "success", text: "Campaign order updated." });
       await loadSlides();
     } catch (error) {
       setNotice({
@@ -539,273 +504,330 @@ export default function AdminHeroPage() {
             ? error.message
             : "Could not change slide order.",
       });
-
       await loadSlides();
     } finally {
       setSaving(false);
     }
   }
 
+  const activeCount = slides.filter((slide) => slide.is_active).length;
+  const hiddenCount = slides.length - activeCount;
+
   return (
-    <main className="min-h-screen bg-[#F8F5F0] px-5 py-12 text-[#332A23] sm:px-6 sm:py-16">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-[#F5F1EB] px-4 py-7 text-[#292720] sm:px-7 sm:py-10">
+      <div className="mx-auto max-w-7xl">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-2 text-sm text-[#8A7969] transition hover:text-[#332A23]"
+          className="inline-flex items-center gap-2 text-xs font-medium text-[#81796D] transition hover:text-[#292720]"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={15} />
           Back to Dashboard
         </Link>
 
-        <div className="mt-10 flex flex-wrap items-end justify-between gap-5">
-          <div className="flex items-center gap-4">
-            <Monitor size={35} strokeWidth={1} />
+        <section className="relative mt-8 overflow-hidden rounded-[28px] bg-[#292720] px-6 py-9 text-white sm:px-10 sm:py-12">
+          <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -right-2 -top-14 h-52 w-52 rounded-full border border-white/10" />
 
+          <div className="relative z-10 flex flex-col justify-between gap-8 md:flex-row md:items-end">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-[#A28A72]">
-                TALA Administration
-              </p>
+              <div className="flex items-center gap-2 text-[#D8ED83]">
+                <Sparkles size={15} />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.25em]">
+                  TALA / Campaign Studio
+                </span>
+              </div>
 
-              <h1 className="mt-2 text-4xl font-light sm:text-5xl">
+              <h1 className="mt-5 font-serif text-4xl font-normal tracking-tight sm:text-6xl">
                 Hero Slider
               </h1>
 
-              <p className="mt-2 text-sm text-[#77695D]">
-                Manage the images and content displayed on your homepage.
+              <p className="mt-3 max-w-xl text-sm leading-7 text-white/60">
+                Shape the first impression. Manage your homepage campaigns,
+                images, messages and collection links in one place.
               </p>
             </div>
-          </div>
 
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => {
-              if (showForm) {
-                closeForm();
-              } else {
-                resetForm();
-                setShowForm(true);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }
-            }}
-            className="inline-flex items-center gap-2 bg-[#332A23] px-5 py-3 text-xs uppercase tracking-[0.15em] text-white transition hover:bg-[#59483B] disabled:opacity-50"
-          >
-            {showForm ? <X size={16} /> : <Plus size={16} />}
-            {showForm ? "Close Form" : "Add Slide"}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={formOpen ? closeForm : openCreateForm}
+              disabled={saving}
+              className={`${buttonClass} ${
+                formOpen
+                  ? "border border-white/30 text-white hover:bg-white/10"
+                  : "bg-[#D8ED83] text-[#292720] hover:bg-[#e4f4a7]"
+              }`}
+            >
+              {formOpen ? <X size={15} /> : <Plus size={15} />}
+              {formOpen ? "Close editor" : "Create campaign"}
+            </button>
+          </div>
+        </section>
 
         {notice && (
           <div
             role="status"
             aria-live="polite"
-            className={`mt-7 border px-4 py-3 text-sm ${
+            className={`mt-5 rounded-2xl border px-5 py-4 text-sm ${
               notice.type === "success"
-                ? "border-[#B8C8B2] bg-[#F0F5ED] text-[#40563A]"
-                : "border-[#D8B9AE] bg-[#FBF1EE] text-[#8A3E2D]"
+                ? "border-[#C9D5B8] bg-[#F0F4E9] text-[#536342]"
+                : "border-[#E3C6BB] bg-[#FBF0EC] text-[#934B3B]"
             }`}
           >
             {notice.text}
           </div>
         )}
 
-        {showForm && (
+        <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-[#E8E1D7] bg-white p-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#93897C]">
+              Total campaigns
+            </p>
+            <p className="mt-3 text-3xl font-light tabular-nums">
+              {slides.length.toString().padStart(2, "0")}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#E8E1D7] bg-white p-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#93897C]">
+              Active campaigns
+            </p>
+            <p className="mt-3 text-3xl font-light tabular-nums text-[#78865C]">
+              {activeCount.toString().padStart(2, "0")}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#E8E1D7] bg-white p-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#93897C]">
+              Hidden campaigns
+            </p>
+            <p className="mt-3 text-3xl font-light tabular-nums">
+              {hiddenCount.toString().padStart(2, "0")}
+            </p>
+          </div>
+        </section>
+
+        {formOpen && (
           <form
             onSubmit={handleSubmit}
-            className="mt-8 border border-[#E5DACE] bg-white/80 p-5 sm:p-8"
+            className="mt-7 overflow-hidden rounded-[26px] border border-[#E8E1D7] bg-white"
           >
-            <div className="mb-8">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
-                {editingId ? "Edit homepage slide" : "New homepage slide"}
-              </p>
-
-              <h2 className="mt-2 text-2xl font-light">
-                {editingId ? "Edit Hero Slide" : "Create Hero Slide"}
-              </h2>
-            </div>
-
-            <div className="grid gap-6 sm:grid-cols-2">
-              <label className={labelClass}>
-                Main title
-
-                <input
-                  className={inputClass}
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="TALA"
-                />
-              </label>
-
-              <label className={labelClass}>
-                Subtitle / Kicker
-
-                <input
-                  className={inputClass}
-                  value={subtitle}
-                  onChange={(event) => setSubtitle(event.target.value)}
-                  placeholder="THE ART OF EVERYDAY ELEGANCE"
-                />
-              </label>
-
-              <label className={`${labelClass} sm:col-span-2`}>
-                Description
-
-                <textarea
-                  className={`${inputClass} min-h-28 resize-y`}
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Timeless pieces. Effortless confidence..."
-                />
-              </label>
-
-              <label className={labelClass}>
-                Button text
-
-                <input
-                  className={inputClass}
-                  value={buttonText}
-                  onChange={(event) => setButtonText(event.target.value)}
-                  placeholder="Discover Collection"
-                />
-              </label>
-
-              <label className={labelClass}>
-                Button link
-
-                <input
-                  className={inputClass}
-                  value={buttonLink}
-                  onChange={(event) => setButtonLink(event.target.value)}
-                  placeholder="/products"
-                />
-              </label>
-
-              <label className={labelClass}>
-                Display order
-
-                <input
-                  className={inputClass}
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={sortOrder}
-                  onChange={(event) => setSortOrder(event.target.value)}
-                />
-              </label>
-
-              <label className="flex items-center gap-3 self-end pb-3 text-xs text-[#77695D]">
-                <input
-                  type="checkbox"
-                  checked={isActive}
-                  onChange={(event) => setIsActive(event.target.checked)}
-                  className="h-4 w-4 accent-[#332A23]"
-                />
-                Show this slide on the homepage
-              </label>
-            </div>
-
-            <div className="mt-8 border-t border-[#E5DACE] pt-7">
-              <h3 className="text-lg font-light">Desktop hero image *</h3>
-
-              <p className="mt-1 text-xs text-[#8A7969]">
-                Recommended landscape image · JPG, PNG, WEBP or AVIF · Max 5 MB
-              </p>
-
-              <input
-                ref={desktopInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/avif"
-                onChange={handleDesktopFile}
-                className="hidden"
-              />
-
-              <button
-                type="button"
-                onClick={() => desktopInputRef.current?.click()}
-                className="mt-4 flex min-h-44 w-full flex-col items-center justify-center overflow-hidden border border-dashed border-[#CDBEAE] bg-[#FBF9F6] text-[#8A7969]"
-              >
-                {desktopPreview || imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={desktopPreview || imageUrl}
-                    alt="Desktop hero preview"
-                    className="h-56 w-full object-cover"
-                  />
-                ) : (
-                  <>
-                    <ImagePlus size={26} strokeWidth={1.3} />
-                    <span className="mt-3 text-xs">
-                      Tap to select desktop image
-                    </span>
-                  </>
-                )}
-              </button>
-
-              <div className="mt-8 flex items-center gap-3">
-                <Smartphone size={19} strokeWidth={1.3} />
-                <h3 className="text-lg font-light">
-                  Mobile image
-                </h3>
-                <span className="text-[10px] uppercase tracking-wider text-[#A28A72]">
-                  Optional
-                </span>
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#EEE8DF] px-5 py-6 sm:px-8">
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8B966D]">
+                  Campaign editor
+                </p>
+                <h2 className="mt-2 font-serif text-3xl">
+                  {editingId ? "Edit campaign" : "New campaign"}
+                </h2>
               </div>
 
-              <p className="mt-1 text-xs text-[#8A7969]">
-                Upload a separate portrait image for mobile screens.
-              </p>
-
-              <input
-                ref={mobileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/avif"
-                onChange={handleMobileFile}
-                className="hidden"
-              />
-
-              <button
-                type="button"
-                onClick={() => mobileInputRef.current?.click()}
-                className="mt-4 flex min-h-44 w-full max-w-xs flex-col items-center justify-center overflow-hidden border border-dashed border-[#CDBEAE] bg-[#FBF9F6] text-[#8A7969]"
-              >
-                {mobilePreview || mobileImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={mobilePreview || mobileImageUrl}
-                    alt="Mobile hero preview"
-                    className="h-56 w-full object-cover"
-                  />
-                ) : (
-                  <>
-                    <ImagePlus size={26} strokeWidth={1.3} />
-                    <span className="mt-3 text-xs">
-                      Tap to select mobile image
-                    </span>
-                  </>
-                )}
-              </button>
-
-              {(mobileImageUrl || mobileFile) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileImageUrl("");
-                    setMobileFile(null);
-                  }}
-                  className="mt-3 inline-flex items-center gap-2 text-xs text-[#8A3E2D]"
-                >
-                  <X size={14} />
-                  Remove mobile image
-                </button>
-              )}
+              <span className="rounded-full bg-[#F3F1E9] px-3 py-2 text-[9px] font-semibold uppercase tracking-wider text-[#777365]">
+                {editingId ? "Editing existing slide" : "New homepage slide"}
+              </span>
             </div>
 
-            <div className="mt-8 flex flex-wrap justify-end gap-3 border-t border-[#E5DACE] pt-6">
+            <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[1fr_0.85fr]">
+              <div className="space-y-5">
+                <div>
+                  <label className={labelClass}>Main headline</label>
+                  <input
+                    className={inputClass}
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="NOT HERE TO BLEND IN."
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Subtitle / kicker</label>
+                  <input
+                    className={inputClass}
+                    value={subtitle}
+                    onChange={(event) => setSubtitle(event.target.value)}
+                    placeholder="A DIFFERENT KIND OF EVERYDAY."
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Campaign description</label>
+                  <textarea
+                    className={`${inputClass} min-h-32 resize-y leading-7`}
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder="Write a short message that introduces this campaign..."
+                  />
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className={labelClass}>Button label</label>
+                    <input
+                      className={inputClass}
+                      value={buttonText}
+                      onChange={(event) => setButtonText(event.target.value)}
+                      placeholder="Discover Collection"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Button destination</label>
+                    <input
+                      className={inputClass}
+                      value={buttonLink}
+                      onChange={(event) => setButtonLink(event.target.value)}
+                      placeholder="/collections/sets"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className={labelClass}>Display order</label>
+                    <input
+                      className={inputClass}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={sortOrder}
+                      onChange={(event) => setSortOrder(event.target.value)}
+                    />
+                  </div>
+
+                  <label className="flex cursor-pointer items-center gap-3 self-end rounded-xl border border-[#E8E1D7] px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={isActive}
+                      onChange={(event) => setIsActive(event.target.checked)}
+                      className="h-4 w-4 accent-[#87936B]"
+                    />
+                    <span>
+                      <span className="block text-xs font-semibold">
+                        Show on homepage
+                      </span>
+                      <span className="mt-1 block text-[10px] text-[#93897C]">
+                        Make this campaign visible
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Monitor size={15} className="text-[#87936B]" />
+                    <h3 className="text-sm font-semibold">Desktop artwork</h3>
+                  </div>
+                  <p className="mt-1 text-[10px] leading-5 text-[#93897C]">
+                    Landscape image recommended · JPG, PNG, WEBP or AVIF · Max 5 MB
+                  </p>
+
+                  <input
+                    ref={desktopInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    onChange={handleDesktopFile}
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => desktopInput.current?.click()}
+                    className="mt-3 flex min-h-48 w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[#CFC7B9] bg-[#F8F6F1] transition hover:border-[#87936B]"
+                  >
+                    {desktopPreview || imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={desktopPreview || imageUrl}
+                        alt="Desktop campaign preview"
+                        className="h-56 w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex flex-col items-center gap-3 text-[#928A7C]">
+                        <ImagePlus size={28} strokeWidth={1.3} />
+                        <span className="text-xs">Choose desktop image</span>
+                      </span>
+                    )}
+                  </button>
+
+                  {(desktopFile || imageUrl) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDesktopFile(null);
+                        setImageUrl("");
+                      }}
+                      className="mt-3 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[#A45D4A]"
+                    >
+                      <X size={13} />
+                      Remove desktop image
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Smartphone size={15} className="text-[#87936B]" />
+                    <h3 className="text-sm font-semibold">Mobile artwork</h3>
+                    <span className="rounded-full bg-[#F3F1E9] px-2 py-1 text-[8px] uppercase tracking-wider text-[#81796D]">
+                      Optional
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[10px] leading-5 text-[#93897C]">
+                    Use a portrait crop for a better mobile experience.
+                  </p>
+
+                  <input
+                    ref={mobileInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    onChange={handleMobileFile}
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => mobileInput.current?.click()}
+                    className="mt-3 flex min-h-40 w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[#CFC7B9] bg-[#F8F6F1] transition hover:border-[#87936B]"
+                  >
+                    {mobilePreview || mobileImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={mobilePreview || mobileImageUrl}
+                        alt="Mobile campaign preview"
+                        className="h-48 w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex flex-col items-center gap-3 text-[#928A7C]">
+                        <ImagePlus size={25} strokeWidth={1.3} />
+                        <span className="text-xs">Choose mobile image</span>
+                      </span>
+                    )}
+                  </button>
+
+                  {(mobileFile || mobileImageUrl) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileFile(null);
+                        setMobileImageUrl("");
+                      }}
+                      className="mt-3 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[#A45D4A]"
+                    >
+                      <X size={13} />
+                      Remove mobile image
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-3 border-t border-[#EEE8DF] bg-[#FBFAF7] px-5 py-5 sm:px-8">
               <button
                 type="button"
                 onClick={closeForm}
                 disabled={saving}
-                className="border border-[#CDBEAE] px-5 py-3 text-xs uppercase tracking-wider text-[#77695D] disabled:opacity-50"
+                className={`${buttonClass} border border-[#DED7CB] text-[#746D61] hover:bg-white`}
               >
                 Cancel
               </button>
@@ -813,236 +835,237 @@ export default function AdminHeroPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 bg-[#332A23] px-6 py-3 text-xs uppercase tracking-[0.15em] text-white disabled:opacity-60"
+                className={`${buttonClass} min-w-36 bg-[#292720] text-white hover:bg-[#48463B]`}
               >
                 {saving ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={15} className="animate-spin" />
                 ) : (
-                  <Upload size={16} />
+                  <Upload size={15} />
                 )}
-
                 {saving
                   ? "Saving..."
                   : editingId
                     ? "Save changes"
-                    : "Create slide"}
+                    : "Create campaign"}
               </button>
             </div>
           </form>
         )}
 
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-[#A28A72]">
-              Homepage presentation
-            </p>
-
-            <h2 className="mt-2 text-2xl font-light">
-              Your Hero Slides
-            </h2>
-
-            <p className="mt-1 text-xs text-[#8A7969]">
-              {slides.length} slide(s) in your hero collection
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => void loadSlides()}
-            disabled={loading || saving}
-            className="inline-flex items-center gap-2 border border-[#E5DACE] bg-white px-4 py-3 text-xs uppercase tracking-wider text-[#77695D] disabled:opacity-50"
-          >
-            <RefreshCw size={15} />
-            Refresh
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="mt-7 flex items-center justify-center gap-3 border border-[#E5DACE] bg-white/70 p-12 text-sm text-[#8A7969]">
-            <Loader2 size={18} className="animate-spin" />
-            Loading hero slides...
-          </div>
-        ) : slides.length === 0 ? (
-          <div className="mt-7 border border-dashed border-[#CDBEAE] bg-white/60 p-12 text-center">
-            <ImagePlus
-              size={34}
-              strokeWidth={1}
-              className="mx-auto text-[#B5A493]"
-            />
-
-            <h3 className="mt-4 text-xl font-light">
-              No hero slides yet
-            </h3>
-
-            <p className="mt-2 text-sm text-[#8A7969]">
-              Add your first image to start building your homepage slider.
-            </p>
+        <section className="mt-9">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8B966D]">
+                Homepage presentation
+              </p>
+              <h2 className="mt-2 font-serif text-3xl">Your campaigns</h2>
+              <p className="mt-1 text-xs text-[#93897C]">
+                Arrange the slides and control what visitors see first.
+              </p>
+            </div>
 
             <button
               type="button"
-              onClick={() => {
-                resetForm();
-                setShowForm(true);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              className="mt-6 inline-flex items-center gap-2 bg-[#332A23] px-5 py-3 text-xs uppercase tracking-wider text-white"
+              onClick={() => void loadSlides()}
+              disabled={loading || saving}
+              className={`${buttonClass} border border-[#DED7CB] bg-white text-[#746D61] hover:bg-[#F9F7F2]`}
             >
-              <Plus size={15} />
-              Add First Slide
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              Refresh
             </button>
           </div>
-        ) : (
-          <div className="mt-7 space-y-5">
-            {slides.map((slide, index) => (
-              <section
-                key={slide.id}
-                className="overflow-hidden border border-[#E5DACE] bg-white/80"
+
+          {loading ? (
+            <div className="flex min-h-52 items-center justify-center gap-3 rounded-2xl border border-[#E8E1D7] bg-white text-sm text-[#93897C]">
+              <Loader2 size={18} className="animate-spin" />
+              Loading campaigns...
+            </div>
+          ) : slides.length === 0 ? (
+            <div className="rounded-[26px] border border-dashed border-[#CFC7B9] bg-white/70 px-6 py-16 text-center">
+              <ImagePlus
+                size={34}
+                strokeWidth={1.2}
+                className="mx-auto text-[#9A927F]"
+              />
+              <h3 className="mt-5 font-serif text-2xl">A blank canvas.</h3>
+              <p className="mx-auto mt-2 max-w-sm text-xs leading-6 text-[#93897C]">
+                Your homepage campaigns will appear here. Create the first one
+                to start shaping your storefront.
+              </p>
+              <button
+                type="button"
+                onClick={openCreateForm}
+                className={`${buttonClass} mt-6 bg-[#292720] text-white hover:bg-[#48463B]`}
               >
-                <div className="grid sm:grid-cols-[240px_1fr]">
-                  <div className="relative min-h-48 bg-[#F1ECE5]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={slide.image_url}
-                      alt={slide.title || "TALA hero slide"}
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
+                <Plus size={15} />
+                Create first campaign
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {slides.map((slide, index) => (
+                <article
+                  key={slide.id}
+                  className="overflow-hidden rounded-[22px] border border-[#E8E1D7] bg-white transition hover:border-[#CFC7B9]"
+                >
+                  <div className="grid md:grid-cols-[280px_1fr]">
+                    <div className="relative min-h-52 bg-[#EAE5DC] md:min-h-60">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={slide.image_url}
+                        alt={slide.title || "TALA campaign"}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
 
-                    <span className="absolute left-3 top-3 bg-white/90 px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#332A23]">
-                      Slide {index + 1}
-                    </span>
-                  </div>
+                      <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#292720]">
+                        Campaign {String(index + 1).padStart(2, "0")}
+                      </div>
 
-                  <div className="min-w-0 p-5 sm:p-7">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-xl font-light">
-                            {slide.title || "Untitled Slide"}
-                          </h3>
+                      {slide.mobile_image_url && (
+                        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-[#292720]/80 px-3 py-1.5 text-[9px] text-white">
+                          <Smartphone size={11} />
+                          Mobile artwork
+                        </div>
+                      )}
+                    </div>
 
-                          {slide.is_active ? (
-                            <span className="border border-[#C4D0BE] bg-[#F0F5ED] px-2 py-1 text-[9px] uppercase tracking-wider text-[#53684B]">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="border border-[#D9CCBE] bg-[#F8F5F0] px-2 py-1 text-[9px] uppercase tracking-wider text-[#8A7969]">
-                              Hidden
-                            </span>
+                    <div className="min-w-0 p-5 sm:p-7">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-serif text-2xl">
+                              {slide.title || "Untitled campaign"}
+                            </h3>
+
+                            {slide.is_active ? (
+                              <span className="rounded-full bg-[#EDF2E5] px-3 py-1 text-[8px] font-semibold uppercase tracking-wider text-[#68794E]">
+                                Active
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-[#F1EEE8] px-3 py-1 text-[8px] font-semibold uppercase tracking-wider text-[#81796D]">
+                                Hidden
+                              </span>
+                            )}
+                          </div>
+
+                          {slide.subtitle && (
+                            <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8B966D]">
+                              {slide.subtitle}
+                            </p>
                           )}
+
+                          {slide.description && (
+                            <p className="mt-3 line-clamp-2 max-w-2xl text-xs leading-6 text-[#81796D]">
+                              {slide.description}
+                            </p>
+                          )}
+
+                          <p className="mt-4 flex flex-wrap items-center gap-2 text-[10px] text-[#93897C]">
+                            <ExternalLink size={12} />
+                            {slide.button_text || "Discover Collection"}
+                            <span>·</span>
+                            {slide.button_link || "/collections/all-pieces"}
+                          </p>
                         </div>
 
-                        {slide.subtitle && (
-                          <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-[#A28A72]">
-                            {slide.subtitle}
-                          </p>
-                        )}
-
-                        {slide.description && (
-                          <p className="mt-3 line-clamp-2 text-xs leading-6 text-[#77695D]">
-                            {slide.description}
-                          </p>
-                        )}
-
-                        <p className="mt-3 flex items-center gap-2 text-xs text-[#8A7969]">
-                          <ExternalLink size={13} />
-                          {slide.button_text} · {slide.button_link}
-                        </p>
-
-                        {slide.mobile_image_url && (
-                          <p className="mt-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#8A7969]">
-                            <Smartphone size={13} />
-                            Mobile image uploaded
-                          </p>
-                        )}
+                        <div className="rounded-xl bg-[#F5F2EC] px-3 py-2 text-center">
+                          <span className="block text-[8px] uppercase tracking-wider text-[#93897C]">
+                            Order
+                          </span>
+                          <span className="mt-1 block text-lg font-light tabular-nums">
+                            {String(slide.sort_order).padStart(2, "0")}
+                          </span>
+                        </div>
                       </div>
 
-                      <span className="text-xs text-[#A28A72]">
-                        Order: {slide.sort_order}
-                      </span>
-                    </div>
+                      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#EEE8DF] pt-5">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={saving || index === 0}
+                            onClick={() => void moveSlide(index, -1)}
+                            aria-label="Move campaign up"
+                            className="rounded-full border border-[#E8E1D7] p-2.5 text-[#746D61] transition hover:bg-[#F5F2EC] disabled:opacity-30"
+                          >
+                            <ArrowUp size={15} />
+                          </button>
 
-                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#EDE5DC] pt-5">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          disabled={saving || index === 0}
-                          onClick={() => void moveSlide(index, -1)}
-                          className="border border-[#E5DACE] p-2.5 text-[#77695D] disabled:opacity-30"
-                          aria-label="Move slide up"
-                        >
-                          <ChevronUp size={16} />
-                        </button>
+                          <button
+                            type="button"
+                            disabled={saving || index === slides.length - 1}
+                            onClick={() => void moveSlide(index, 1)}
+                            aria-label="Move campaign down"
+                            className="rounded-full border border-[#E8E1D7] p-2.5 text-[#746D61] transition hover:bg-[#F5F2EC] disabled:opacity-30"
+                          >
+                            <ArrowDown size={15} />
+                          </button>
 
-                        <button
-                          type="button"
-                          disabled={saving || index === slides.length - 1}
-                          onClick={() => void moveSlide(index, 1)}
-                          className="border border-[#E5DACE] p-2.5 text-[#77695D] disabled:opacity-30"
-                          aria-label="Move slide down"
-                        >
-                          <ChevronDown size={16} />
-                        </button>
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() =>
+                              void updateSlide(
+                                slide,
+                                { is_active: !slide.is_active },
+                                slide.is_active
+                                  ? "Campaign hidden from homepage."
+                                  : "Campaign activated successfully."
+                              )
+                            }
+                            className="inline-flex items-center gap-2 rounded-full border border-[#E8E1D7] px-4 py-2 text-[9px] font-semibold uppercase tracking-wider text-[#746D61] transition hover:bg-[#F5F2EC] disabled:opacity-40"
+                          >
+                            {slide.is_active ? (
+                              <EyeOff size={13} />
+                            ) : (
+                              <Eye size={13} />
+                            )}
+                            {slide.is_active ? "Hide" : "Activate"}
+                          </button>
+                        </div>
 
-                        <button
-                          type="button"
-                          disabled={saving}
-                          onClick={() =>
-                            void updateSlide(
-                              slide,
-                              { is_active: !slide.is_active },
-                              slide.is_active
-                                ? "Slide hidden from homepage."
-                                : "Slide activated successfully."
-                            )
-                          }
-                          className="inline-flex items-center gap-2 border border-[#E5DACE] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
-                        >
-                          {slide.is_active ? (
-                            <EyeOff size={14} />
-                          ) : (
-                            <Eye size={14} />
-                          )}
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => openEditForm(slide)}
+                            className="inline-flex items-center gap-2 rounded-full bg-[#292720] px-4 py-2.5 text-[9px] font-semibold uppercase tracking-wider text-white transition hover:bg-[#48463B] disabled:opacity-40"
+                          >
+                            <Pencil size={12} />
+                            Edit
+                          </button>
 
-                          {slide.is_active ? "Hide" : "Activate"}
-                        </button>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          disabled={saving}
-                          onClick={() => openEditForm(slide)}
-                          className="inline-flex items-center gap-2 border border-[#BCA995] px-3 py-2 text-[10px] uppercase tracking-wider text-[#59483B] disabled:opacity-50"
-                        >
-                          <Pencil size={13} />
-                          Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={saving}
-                          onClick={() => void deleteSlide(slide)}
-                          className="inline-flex items-center gap-2 border border-[#D8B9AE] px-3 py-2 text-[10px] uppercase tracking-wider text-[#8A3E2D] disabled:opacity-50"
-                        >
-                          <Trash2 size={13} />
-                          Delete
-                        </button>
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => void deleteSlide(slide)}
+                            className="inline-flex items-center gap-2 rounded-full border border-[#E4CFC7] px-4 py-2.5 text-[9px] font-semibold uppercase tracking-wider text-[#A45D4A] transition hover:bg-[#FBF0EC] disabled:opacity-40"
+                          >
+                            <Trash2 size={12} />
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
-        <Link
-          href="/"
-          className="mt-8 inline-flex items-center gap-3 border-b border-[#A28A72] pb-2 text-xs uppercase tracking-widest"
-        >
-          <Monitor size={15} />
-          View Homepage
-        </Link>
+        <div className="mt-9 flex flex-wrap items-center justify-between gap-4 border-t border-[#E5DED3] pt-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#746D61] transition hover:text-[#292720]"
+          >
+            <ExternalLink size={14} />
+            View live storefront
+          </Link>
+
+          <span className="text-[9px] uppercase tracking-[0.16em] text-[#A49B8E]">
+            TALA / Luxury Fashion
+          </span>
+        </div>
       </div>
     </main>
   );
