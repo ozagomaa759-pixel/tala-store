@@ -1,10 +1,14 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Sparkles,
+} from "lucide-react";
 
 import Header from "@/components/layout/Header";
 import { getTalaProducts } from "@/lib/tala-products";
@@ -19,44 +23,118 @@ type Category = {
   subtitle: string | null;
 };
 
-const FALLBACK_IMAGES = {
-  sets: "https://placehold.co/1000x1300/E8E0D6/55483D?text=TALA+SETS",
-  jackets: "https://placehold.co/1000x1300/D9D1C7/55483D?text=TALA+JACKETS",
-  all: "https://placehold.co/1000x1300/E2DAD0/55483D?text=TALA",
-};
-
-const collections = [
+const COLLECTIONS = [
   {
     number: "01",
     name: "Sets",
     eyebrow: "THE CO-ORD EDIT",
-    description: "The art of looking put together, without trying too hard.",
+    description:
+      "The art of looking put together, without trying too hard.",
     href: "/collections/sets",
     categorySlug: "sets",
     accent: "NEW SEASON",
-    layout: "large",
+    className: "md:col-span-1",
+    aspect: "aspect-[4/5]",
   },
   {
     number: "02",
     name: "Jackets",
     eyebrow: "THE LAYERING EDIT",
-    description: "The finishing touch. The statement piece. Your kind of layer.",
+    description:
+      "The finishing touch. The statement piece. Your kind of layer.",
     href: "/collections/jackets",
     categorySlug: "jackets",
     accent: "THE OUTERWEAR EDIT",
-    layout: "small",
+    className: "md:col-span-1",
+    aspect: "aspect-[4/5]",
   },
   {
     number: "03",
     name: "All Collection",
     eyebrow: "THE TALA UNIVERSE",
-    description: "Every piece, every mood. Find what feels like you.",
+    description:
+      "Every piece, every mood. Find what feels like you.",
     href: "/collections/all-pieces",
     categorySlug: "all",
     accent: "EXPLORE EVERYTHING",
-    layout: "wide",
+    className: "md:col-span-2",
+    aspect: "aspect-[16/9]",
   },
 ];
+
+function normalize(value?: string | null) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function isValidImage(value?: string | null) {
+  if (!value || typeof value !== "string") return false;
+
+  const image = value.trim().toLowerCase();
+
+  return (
+    (image.startsWith("https://") || image.startsWith("/")) &&
+    !image.includes("placehold.co") &&
+    !image.includes("placeholder")
+  );
+}
+
+function CollectionVisual({
+  image,
+  name,
+  number,
+  accent,
+}: {
+  image?: string | null;
+  name: string;
+  number: string;
+  accent: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [image]);
+
+  const showImage = isValidImage(image) && !failed;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[#DCD5CA]">
+      {showImage ? (
+        <img
+          src={image!}
+          alt={`TALA ${name}`}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.045]"
+        />
+      ) : (
+        <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#DCD5CA]">
+          <div className="absolute -right-16 -top-20 h-[340px] w-[340px] rounded-full border border-[#24221F]/10" />
+          <div className="absolute -right-4 -top-8 h-[240px] w-[240px] rounded-full border border-[#24221F]/10" />
+          <div className="absolute -bottom-32 -left-20 h-[360px] w-[360px] rounded-full border border-[#24221F]/10" />
+          <span className="font-serif text-[clamp(6rem,18vw,15rem)] font-light tracking-[-0.12em] text-[#24221F]/[0.09]">
+            T.
+          </span>
+          <span className="absolute bottom-8 left-8 text-[9px] font-semibold uppercase tracking-[0.3em] text-[#24221F]/45">
+            TALA / {name}
+          </span>
+        </div>
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-black/10 transition-colors duration-500 group-hover:from-black/75" />
+
+      <div className="absolute left-5 right-5 top-5 flex items-center justify-between sm:left-8 sm:right-8 sm:top-8">
+        <span className="rounded-full border border-white/50 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-sm">
+          {accent}
+        </span>
+
+        <span className="text-[10px] font-medium tracking-[0.18em] text-white">
+          {number}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function CollectionsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -73,14 +151,14 @@ export default function CollectionsPage() {
           fetch("/api/categories", { cache: "no-store" }),
         ]);
 
-        const result = await response.json();
+        const result = response.ok ? await response.json() : null;
 
         if (!active) return;
 
         setProducts(productsData);
 
-        if (response.ok && result.success) {
-          setCategories(result.categories ?? []);
+        if (result?.success && Array.isArray(result.categories)) {
+          setCategories(result.categories);
         }
       } catch (error) {
         console.error("Collections loading error:", error);
@@ -96,76 +174,76 @@ export default function CollectionsPage() {
     };
   }, []);
 
-  function getCategory(slug: string) {
-    return categories.find(
-      (category) =>
-        category.slug?.toLowerCase() === slug ||
-        category.name?.toLowerCase() === slug
-    );
-  }
+  const collectionData = useMemo(() => {
+    return COLLECTIONS.map((collection) => {
+      const category = categories.find(
+        (item) =>
+          normalize(item.slug) === collection.categorySlug ||
+          normalize(item.name) === collection.categorySlug
+      );
 
-  function getCollectionImage(slug: string) {
-    if (slug === "all") {
-      return products[0]?.image || FALLBACK_IMAGES.all;
-    }
+      const matchingProducts =
+        collection.categorySlug === "all"
+          ? products
+          : products.filter(
+              (product) =>
+                normalize(product.category) === collection.categorySlug
+            );
 
-    const category = getCategory(slug);
+      const productImage = matchingProducts
+        .flatMap((product) => [
+          product.image,
+          ...(product.images ?? []),
+        ])
+        .find((image) => isValidImage(image));
 
-    if (category?.image_url) return category.image_url;
+      const image =
+        (isValidImage(category?.image_url) && category?.image_url) ||
+        productImage ||
+        null;
 
-    const product = products.find(
-      (item) => item.category?.toLowerCase() === slug
-    );
-
-    if (product?.image) return product.image;
-
-    return FALLBACK_IMAGES[slug as keyof typeof FALLBACK_IMAGES];
-  }
-
-  function getCollectionCount(slug: string) {
-    if (slug === "all") return products.length;
-
-    return products.filter(
-      (product) => product.category?.toLowerCase() === slug
-    ).length;
-  }
+      return {
+        ...collection,
+        image,
+        count: matchingProducts.length,
+        headline: category?.headline?.trim() || collection.eyebrow,
+        description:
+          category?.subtitle?.trim() || collection.description,
+      };
+    });
+  }, [categories, products]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#F5F1EB] text-[#24221F]">
       <Header />
 
-      {/* Moving announcement */}
+      {/* Announcement */}
       <div className="overflow-hidden border-b border-[#24221F]/10 bg-[#D8ED83] py-2.5">
-        <motion.div
-          animate={{ x: ["0%", "-50%"] }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-          className="flex w-max items-center gap-10 whitespace-nowrap"
-        >
+        <div className="flex w-max animate-[tala-marquee_28s_linear_infinite] items-center gap-9 whitespace-nowrap">
           {Array.from({ length: 8 }).map((_, index) => (
             <span
               key={index}
               className="text-[9px] font-bold uppercase tracking-[0.22em]"
             >
-              YOUR STYLE. YOUR RULES. <span className="mx-3">✳</span>
-              DISCOVER TALA <span className="mx-3">✳</span>
+              YOUR STYLE. YOUR RULES.
+              <span className="mx-4">✳</span>
+              DISCOVER TALA
+              <span className="mx-4">✳</span>
+              MADE TO BE YOURS
+              <span className="mx-4">✳</span>
             </span>
           ))}
-        </motion.div>
+        </div>
       </div>
 
-      {/* Hero */}
+      {/* Intro */}
       <section className="mx-auto max-w-[1600px] px-5 pb-12 pt-14 sm:px-10 sm:pb-20 sm:pt-24 lg:px-16">
         <motion.div
-          initial={{ opacity: 0, y: 25 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="relative"
         >
-          <div className="mb-7 flex items-center justify-between">
+          <div className="mb-8 flex items-center justify-between">
             <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#77716A]">
               TALA / THE COLLECTIONS
             </p>
@@ -177,17 +255,22 @@ export default function CollectionsPage() {
 
           <div className="grid items-end gap-8 lg:grid-cols-[1.5fr_0.5fr]">
             <div>
-              <h1 className="max-w-5xl font-serif text-[clamp(3.5rem,10vw,9rem)] font-normal leading-[0.85] tracking-[-0.065em]">
+              <p className="mb-5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.25em] text-[#77716A]">
+                <Sparkles size={13} />
+                THE WORLD OF TALA
+              </p>
+
+              <h1 className="max-w-5xl font-serif text-[clamp(3.8rem,10vw,9rem)] font-normal leading-[0.84] tracking-[-0.065em]">
                 Find your
                 <span className="ml-3 inline-block italic text-[#888078]">
                   kind.
                 </span>
               </h1>
 
-              <div className="mt-8 flex items-center gap-3 sm:mt-10">
-                <span className="h-2 w-2 rounded-full bg-[#D8ED83]" />
+              <div className="mt-9 flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-[#A7BD62]" />
                 <p className="text-[9px] font-semibold uppercase tracking-[0.25em]">
-                  THE TALA COLLECTIONS
+                  THREE EDITS. ONE TALA.
                 </p>
               </div>
             </div>
@@ -203,10 +286,7 @@ export default function CollectionsPage() {
 
               <p className="mt-6 text-[9px] font-bold uppercase tracking-[0.2em]">
                 SCROLL TO EXPLORE
-                <ArrowDownRight
-                  className="ml-2 inline-block"
-                  size={15}
-                />
+                <ArrowDownRight className="ml-2 inline-block" size={15} />
               </p>
             </div>
           </div>
@@ -221,113 +301,91 @@ export default function CollectionsPage() {
           </p>
 
           <p className="text-[9px] uppercase tracking-[0.16em] text-[#77716A]">
-            {loading ? "LOADING..." : `${products.length} PIECES AVAILABLE`}
+            {loading
+              ? "LOADING..."
+              : `${products.length} PIECES AVAILABLE`}
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-7">
-          {collections.map((collection, index) => {
-            const category = getCategory(collection.categorySlug);
-            const image = getCollectionImage(collection.categorySlug);
-            const count = getCollectionCount(collection.categorySlug);
-
-            return (
-              <motion.article
-                key={collection.number}
-                initial={{ opacity: 0, y: 35 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.12 }}
-                transition={{
-                  duration: 0.65,
-                  delay: index * 0.08,
-                }}
-                className={`group ${
-                  collection.layout === "wide" ? "md:col-span-2" : ""
-                }`}
+          {collectionData.map((collection, index) => (
+            <motion.article
+              key={collection.number}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.12 }}
+              transition={{
+                duration: 0.65,
+                delay: index * 0.08,
+              }}
+              className={`group ${collection.className}`}
+            >
+              <Link
+                href={collection.href}
+                className="block"
+                aria-label={`Explore ${collection.name}`}
               >
-                <Link
-                  href={collection.href}
-                  className="block"
-                  aria-label={`Explore ${collection.name}`}
+                <div
+                  className={`relative overflow-hidden bg-[#DCD5CA] ${collection.aspect}`}
                 >
+                  <CollectionVisual
+                    image={collection.image}
+                    name={collection.name}
+                    number={collection.number}
+                    accent={collection.accent}
+                  />
+
                   <div
-                    className={`relative overflow-hidden bg-[#E6DED3] ${
-                      collection.layout === "wide"
-                        ? "aspect-[16/8] sm:aspect-[2.3/1]"
-                        : "aspect-[4/5]"
+                    className={`absolute bottom-0 left-0 right-0 p-6 text-white sm:p-9 ${
+                      collection.categorySlug === "all"
+                        ? "sm:flex sm:items-end sm:justify-between"
+                        : ""
                     }`}
                   >
-                    <img
-                      src={image}
-                      alt={`TALA ${collection.name}`}
-                      loading={index === 0 ? "eager" : "lazy"}
-                      className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.045]"
-                    />
+                    <div className="max-w-xl">
+                      <p className="mb-3 text-[8px] font-semibold uppercase tracking-[0.3em] text-white/75">
+                        {collection.headline}
+                      </p>
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-black/10 transition-opacity duration-500 group-hover:from-black/70" />
+                      <h2
+                        className={`font-serif font-normal leading-none tracking-[-0.045em] ${
+                          collection.categorySlug === "all"
+                            ? "text-5xl sm:text-7xl lg:text-8xl"
+                            : "text-5xl sm:text-6xl"
+                        }`}
+                      >
+                        {collection.name}
+                      </h2>
 
-                    {/* Top labels */}
-                    <div className="absolute left-5 right-5 top-5 flex items-center justify-between sm:left-8 sm:right-8 sm:top-8">
-                      <span className="rounded-full border border-white/50 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-sm">
-                        {collection.accent}
-                      </span>
-
-                      <span className="text-[10px] font-medium tracking-[0.18em] text-white">
-                        {collection.number}
-                      </span>
+                      <p className="mt-4 max-w-sm text-xs leading-6 text-white/80 sm:text-sm">
+                        {collection.description}
+                      </p>
                     </div>
 
-                    {/* Collection information */}
-                    <div
-                      className={`absolute bottom-0 left-0 right-0 p-6 text-white sm:p-9 ${
-                        collection.layout === "wide"
-                          ? "sm:flex sm:items-end sm:justify-between"
-                          : ""
-                      }`}
-                    >
-                      <div className="max-w-xl">
-                        <p className="mb-3 text-[8px] font-semibold uppercase tracking-[0.3em] text-white/75">
-                          {category?.headline || collection.eyebrow}
+                    <div className="mt-7 flex items-center justify-between border-t border-white/40 pt-4 transition-colors group-hover:border-[#D8ED83] sm:mt-8 sm:pt-5">
+                      <div>
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.2em]">
+                          EXPLORE THE EDIT
                         </p>
 
-                        <h2
-                          className={`font-serif font-normal leading-none tracking-[-0.04em] ${
-                            collection.layout === "wide"
-                              ? "text-5xl sm:text-7xl lg:text-8xl"
-                              : "text-5xl sm:text-6xl"
-                          }`}
-                        >
-                          {collection.name}
-                        </h2>
-
-                        <p className="mt-4 max-w-sm text-xs leading-6 text-white/80 sm:text-sm">
-                          {category?.subtitle || collection.description}
+                        <p className="mt-1 text-[9px] text-white/65">
+                          {loading
+                            ? "Discover TALA"
+                            : `${collection.count} ${
+                                collection.count === 1 ? "PIECE" : "PIECES"
+                              }`}
                         </p>
                       </div>
 
-                      <div className="mt-7 flex items-center justify-between border-t border-white/40 pt-4 sm:mt-8 sm:pt-5 sm:group-hover:border-white/70">
-                        <div>
-                          <p className="text-[9px] font-semibold uppercase tracking-[0.2em]">
-                            EXPLORE THE EDIT
-                          </p>
-
-                          <p className="mt-1 text-[9px] text-white/65">
-                            {loading
-                              ? "Discover TALA"
-                              : `${count} ${count === 1 ? "PIECE" : "PIECES"}`}
-                          </p>
-                        </div>
-
-                        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 transition-all duration-300 group-hover:border-[#D8ED83] group-hover:bg-[#D8ED83] group-hover:text-[#24221F]">
-                          <ArrowUpRight size={19} strokeWidth={1.4} />
-                        </span>
-                      </div>
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 transition-all duration-300 group-hover:border-[#D8ED83] group-hover:bg-[#D8ED83] group-hover:text-[#24221F]">
+                        <ArrowUpRight size={19} strokeWidth={1.4} />
+                      </span>
                     </div>
                   </div>
-                </Link>
-              </motion.article>
-            );
-          })}
+                </div>
+              </Link>
+            </motion.article>
+          ))}
         </div>
       </section>
 
@@ -359,7 +417,7 @@ export default function CollectionsPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#24221F] px-5 py-9 text-center text-[#F5F1EB]">
+      <footer className="bg-[#24221F] px-5 py-10 text-center text-[#F5F1EB]">
         <Link
           href="/"
           className="font-serif text-3xl tracking-[0.22em]"
@@ -373,7 +431,19 @@ export default function CollectionsPage() {
 
         <div className="mx-auto mt-7 h-px max-w-5xl bg-white/15" />
 
-        <p className="mt-6 text-[8px] tracking-[0.2em] text-white/45">
+        <div className="mt-6 flex flex-wrap justify-center gap-x-7 gap-y-3 text-[8px] uppercase tracking-[0.18em] text-white/55">
+          <Link href="/collections/sets" className="hover:text-[#D8ED83]">
+            Sets
+          </Link>
+          <Link href="/collections/jackets" className="hover:text-[#D8ED83]">
+            Jackets
+          </Link>
+          <Link href="/collections/all-pieces" className="hover:text-[#D8ED83]">
+            All Collection
+          </Link>
+        </div>
+
+        <p className="mt-6 text-[8px] tracking-[0.2em] text-white/35">
           © {new Date().getFullYear()} TALA. ALL RIGHTS RESERVED.
         </p>
       </footer>
