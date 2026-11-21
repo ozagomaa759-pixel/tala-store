@@ -319,19 +319,10 @@ export default function AdminCategoriesPage() {
       return;
     }
 
-    const slug = createSlug(form.slug || name);
+    const slug = createSlug(name);
 
     if (!slug) {
-      setError("Please enter a valid collection slug.");
-      return;
-    }
-
-    if (form.button_link.trim() && !(
-      form.button_link.startsWith("/") ||
-      form.button_link.startsWith("https://") ||
-      form.button_link.startsWith("http://")
-    )) {
-      setError("Button link must start with / or a valid URL.");
+      setError("Please enter a valid collection name using English letters or numbers.");
       return;
     }
 
@@ -350,8 +341,7 @@ export default function AdminCategoriesPage() {
         image_url: form.image_url.trim(),
         mobile_image_url: form.mobile_image_url.trim(),
         button_text: form.button_text.trim() || "EXPLORE",
-        button_link:
-          form.button_link.trim() || `/products?category=${slug}`,
+        button_link: `/products?category=${slug}`,
         sort_order: Number(form.sort_order) || 0,
         overlay_opacity: Number(form.overlay_opacity),
       };
@@ -728,18 +718,6 @@ export default function AdminCategoriesPage() {
                   />
                 </Field>
 
-                <Field label="URL slug">
-                  <input
-                    required
-                    value={form.slug}
-                    onChange={(event) =>
-                      updateField("slug", event.target.value)
-                    }
-                    placeholder="collection-name"
-                    className={inputClass}
-                  />
-                </Field>
-
                 <Field
                   label="Display order"
                   hint="Lower numbers appear first."
@@ -998,20 +976,6 @@ export default function AdminCategoriesPage() {
                       updateField("button_text", event.target.value)
                     }
                     placeholder="EXPLORE COLLECTION"
-                    className={inputClass}
-                  />
-                </Field>
-
-                <Field
-                  label="Button link"
-                  hint="Example: /products?category=sets"
-                >
-                  <input
-                    value={form.button_link}
-                    onChange={(event) =>
-                      updateField("button_link", event.target.value)
-                    }
-                    placeholder="/products?category=sets"
                     className={inputClass}
                   />
                 </Field>
