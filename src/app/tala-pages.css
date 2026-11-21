@@ -5,7 +5,6 @@
    ========================================= */
 
 :root {
-  /* Colors mapped to the new TALA palette */
   --tala-bg: var(--background);
   --tala-surface: var(--surface);
   --tala-surface-alt: var(--surface-soft);
@@ -20,17 +19,42 @@
   --tala-white: #ffffff;
   --tala-black: var(--foreground);
 
-  /* Shape */
   --tala-radius-sm: 3px;
   --tala-radius-md: 10px;
   --tala-radius-lg: 20px;
   --tala-radius-xl: 30px;
 
-  /* Shadows */
   --tala-shadow-soft: var(--shadow-soft);
   --tala-shadow-medium: var(--shadow-large);
 
-  /* Motion */
-  --tala-transition:
-    350ms var(--ease-luxury);
+  --tala-transition: 350ms var(--ease-luxury);
+}
+
+/* =========================================
+   PRODUCT CARDS — ALWAYS VISIBLE ACTION
+   Fixes hover-only indicators on touch devices
+   ========================================= */
+
+a.group [class*="bottom-3"][class*="right-3"][class*="opacity-0"] {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* Keep keyboard navigation visible */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #89965D;
+  outline-offset: 4px;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
