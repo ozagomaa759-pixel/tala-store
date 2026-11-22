@@ -55,22 +55,7 @@ export async function GET(
       await supabase
         .from("products")
         .select(
-          [
-            "id",
-            "category_id",
-            "name",
-            "slug",
-            "description",
-            "price",
-            "compare_at_price",
-            "main_image",
-            "images",
-            "is_featured",
-            "is_best_seller",
-            "is_new_arrival",
-            "sort_order",
-            "created_at",
-          ].join(", ")
+          "id, category_id, name, slug, description, price, compare_at_price, main_image, images, is_featured, is_best_seller, is_new_arrival, sort_order, created_at"
         )
         .eq("slug", safeSlug)
         .eq("status", "published")
@@ -105,18 +90,7 @@ export async function GET(
       await supabase
         .from("product_variants")
         .select(
-          [
-            "id",
-            "product_id",
-            "size",
-            "color",
-            "color_code",
-            "sku",
-            "stock_quantity",
-            "price_override",
-            "image_url",
-            "is_active",
-          ].join(", ")
+          "id, product_id, size, color, color_code, sku, stock_quantity, price_override, image_url, is_active"
         )
         .eq("product_id", product.id)
         .eq("is_active", true)
