@@ -135,7 +135,8 @@ export default function HomePage() {
   const heroButton =
     activeHero?.button_text?.trim() || "DISCOVER THE COLLECTION";
 
-  const heroLink = "/collections/all-pieces";
+  const heroLink =
+    activeHero?.button_link?.trim() || "/collections/all-pieces";
 
   useEffect(() => {
     let mounted = true;
@@ -214,7 +215,7 @@ export default function HomePage() {
 
     const timer = window.setInterval(() => {
       setHeroIndex((current) => (current + 1) % heroSlides.length);
-    },3000 );
+    }, 3000);
 
     return () => window.clearInterval(timer);
   }, [heroSlides.length, heroIndex]);
@@ -254,12 +255,26 @@ export default function HomePage() {
           {heroImage && (
             <motion.div
               key={heroImage}
-              initial={reducedMotion ? false : { opacity: 0, scale: 1.06 }}
+              initial={
+                reducedMotion
+                  ? false
+                  : { opacity: 0, scale: 1.035 }
+              }
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
+              exit={
+                reducedMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, scale: 1.015 }
+              }
               transition={{
-                duration: reducedMotion ? 0 : 1.2,
-                ease: EASE,
+                opacity: {
+                  duration: reducedMotion ? 0 : 1.25,
+                  ease: EASE,
+                },
+                scale: {
+                  duration: reducedMotion ? 0 : 1.65,
+                  ease: EASE,
+                },
               }}
               className="absolute inset-0"
             >
@@ -338,11 +353,15 @@ export default function HomePage() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeHero?.id || "default"}
-              initial={reducedMotion ? false : { opacity: 0, y: 24 }}
+              initial={
+                reducedMotion
+                  ? false
+                  : { opacity: 0, y: 18 }
+              }
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{
-                duration: reducedMotion ? 0 : 0.6,
+                duration: reducedMotion ? 0 : 0.72,
                 ease: EASE,
               }}
               className="max-w-[1050px]"
