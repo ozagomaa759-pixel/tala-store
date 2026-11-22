@@ -548,6 +548,36 @@ export default function AllPiecesCollectionPage() {
         </div>
       </section>
 
+      {/* Collection navigation */}
+      <nav
+        aria-label="Shop collections"
+        className="border-y border-[#292720]/20 bg-[#B8AA98]"
+      >
+        <div className="mx-auto flex max-w-[1600px] items-center justify-center gap-7 overflow-x-auto px-5 py-5 sm:gap-12 sm:px-10 lg:px-16">
+          <Link
+            href="/collections/all-pieces"
+            aria-current="page"
+            className="whitespace-nowrap border-b border-[#292720] pb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#292720]"
+          >
+            All Collection
+          </Link>
+
+          <Link
+            href="/collections/sets"
+            className="whitespace-nowrap border-b border-transparent pb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#625B50] transition-colors hover:border-[#292720] hover:text-[#292720]"
+          >
+            Sets
+          </Link>
+
+          <Link
+            href="/collections/jackets"
+            className="whitespace-nowrap border-b border-transparent pb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#625B50] transition-colors hover:border-[#292720] hover:text-[#292720]"
+          >
+            Jackets
+          </Link>
+        </div>
+      </nav>
+
       {/* Product collection */}
       <section
         id="all-products"
