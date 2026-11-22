@@ -37,22 +37,7 @@ export async function GET() {
       supabase
         .from("products")
         .select(
-          [
-            "id",
-            "category_id",
-            "name",
-            "slug",
-            "description",
-            "price",
-            "compare_at_price",
-            "main_image",
-            "images",
-            "is_featured",
-            "is_best_seller",
-            "is_new_arrival",
-            "sort_order",
-            "created_at",
-          ].join(", ")
+          "id, category_id, name, slug, description, price, compare_at_price, main_image, images, is_featured, is_best_seller, is_new_arrival, sort_order, created_at"
         )
         .eq("status", "published")
         .order("sort_order", { ascending: true })
