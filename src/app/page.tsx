@@ -6,7 +6,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import {
   ArrowDown,
-  ArrowRight,
   ArrowUpRight,
   Menu,
   ShoppingBag,
@@ -90,8 +89,8 @@ export default function HomePage() {
   const heroButton =
     activeHero?.button_text?.trim() || "DISCOVER THE COLLECTION";
 
-  const heroLink =
-    activeHero?.button_link || "/collections/all-pieces";
+  // The homepage hero CTA always opens the All Pieces collection.
+  const heroLink = "/collections/all-pieces";
 
   useEffect(() => {
     let mounted = true;
@@ -174,9 +173,7 @@ export default function HomePage() {
   }, [heroSlides.length]);
 
   const featuredProducts = [...products]
-    .sort(
-      (a, b) => Number(b.isFeatured) - Number(a.isFeatured)
-    )
+    .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
     .slice(0, 4);
 
   const categoryMap = new Map(
@@ -197,10 +194,8 @@ export default function HomePage() {
 
   return (
     <main className="overflow-hidden bg-[#F5F1EB] text-[#24221F]">
-
       {/* HERO */}
       <section className="relative min-h-[680px] h-[calc(100svh-34px)] max-h-[1000px] overflow-hidden bg-[#24221F] text-white">
-
         <AnimatePresence mode="sync" initial={false}>
           {heroImage && (
             <motion.div
@@ -243,7 +238,6 @@ export default function HomePage() {
 
         {/* TOP NAVIGATION */}
         <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 pt-7 sm:px-10 md:px-16">
-
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
@@ -278,7 +272,6 @@ export default function HomePage() {
 
         {/* HERO TEXT */}
         <div className="relative z-10 flex h-full flex-col justify-end px-6 pb-24 sm:px-10 sm:pb-28 md:px-16 lg:px-24">
-
           <div className="mb-6 flex items-center gap-3">
             <span className="h-px w-9 bg-[#D8ED83]" />
             <p className="text-[9px] tracking-[0.3em] text-white/90 sm:text-[10px]">
@@ -303,7 +296,6 @@ export default function HomePage() {
               </h1>
 
               <div className="mt-8 flex max-w-3xl flex-col gap-7 sm:mt-10 sm:flex-row sm:items-end sm:justify-between">
-
                 <p className="max-w-[340px] text-xs leading-7 text-white/80 sm:text-sm">
                   {heroDescription}
                 </p>
@@ -319,14 +311,12 @@ export default function HomePage() {
                     className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
                   />
                 </Link>
-
               </div>
             </motion.div>
           </AnimatePresence>
 
           {/* HERO CONTROLS */}
           <div className="absolute bottom-8 left-6 right-6 flex items-center justify-between sm:left-10 sm:right-10 md:left-16 md:right-16">
-
             <div className="flex items-center gap-3">
               <ArrowDown size={15} strokeWidth={1.2} />
               <span className="text-[8px] tracking-[0.22em]">
@@ -363,13 +353,11 @@ export default function HomePage() {
             )}
           </div>
         </div>
-
       </section>
 
       {/* INTRO */}
       <section className="px-6 py-24 sm:px-10 sm:py-32 md:px-16">
         <div className="mx-auto grid max-w-[1450px] gap-10 md:grid-cols-2 md:items-end">
-
           <div>
             <p className="mb-6 text-[9px] font-semibold tracking-[0.3em] text-[#827D75]">
               THE TALA POINT OF VIEW
@@ -400,15 +388,12 @@ export default function HomePage() {
               />
             </Link>
           </div>
-
         </div>
       </section>
 
       {/* COLLECTIONS */}
       <section className="px-4 pb-24 sm:px-8 md:px-14 md:pb-32">
-
         <div className="mx-auto max-w-[1500px]">
-
           <div className="mb-9 flex items-end justify-between px-2 sm:mb-12">
             <div>
               <p className="mb-3 text-[9px] font-semibold tracking-[0.3em] text-[#827D75]">
@@ -430,10 +415,8 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-5">
-
             {collections.map((collection) => {
               const category = categoryMap.get(collection.name.toLowerCase());
-
               const image = category?.image_url;
 
               return (
@@ -442,7 +425,6 @@ export default function HomePage() {
                   key={collection.name}
                   className="group relative block aspect-[3/4] overflow-hidden bg-[#B9AEA1] sm:aspect-[4/5]"
                 >
-
                   {image ? (
                     <img
                       src={image}
@@ -459,7 +441,6 @@ export default function HomePage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
 
                   <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-8 md:p-10">
-
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-[8px] tracking-[0.25em] text-white/75">
                         TALA EDIT {collection.number}
@@ -482,12 +463,10 @@ export default function HomePage() {
                     <span className="mt-6 inline-flex border-b border-white/70 pb-2 text-[8px] font-semibold tracking-[0.2em] sm:text-[9px]">
                       EXPLORE COLLECTION
                     </span>
-
                   </div>
                 </Link>
               );
             })}
-
           </div>
 
           <Link
@@ -497,17 +476,13 @@ export default function HomePage() {
             ALL COLLECTION
             <ArrowUpRight size={18} />
           </Link>
-
         </div>
       </section>
 
       {/* FEATURED PRODUCTS */}
       <section className="bg-[#EEE9E1] px-5 py-20 sm:px-10 sm:py-28 md:px-16">
-
         <div className="mx-auto max-w-[1450px]">
-
           <div className="mb-10 flex items-end justify-between gap-4 sm:mb-14">
-
             <div>
               <p className="mb-3 text-[9px] font-semibold tracking-[0.3em] text-[#827D75]">
                 THE LATEST OBSESSION
@@ -528,7 +503,6 @@ export default function HomePage() {
                 className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
               />
             </Link>
-
           </div>
 
           {loading ? (
@@ -543,7 +517,6 @@ export default function HomePage() {
             </div>
           ) : featuredProducts.length > 0 ? (
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-6">
-
               {featuredProducts.map((product, index) => (
                 <motion.article
                   key={product.id}
@@ -562,9 +535,7 @@ export default function HomePage() {
                     )}`}
                     className="group block"
                   >
-
                     <div className="relative aspect-[3/4] overflow-hidden bg-[#D8D0C5]">
-
                       <img
                         src={product.image}
                         alt={product.name}
@@ -588,7 +559,6 @@ export default function HomePage() {
                       <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F1EB] text-[#24221F] opacity-0 transition-all duration-300 group-hover:opacity-100">
                         <ArrowUpRight size={17} />
                       </span>
-
                     </div>
 
                     <div className="flex items-start justify-between gap-2 pt-4">
@@ -619,11 +589,9 @@ export default function HomePage() {
                         ))}
                       </div>
                     )}
-
                   </Link>
                 </motion.article>
               ))}
-
             </div>
           ) : (
             <div className="py-16 text-center">
@@ -635,18 +603,15 @@ export default function HomePage() {
               </p>
             </div>
           )}
-
         </div>
       </section>
 
       {/* BRAND STATEMENT */}
       <section className="relative overflow-hidden bg-[#24221F] px-6 py-24 text-[#F5F1EB] sm:px-12 sm:py-36">
-
         <div className="pointer-events-none absolute -right-20 -top-32 h-[420px] w-[420px] rounded-full border border-white/10 sm:h-[600px] sm:w-[600px]" />
         <div className="pointer-events-none absolute -right-8 -top-20 h-[300px] w-[300px] rounded-full border border-white/10 sm:h-[460px] sm:w-[460px]" />
 
         <div className="relative mx-auto max-w-[1200px]">
-
           <p className="mb-8 text-[9px] font-semibold tracking-[0.35em] text-[#D8ED83]">
             MORE THAN WHAT YOU WEAR
           </p>
@@ -659,7 +624,6 @@ export default function HomePage() {
           </h2>
 
           <div className="mt-12 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-
             <p className="max-w-[360px] text-xs leading-7 text-white/55">
               A little unexpected. Always considered.
               Never just another outfit.
@@ -675,18 +639,14 @@ export default function HomePage() {
                 className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
               />
             </Link>
-
           </div>
         </div>
       </section>
 
       {/* FOOTER */}
       <footer className="bg-[#F5F1EB] px-6 pb-8 pt-16 sm:px-10 md:px-16">
-
         <div className="mx-auto max-w-[1450px]">
-
           <div className="grid gap-12 border-b border-[#D9D1C7] pb-14 sm:grid-cols-2 md:grid-cols-4">
-
             <div className="sm:col-span-2">
               <Link
                 href="/"
@@ -725,14 +685,12 @@ export default function HomePage() {
                 <Link href="/faq">FAQ</Link>
               </div>
             </div>
-
           </div>
 
           <div className="flex flex-col justify-between gap-3 pt-6 text-[8px] tracking-[0.15em] text-[#8A8178] sm:flex-row">
             <p>© {new Date().getFullYear()} TALA. ALL RIGHTS RESERVED.</p>
             <p>MADE TO BE YOURS.</p>
           </div>
-
         </div>
       </footer>
 
@@ -760,9 +718,7 @@ export default function HomePage() {
               }}
               className="fixed inset-y-0 left-0 z-50 flex w-[min(88%,460px)] flex-col bg-[#F5F1EB] px-7 pb-8 pt-7 text-[#24221F] shadow-2xl sm:px-10"
             >
-
               <div className="flex items-center justify-between border-b border-[#D9D1C7] pb-7">
-
                 <Link
                   href="/"
                   onClick={() => setMenuOpen(false)}
@@ -779,11 +735,9 @@ export default function HomePage() {
                 >
                   <X size={19} />
                 </button>
-
               </div>
 
               <nav className="mt-10 flex flex-1 flex-col">
-
                 {menuItems.map((item, index) => (
                   <Link
                     key={item.href + item.label}
@@ -798,19 +752,16 @@ export default function HomePage() {
                     </span>
                   </Link>
                 ))}
-
               </nav>
 
               <div className="flex items-center justify-between pt-8 text-[9px] tracking-[0.2em] text-[#77716A]">
                 <span>TALA LUXURY FASHION</span>
                 <span>EST. TALA</span>
               </div>
-
             </motion.aside>
           </>
         )}
       </AnimatePresence>
-
     </main>
   );
 }
