@@ -214,7 +214,7 @@ export default function HomePage() {
 
     const timer = window.setInterval(() => {
       setHeroIndex((current) => (current + 1) % heroSlides.length);
-    }, 6500);
+    },3000 );
 
     return () => window.clearInterval(timer);
   }, [heroSlides.length, heroIndex]);
