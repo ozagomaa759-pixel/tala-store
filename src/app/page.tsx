@@ -1,12 +1,14 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import {
   ArrowDown,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   Menu,
   ShoppingBag,
   X,
@@ -69,6 +71,50 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const touchStartX = useRef<number | null>(null);
+
+  const goToNextHero = () => {
+    if (heroSlides.length < 2) return;
+
+    setHeroIndex((current) => (current + 1) % heroSlides.length);
+  };
+
+  const goToPreviousHero = () => {
+    if (heroSlides.length < 2) return;
+
+    setHeroIndex(
+      (current) => (current - 1 + heroSlides.length) % heroSlides.length
+    );
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLElement>) => {
+    if (touchStartX.current === null) return;
+
+    const touchEndX = event.changedTouches[0]?.clientX;
+
+    if (touchEndX === undefined) {
+      touchStartX.current = null;
+      return;
+    }
+
+    const difference = touchStartX.current - touchEndX;
+    const swipeThreshold = 45;
+
+    if (Math.abs(difference) > swipeThreshold) {
+      if (difference > 0) {
+        goToNextHero();
+      } else {
+        goToPreviousHero();
+      }
+    }
+
+    touchStartX.current = null;
+  };
+
   const activeHero = heroSlides[heroIndex];
 
   const heroImage =
@@ -89,7 +135,6 @@ export default function HomePage() {
   const heroButton =
     activeHero?.button_text?.trim() || "DISCOVER THE COLLECTION";
 
-  // The homepage hero CTA always opens the All Pieces collection.
   const heroLink = "/collections/all-pieces";
 
   useEffect(() => {
@@ -146,6 +191,7 @@ export default function HomePage() {
               );
 
             setHeroSlides(validSlides);
+            setHeroIndex(0);
           }
         }
       } catch (error) {
@@ -162,6 +208,7 @@ export default function HomePage() {
     };
   }, []);
 
+  // Auto-play. The timer restarts whenever the selected slide changes.
   useEffect(() => {
     if (heroSlides.length < 2) return;
 
@@ -170,7 +217,7 @@ export default function HomePage() {
     }, 6500);
 
     return () => window.clearInterval(timer);
-  }, [heroSlides.length]);
+  }, [heroSlides.length, heroIndex]);
 
   const featuredProducts = [...products]
     .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
@@ -195,7 +242,14 @@ export default function HomePage() {
   return (
     <main className="overflow-hidden bg-[#F5F1EB] text-[#24221F]">
       {/* HERO */}
-      <section className="relative min-h-[680px] h-[calc(100svh-34px)] max-h-[1000px] overflow-hidden bg-[#24221F] text-white">
+      <section
+        className="relative min-h-[680px] h-[calc(100svh-34px)] max-h-[1000px] overflow-hidden bg-[#24221F] text-white"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={() => {
+          touchStartX.current = null;
+        }}
+      >
         <AnimatePresence mode="sync" initial={false}>
           {heroImage && (
             <motion.div
@@ -216,6 +270,7 @@ export default function HomePage() {
                     srcSet={activeHero.mobile_image_url}
                   />
                 )}
+
                 <img
                   src={heroImage}
                   alt="TALA fashion campaign"
@@ -274,6 +329,7 @@ export default function HomePage() {
         <div className="relative z-10 flex h-full flex-col justify-end px-6 pb-24 sm:px-10 sm:pb-28 md:px-16 lg:px-24">
           <div className="mb-6 flex items-center gap-3">
             <span className="h-px w-9 bg-[#D8ED83]" />
+
             <p className="text-[9px] tracking-[0.3em] text-white/90 sm:text-[10px]">
               {heroSubtitle}
             </p>
@@ -305,6 +361,7 @@ export default function HomePage() {
                   className="group inline-flex min-h-12 w-fit items-center gap-8 border border-white/75 px-6 text-[9px] font-medium tracking-[0.2em] transition duration-300 hover:border-[#D8ED83] hover:bg-[#D8ED83] hover:text-[#24221F]"
                 >
                   {heroButton}
+
                   <ArrowUpRight
                     size={17}
                     strokeWidth={1.3}
@@ -315,10 +372,34 @@ export default function HomePage() {
             </motion.div>
           </AnimatePresence>
 
+          {/* SLIDER ARROWS */}
+          {heroSlides.length > 1 && (
+            <div className="absolute right-6 top-1/2 z-20 flex -translate-y-1/2 flex-col gap-2 sm:right-10 md:right-16">
+              <button
+                type="button"
+                onClick={goToPreviousHero}
+                aria-label="Previous campaign"
+                className="flex h-10 w-10 items-center justify-center border border-white/50 bg-black/10 text-white backdrop-blur-sm transition hover:border-[#D8ED83] hover:bg-[#D8ED83] hover:text-[#24221F] sm:h-12 sm:w-12"
+              >
+                <ChevronLeft size={21} strokeWidth={1.3} />
+              </button>
+
+              <button
+                type="button"
+                onClick={goToNextHero}
+                aria-label="Next campaign"
+                className="flex h-10 w-10 items-center justify-center border border-white/50 bg-black/10 text-white backdrop-blur-sm transition hover:border-[#D8ED83] hover:bg-[#D8ED83] hover:text-[#24221F] sm:h-12 sm:w-12"
+              >
+                <ChevronRight size={21} strokeWidth={1.3} />
+              </button>
+            </div>
+          )}
+
           {/* HERO CONTROLS */}
           <div className="absolute bottom-8 left-6 right-6 flex items-center justify-between sm:left-10 sm:right-10 md:left-16 md:right-16">
             <div className="flex items-center gap-3">
               <ArrowDown size={15} strokeWidth={1.2} />
+
               <span className="text-[8px] tracking-[0.22em]">
                 SCROLL TO EXPLORE
               </span>
@@ -337,6 +418,7 @@ export default function HomePage() {
                       type="button"
                       onClick={() => setHeroIndex(index)}
                       aria-label={`Show campaign ${index + 1}`}
+                      aria-current={index === heroIndex ? "true" : undefined}
                       className={`h-[2px] transition-all duration-300 ${
                         index === heroIndex
                           ? "w-8 bg-[#D8ED83]"
@@ -382,6 +464,7 @@ export default function HomePage() {
               className="group inline-flex items-center gap-5 border-b border-[#24221F] pb-3 text-[9px] font-semibold tracking-[0.2em]"
             >
               GET INTO TALA
+
               <ArrowUpRight
                 size={16}
                 className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
@@ -498,6 +581,7 @@ export default function HomePage() {
               className="group mb-1 inline-flex items-center gap-2 text-[8px] font-semibold tracking-[0.16em] sm:text-[9px]"
             >
               SHOP ALL
+
               <ArrowUpRight
                 size={15}
                 className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
@@ -598,6 +682,7 @@ export default function HomePage() {
               <p className="font-serif text-3xl">
                 Something new is coming.
               </p>
+
               <p className="mt-3 text-xs text-[#77716A]">
                 Our next collection is on its way.
               </p>
@@ -634,6 +719,7 @@ export default function HomePage() {
               className="group inline-flex w-fit items-center gap-5 border-b border-white/50 pb-3 text-[9px] font-semibold tracking-[0.2em] transition hover:border-[#D8ED83] hover:text-[#D8ED83]"
             >
               GET TO KNOW TALA
+
               <ArrowUpRight
                 size={17}
                 className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
