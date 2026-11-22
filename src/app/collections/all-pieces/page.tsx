@@ -27,19 +27,6 @@ const PRICE_FORMAT = new Intl.NumberFormat("en-EG", {
   maximumFractionDigits: 0,
 });
 
-const C = {
-  page: "#B8AA98",
-  surface: "#B0A18E",
-  image: "#A99A88",
-  imageDeep: "#998A78",
-  ink: "#292720",
-  muted: "#625B50",
-  lime: "#D8ED83",
-  limeDark: "#C9DE72",
-  dark: "#292923",
-  line: "rgba(41,39,32,0.22)",
-};
-
 function formatPrice(price: number) {
   return PRICE_FORMAT.format(price);
 }
@@ -61,7 +48,7 @@ function ProductImage({
   alt,
   images,
 }: {
-  src?: string;
+  src?: string | null;
   alt: string;
   images?: string[];
 }) {
@@ -398,7 +385,7 @@ export default function AllPiecesCollectionPage() {
       </div>
 
       {/* Editorial hero */}
-      <section className="relative isolate min-h-[590px] overflow-hidden bg-[#292923] sm:min-h-[690px]">
+      <section className="relative isolate min-h-[350px] overflow-hidden bg-[#292923] sm:min-h-[430px]">
         {heroImage ? (
           <img
             src={heroImage}
@@ -419,8 +406,8 @@ export default function AllPiecesCollectionPage() {
         <div className="absolute inset-0 -z-10 bg-black/25" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/75 via-black/15 to-black/15" />
 
-        <div className="relative mx-auto flex min-h-[590px] max-w-[1600px] flex-col justify-end px-5 pb-14 pt-28 text-white sm:min-h-[690px] sm:px-10 sm:pb-20 lg:px-16">
-          <div className="mb-auto flex items-center justify-between pt-4">
+        <div className="relative mx-auto flex min-h-[350px] max-w-[1600px] flex-col justify-end px-5 pb-8 pt-20 text-white sm:min-h-[430px] sm:px-10 sm:pb-10 lg:px-16">
+          <div className="mb-auto flex items-center justify-between pt-2">
             <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-white/75 sm:text-[9px]">
               TALA / THE FULL COLLECTION
             </p>
@@ -436,22 +423,22 @@ export default function AllPiecesCollectionPage() {
             transition={{ duration: 0.75 }}
             className="max-w-5xl"
           >
-            <div className="mb-6 flex items-center gap-3">
+            <div className="mb-4 flex items-center gap-3">
               <span className="h-px w-9 bg-[#D8ED83]" />
               <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-white/80">
                 THE NEW WAY TO DRESS
               </p>
             </div>
 
-            <h1 className="font-serif text-[clamp(4.2rem,12vw,10.5rem)] font-normal leading-[0.78] tracking-[-0.075em]">
+            <h1 className="font-serif text-[clamp(3.5rem,10vw,8rem)] font-normal leading-[0.78] tracking-[-0.075em]">
               ALL
               <br />
               YOUR
               <span className="text-[#D8ED83]"> VIBE.</span>
             </h1>
 
-            <div className="mt-9 flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
-              <p className="max-w-md text-xs leading-7 text-white/80 sm:text-sm">
+            <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <p className="max-w-md text-[11px] leading-6 text-white/80 sm:text-sm sm:leading-7">
                 A little bold. A little unexpected.
                 Always unmistakably you.
                 Discover every piece in the TALA universe.
@@ -459,7 +446,7 @@ export default function AllPiecesCollectionPage() {
 
               <a
                 href="#all-products"
-                className="group inline-flex min-h-12 w-fit items-center gap-8 border border-white/70 px-5 text-[9px] font-bold uppercase tracking-[0.2em] transition duration-300 hover:border-[#D8ED83] hover:bg-[#D8ED83] hover:text-[#242421]"
+                className="group inline-flex min-h-11 w-fit items-center gap-8 border border-white/70 px-5 text-[9px] font-bold uppercase tracking-[0.2em] transition duration-300 hover:border-[#D8ED83] hover:bg-[#D8ED83] hover:text-[#242421]"
               >
                 Find your next look
                 <ArrowDown size={16} />
@@ -467,7 +454,7 @@ export default function AllPiecesCollectionPage() {
             </div>
           </motion.div>
 
-          <div className="mt-12 flex items-center justify-between border-t border-white/30 pt-5">
+          <div className="mt-7 flex items-center justify-between border-t border-white/30 pt-4">
             <p className="text-[8px] uppercase tracking-[0.22em] text-white/65">
               TALA LUXURY FASHION
             </p>
@@ -480,8 +467,8 @@ export default function AllPiecesCollectionPage() {
       </section>
 
       {/* Category shortcuts */}
-      <section className="mx-auto max-w-[1600px] px-5 py-12 sm:px-10 sm:py-16 lg:px-16">
-        <div className="mb-7 flex items-end justify-between gap-4">
+      <section className="mx-auto max-w-[1600px] px-5 py-6 sm:px-10 sm:py-8 lg:px-16">
+        <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <SectionLabel>PICK YOUR MOOD</SectionLabel>
 
@@ -504,7 +491,7 @@ export default function AllPiecesCollectionPage() {
                 .getElementById("all-products")
                 ?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="group flex min-h-[125px] flex-col justify-between overflow-hidden bg-[#D8ED83] p-4 text-left transition duration-300 hover:bg-[#C9DE72] sm:min-h-[175px] sm:p-7"
+            className="group flex min-h-[90px] flex-col justify-between overflow-hidden bg-[#D8ED83] p-4 text-left transition duration-300 hover:bg-[#C9DE72] sm:min-h-[115px] sm:p-7"
           >
             <span className="flex items-center justify-between text-[8px] font-bold uppercase tracking-[0.2em] text-[#4C5435]">
               THE CO-ORD EDIT
@@ -529,7 +516,7 @@ export default function AllPiecesCollectionPage() {
                 .getElementById("all-products")
                 ?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="group flex min-h-[125px] flex-col justify-between overflow-hidden bg-[#292923] p-4 text-left transition duration-300 hover:bg-[#3B3B32] sm:min-h-[175px] sm:p-7"
+            className="group flex min-h-[90px] flex-col justify-between overflow-hidden bg-[#292923] p-4 text-left transition duration-300 hover:bg-[#3B3B32] sm:min-h-[115px] sm:p-7"
           >
             <span className="flex items-center justify-between text-[8px] font-bold uppercase tracking-[0.2em] text-white/65">
               THE LAYERING EDIT
@@ -553,7 +540,7 @@ export default function AllPiecesCollectionPage() {
         aria-label="Shop collections"
         className="border-y border-[#292720]/20 bg-[#B8AA98]"
       >
-        <div className="mx-auto flex max-w-[1600px] items-center justify-center gap-7 overflow-x-auto px-5 py-5 sm:gap-12 sm:px-10 lg:px-16">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-center gap-7 overflow-x-auto px-5 py-3 sm:gap-12 sm:px-10 lg:px-16">
           <Link
             href="/collections/all-pieces"
             aria-current="page"
@@ -583,7 +570,7 @@ export default function AllPiecesCollectionPage() {
         id="all-products"
         className="scroll-mt-20 border-y border-[#292720]/20 bg-[#B8AA98]"
       >
-        <div className="mx-auto max-w-[1600px] px-5 py-14 sm:px-10 sm:py-20 lg:px-16">
+        <div className="mx-auto max-w-[1600px] px-5 py-8 sm:px-10 sm:py-12 lg:px-16">
           <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
               <p className="mb-3 flex items-center gap-2 text-[8px] font-bold uppercase tracking-[0.28em] text-[#625B50]">
