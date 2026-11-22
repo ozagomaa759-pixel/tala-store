@@ -65,7 +65,7 @@ function ProductImage({
   src,
   alt,
 }: {
-  src?: string;
+  src?: string | null;
   alt: string;
 }) {
   const [failed, setFailed] = useState(false);
@@ -91,7 +91,7 @@ function ProductImage({
 
   return (
     <img
-      src={src}
+      src={src ?? ""}
       alt={alt}
       loading="lazy"
       onError={() => setFailed(true)}
@@ -125,7 +125,7 @@ function HeroImage({ src }: { src?: string | null }) {
 
   return (
     <img
-      src={src}
+      src={src ?? ""}
       alt="TALA Sets Collection"
       fetchPriority="high"
       onError={() => setFailed(true)}
