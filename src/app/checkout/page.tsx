@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   LockKeyhole,
   MapPin,
-  PackageCheck,
   ShoppingBag,
   Truck,
   ShieldCheck,
@@ -18,6 +17,7 @@ import {
 import { getCart, clearCart, type CartItem } from "@/lib/cart";
 
 const DELIVERY_FEE = 120;
+const SUEZ_DELIVERY_FEE = 40;
 const FREE_DELIVERY_LIMIT = 3000;
 
 const THEME = {
@@ -44,6 +44,37 @@ type Customer = {
 
 const inputClass =
   "mt-2 w-full rounded-xl border border-[#292923]/20 bg-[#D4C8B8] px-4 py-3.5 text-sm text-[#292923] outline-none transition placeholder:text-[#665F55]/65 focus:border-[#292923] focus:ring-2 focus:ring-[#D8ED83]/60";
+
+const normalizeLocation = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[\s،,.-]+/g, "")
+    .trim();
+
+const isSuezLocation = (city: string, address: string) => {
+  const normalizedCity = normalizeLocation(city);
+
+  const isSuezCity = [
+    "السويس",
+    "suez",
+    "السويسمصر",
+    "suezegypt",
+  ].includes(normalizedCity);
+
+  const hasEnglishSuez =
+    /(^|[^a-z])suez([^a-z]|$)/i.test(city);
+
+  const addressParts = address
+    .toLowerCase()
+    .split(/[,،\n]/)
+    .map((part) => normalizeLocation(part));
+
+  const hasSuezInAddress = addressParts.some((part) =>
+    ["السويس", "suez"].includes(part)
+  );
+
+  return isSuezCity || hasEnglishSuez || hasSuezInAddress;
+};
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -96,10 +127,14 @@ export default function CheckoutPage() {
     [cart]
   );
 
+  const isSuez = isSuezLocation(customer.city, customer.address);
+
   const deliveryFee =
     cart.length === 0 || subtotal >= FREE_DELIVERY_LIMIT
       ? 0
-      : DELIVERY_FEE;
+      : isSuez
+        ? SUEZ_DELIVERY_FEE
+        : DELIVERY_FEE;
 
   const discount =
     couponCode.trim().toUpperCase() === "TALA10"
@@ -484,7 +519,7 @@ export default function CheckoutPage() {
                     <input
                       autoComplete="address-level2"
                       className={inputClass}
-                      placeholder="Your city"
+                      placeholder="Your city (e.g. Suez / السويس)"
                       value={customer.city}
                       onChange={(event) =>
                         updateField("city", event.target.value)
@@ -727,7 +762,10 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="flex justify-between opacity-70">
-                  <span>Delivery</span>
+                  <span>
+                    Delivery
+                    {deliveryFee > 0 && isSuez ? " · Suez" : ""}
+                  </span>
                   <span className="tabular-nums">
                     {deliveryFee === 0
                       ? "FREE"
