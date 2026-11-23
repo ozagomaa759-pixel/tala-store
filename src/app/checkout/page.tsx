@@ -519,7 +519,7 @@ export default function CheckoutPage() {
                     <input
                       autoComplete="address-level2"
                       className={inputClass}
-                      placeholder="Your city (e.g. Suez / السويس)"
+                     placeholder="Enter your city"
                       value={customer.city}
                       onChange={(event) =>
                         updateField("city", event.target.value)
