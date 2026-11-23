@@ -4,6 +4,8 @@ import { requireAdmin } from "@/lib/supabase/require-admin";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 20;
+
 function errorResponse(message: string, status = 400) {
   return NextResponse.json(
     { success: false, error: message },
@@ -11,7 +13,7 @@ function errorResponse(message: string, status = 400) {
   );
 }
 
-// GET: عرض العملاء والبحث
+// GET: عرض العملاء مع Pagination والبحث
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin();
@@ -21,35 +23,59 @@ export async function GET(request: NextRequest) {
     }
 
     const params = request.nextUrl.searchParams;
-    const search = params.get("search");
+    const search = params.get("search")?.trim() || "";
+    const requestedPage = Number(params.get("page") || "1");
+
+    const page =
+      Number.isInteger(requestedPage) && requestedPage > 0
+        ? requestedPage
+        : 1;
+
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
 
     let query = auth.supabase
       .from("customers")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (search) {
       const safeSearch = search.replace(/[,%()]/g, "");
 
-      query = query.or(
-        `full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`
-      );
+      if (safeSearch) {
+        query = query.or(
+          `full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`
+        );
+      }
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query.range(from, to);
 
     if (error) {
-      return errorResponse(error.message, 500);
+      console.error("Fetch customers:", error.message);
+      return errorResponse("Could not load customers.", 500);
     }
 
-    return NextResponse.json({
-      success: true,
-      customers: data ?? [],
-      count: data?.length ?? 0,
-    });
+    const total = count ?? 0;
+
+    return NextResponse.json(
+      {
+        success: true,
+        customers: data ?? [],
+        count: total,
+        page,
+        pageSize: PAGE_SIZE,
+        totalPages: Math.ceil(total / PAGE_SIZE),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Fetch customers error:", error);
-    return errorResponse("Failed to fetch customers", 500);
+    return errorResponse("Failed to fetch customers.", 500);
   }
 }
 
@@ -68,7 +94,7 @@ export async function PATCH(request: NextRequest) {
       typeof body.id !== "string" ||
       !body.id.trim()
     ) {
-      return errorResponse("Customer ID is required");
+      return errorResponse("Customer ID is required.");
     }
 
     const updates: Record<string, unknown> = {};
@@ -78,7 +104,7 @@ export async function PATCH(request: NextRequest) {
         typeof body.full_name !== "string" ||
         !body.full_name.trim()
       ) {
-        return errorResponse("Invalid customer name");
+        return errorResponse("Invalid customer name.");
       }
 
       updates.full_name = body.full_name.trim();
@@ -89,7 +115,7 @@ export async function PATCH(request: NextRequest) {
         body.email !== null &&
         typeof body.email !== "string"
       ) {
-        return errorResponse("Invalid email");
+        return errorResponse("Invalid email.");
       }
 
       updates.email = body.email?.trim() || null;
@@ -100,14 +126,14 @@ export async function PATCH(request: NextRequest) {
         body.phone !== null &&
         typeof body.phone !== "string"
       ) {
-        return errorResponse("Invalid phone");
+        return errorResponse("Invalid phone.");
       }
 
       updates.phone = body.phone?.trim() || null;
     }
 
     if (Object.keys(updates).length === 0) {
-      return errorResponse("No changes provided");
+      return errorResponse("No changes provided.");
     }
 
     updates.updated_at = new Date().toISOString();
@@ -115,22 +141,23 @@ export async function PATCH(request: NextRequest) {
     const { data, error } = await auth.supabase
       .from("customers")
       .update(updates as never)
-      .eq("id", body.id)
+      .eq("id", body.id.trim())
       .select()
       .single();
 
     if (error) {
-      return errorResponse(error.message, 400);
+      console.error("Update customer:", error.message);
+      return errorResponse("Could not update customer.", 400);
     }
 
     return NextResponse.json({
       success: true,
       customer: data,
-      message: "Customer updated successfully",
+      message: "Customer updated successfully.",
     });
   } catch (error) {
     console.error("Update customer error:", error);
-    return errorResponse("Failed to update customer", 500);
+    return errorResponse("Failed to update customer.", 500);
   }
 }
 
@@ -145,25 +172,29 @@ export async function DELETE(request: NextRequest) {
 
     const id = request.nextUrl.searchParams.get("id");
 
-    if (!id) {
-      return errorResponse("Customer ID is required");
+    if (!id?.trim()) {
+      return errorResponse("Customer ID is required.");
     }
 
     const { error } = await auth.supabase
       .from("customers")
       .delete()
-      .eq("id", id);
+      .eq("id", id.trim());
 
     if (error) {
-      return errorResponse(error.message, 400);
+      console.error("Delete customer:", error.message);
+      return errorResponse(
+        "Could not delete customer. They may have linked orders.",
+        400
+      );
     }
 
     return NextResponse.json({
       success: true,
-      message: "Customer deleted successfully",
+      message: "Customer deleted successfully.",
     });
   } catch (error) {
     console.error("Delete customer error:", error);
-    return errorResponse("Failed to delete customer", 500);
+    return errorResponse("Failed to delete customer.", 500);
   }
 }
