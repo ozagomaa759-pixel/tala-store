@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 20;
+
 const ALLOWED_ORDER_STATUSES = new Set([
   "new",
   "confirmed",
@@ -39,14 +41,36 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient();
     const params = request.nextUrl.searchParams;
 
-    const search = params.get("search")?.trim();
-    const status = params.get("status");
-    const paymentStatus = params.get("payment_status");
+    const search = params.get("search")?.trim() || "";
+    const status = params.get("status") || "";
+    const paymentStatus = params.get("payment_status") || "";
+
+    const requestedPage = Number(params.get("page") || "1");
+
+    const page =
+      Number.isInteger(requestedPage) && requestedPage > 0
+        ? requestedPage
+        : 1;
+
+    if (status && !ALLOWED_ORDER_STATUSES.has(status)) {
+      return errorResponse("Invalid order status filter.");
+    }
+
+    if (
+      paymentStatus &&
+      !ALLOWED_PAYMENT_STATUSES.has(paymentStatus)
+    ) {
+      return errorResponse("Invalid payment status filter.");
+    }
+
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
 
     let query = supabase
       .from("orders")
-      .select("*, order_items(*)")
-      .order("created_at", { ascending: false });
+      .select("*, order_items(*)", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false });
 
     if (search) {
       const safeSearch = search.replace(/[,%()]/g, "");
@@ -66,18 +90,23 @@ export async function GET(request: NextRequest) {
       query = query.eq("payment_status", paymentStatus);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query.range(from, to);
 
     if (error) {
       console.error("Admin orders GET:", error.message);
       return errorResponse("Could not load orders.", 500);
     }
 
+    const total = count ?? 0;
+
     return NextResponse.json(
       {
         success: true,
         orders: data ?? [],
-        count: data?.length ?? 0,
+        count: total,
+        page,
+        pageSize: PAGE_SIZE,
+        totalPages: Math.ceil(total / PAGE_SIZE),
       },
       {
         headers: {
@@ -152,7 +181,6 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Read the current order status before changing anything.
     const {
       data: currentOrderData,
       error: currentOrderError,
@@ -183,7 +211,6 @@ export async function PATCH(request: NextRequest) {
       return errorResponse("Order not found.", 404);
     }
 
-    // Delivered and cancelled orders cannot return to earlier states.
     if (requestedStatus !== undefined) {
       const currentStatus = currentOrder.status;
 
@@ -209,7 +236,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Cancellation is handled by the database function.
     if (requestedStatus === "cancelled") {
       const rpcClient = supabase as unknown as {
         rpc: (
