@@ -1,12 +1,14 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Mail,
   Pencil,
@@ -30,6 +32,16 @@ type Customer = {
 type Notice = {
   type: "success" | "error";
   message: string;
+};
+
+type CustomersResponse = {
+  success: boolean;
+  customers: Customer[];
+  count: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  error?: string;
 };
 
 const fieldClass =
@@ -62,70 +74,100 @@ export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [count, setCount] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
+
   const [notice, setNotice] = useState<Notice | null>(null);
 
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(
-    null
-  );
+  const [editingCustomer, setEditingCustomer] =
+    useState<Customer | null>(null);
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  const loadCustomers = useCallback(async (searchValue = "") => {
-    setLoading(true);
+  const loadCustomers = useCallback(
+    async (
+      searchValue: string,
+      pageValue: number,
+      signal?: AbortSignal
+    ) => {
+      setLoading(true);
 
-    try {
-      const params = new URLSearchParams();
+      try {
+        const params = new URLSearchParams({
+          page: String(pageValue),
+        });
 
-      if (searchValue.trim()) {
-        params.set("search", searchValue.trim());
+        if (searchValue.trim()) {
+          params.set("search", searchValue.trim());
+        }
+
+        const response = await fetch(
+          `/api/admin/customers?${params.toString()}`,
+          {
+            cache: "no-store",
+            signal,
+          }
+        );
+
+        const data = (await response.json()) as CustomersResponse;
+
+        if (!response.ok || data.success === false) {
+          throw new Error(data.error || "Could not load customers.");
+        }
+
+        setCustomers(
+          Array.isArray(data.customers) ? data.customers : []
+        );
+        setCount(data.count ?? 0);
+        setPageSize(data.pageSize ?? 20);
+        setTotalPages(data.totalPages ?? 0);
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
+        setNotice({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Something went wrong while loading customers.",
+        });
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
       }
-
-      const response = await fetch(
-        `/api/admin/customers?${params.toString()}`,
-        { cache: "no-store" }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok || data.success === false) {
-        throw new Error(data.error || "Could not load customers.");
-      }
-
-      setCustomers(
-        Array.isArray(data.customers) ? data.customers : []
-      );
-    } catch (error) {
-      setNotice({
-        type: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Something went wrong while loading customers.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
-    void loadCustomers();
-  }, [loadCustomers]);
+    const controller = new AbortController();
 
-  const filteredCustomers = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const timeout = window.setTimeout(() => {
+      void loadCustomers(search, page, controller.signal);
+    }, 250);
 
-    if (!query) return customers;
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [search, page, loadCustomers]);
 
-    return customers.filter((customer) =>
-      [
-        customer.full_name,
-        customer.email || "",
-        customer.phone || "",
-      ].some((value) => value.toLowerCase().includes(query))
-    );
-  }, [customers, search]);
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    } else if (totalPages === 0 && page !== 1) {
+      setPage(1);
+    }
+  }, [page, totalPages]);
 
   function startEditing(customer: Customer) {
     setEditingCustomer(customer);
@@ -157,7 +199,10 @@ export default function AdminCustomersPage() {
       return;
     }
 
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (
+      email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
       setNotice({
         type: "error",
         message: "Enter a valid email address.",
@@ -192,7 +237,7 @@ export default function AdminCustomersPage() {
       });
 
       setEditingCustomer(null);
-      await loadCustomers(search);
+      await loadCustomers(search, page);
     } catch (error) {
       setNotice({
         type: "error",
@@ -236,7 +281,7 @@ export default function AdminCustomersPage() {
         message: "Customer removed successfully.",
       });
 
-      await loadCustomers(search);
+      await loadCustomers(search, page);
     } catch (error) {
       setNotice({
         type: "error",
@@ -249,6 +294,19 @@ export default function AdminCustomersPage() {
       setSaving(false);
     }
   }
+
+  const firstRecord = count === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastRecord = Math.min(page * pageSize, count);
+
+  const visiblePages = Array.from(
+    { length: totalPages },
+    (_, index) => index + 1
+  ).filter(
+    (pageNumber) =>
+      pageNumber === 1 ||
+      pageNumber === totalPages ||
+      Math.abs(pageNumber - page) <= 1
+  );
 
   return (
     <main className="min-h-screen bg-[#F6F6F0] px-4 py-7 text-[#292D25] sm:px-7 sm:py-10">
@@ -306,18 +364,21 @@ export default function AdminCustomersPage() {
         <section className="mt-8 grid gap-3 sm:grid-cols-[1fr_2fr]">
           <div className="rounded-2xl border border-[#EAE9E0] bg-white p-5">
             <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-[#929487]">
-              Customer records
+              Total customer records
             </p>
+
             <div className="mt-3 flex items-end justify-between">
               <p className="text-4xl font-semibold tracking-tight">
-                {customers.length}
+                {count}
               </p>
+
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EDF1E6] text-[#71805D]">
                 <Users size={19} />
               </span>
             </div>
+
             <p className="mt-2 text-[10px] text-[#A1A296]">
-              Records returned by your customer database
+              Total records in your customer database
             </p>
           </div>
 
@@ -331,16 +392,24 @@ export default function AdminCustomersPage() {
 
             <div className="flex w-full items-center gap-2 rounded-full border border-[#E7E6DE] bg-[#FBFBF8] px-4 sm:max-w-sm">
               <Search size={15} className="shrink-0 text-[#929387]" />
+
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search customers..."
                 className="min-w-0 flex-1 bg-transparent py-3 text-xs outline-none placeholder:text-[#AAA99F]"
               />
+
               {search && (
                 <button
                   type="button"
-                  onClick={() => setSearch("")}
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
                   aria-label="Clear search"
                   className="text-[#929387] hover:text-[#292D25]"
                 >
@@ -361,7 +430,9 @@ export default function AdminCustomersPage() {
                 <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#929A7D]">
                   Customer details
                 </p>
-                <h2 className="mt-1 text-lg font-semibold">Edit customer</h2>
+                <h2 className="mt-1 text-lg font-semibold">
+                  Edit customer
+                </h2>
               </div>
 
               <button
@@ -441,7 +512,7 @@ export default function AdminCustomersPage() {
             </div>
 
             <span className="rounded-full bg-[#F2F2EC] px-3 py-1.5 text-[10px] font-semibold text-[#64695A]">
-              {filteredCustomers.length} shown
+              {firstRecord}–{lastRecord} of {count}
             </span>
           </div>
 
@@ -450,16 +521,18 @@ export default function AdminCustomersPage() {
               <Loader2 size={18} className="animate-spin" />
               Loading customer records...
             </div>
-          ) : filteredCustomers.length === 0 ? (
+          ) : customers.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <UserRound
                 size={28}
                 strokeWidth={1.3}
                 className="mx-auto text-[#B4B6A9]"
               />
+
               <p className="mt-3 text-sm font-medium text-[#55594B]">
                 {search ? "No matching customers" : "No customer records yet"}
               </p>
+
               <p className="mt-1 text-xs text-[#929387]">
                 {search
                   ? "Try another name, email or phone number."
@@ -468,7 +541,7 @@ export default function AdminCustomersPage() {
             </div>
           ) : (
             <div className="divide-y divide-[#F0EFE9]">
-              {filteredCustomers.map((customer) => (
+              {customers.map((customer) => (
                 <article
                   key={customer.id}
                   className="flex flex-col gap-4 px-5 py-5 transition hover:bg-[#FAFAF6] sm:flex-row sm:items-center sm:px-6"
@@ -528,6 +601,68 @@ export default function AdminCustomersPage() {
                   </div>
                 </article>
               ))}
+            </div>
+          )}
+
+          {!loading && totalPages > 1 && (
+            <div className="flex flex-col gap-4 border-t border-[#EFEEE8] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <p className="text-[11px] text-[#929387]">
+                Page {page} of {totalPages}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page <= 1}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#E7E6DE] px-3 py-2 text-[10px] font-semibold text-[#626C52] transition hover:bg-[#F6F6F0] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={14} />
+                  Previous
+                </button>
+
+                {visiblePages.map((pageNumber, index) => {
+                  const previousPage = visiblePages[index - 1];
+                  const showGap =
+                    previousPage !== undefined &&
+                    pageNumber - previousPage > 1;
+
+                  return (
+                    <span key={pageNumber} className="contents">
+                      {showGap && (
+                        <span className="px-1 text-xs text-[#A1A296]">
+                          …
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setPage(pageNumber)}
+                        aria-current={page === pageNumber ? "page" : undefined}
+                        className={`h-9 min-w-9 rounded-full px-3 text-[11px] font-semibold transition ${
+                          page === pageNumber
+                            ? "bg-[#292D25] text-white"
+                            : "border border-[#E7E6DE] text-[#626C52] hover:bg-[#F6F6F0]"
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    </span>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((current) => Math.min(totalPages, current + 1))
+                  }
+                  disabled={page >= totalPages}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#E7E6DE] px-3 py-2 text-[10px] font-semibold text-[#626C52] transition hover:bg-[#F6F6F0] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           )}
         </section>
