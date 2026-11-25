@@ -1,0 +1,234 @@
+/* =========================================================
+   TALA — PRODUCTS / DISCOVER EXPERIENCE
+   Current brand palette: taupe, ink, warm cream + lime
+   Scoped to the products page only.
+========================================================= */
+
+.tala-products-page {
+  --td-bg: #B8AA98;
+  --td-surface: #C9BBA9;
+  --td-surface-soft: #A99A88;
+  --td-ink: #292923;
+  --td-ink-soft: #3B3A32;
+  --td-muted: #625B50;
+  --td-cream: #F0E7D9;
+  --td-lime: #D8ED83;
+  --td-border: rgba(41, 41, 35, .18);
+  background: var(--td-bg) !important;
+  color: var(--td-ink) !important;
+}
+
+/* Header */
+.tala-products-page > header {
+  background: var(--td-ink) !important;
+  border-color: rgba(240, 231, 217, .18) !important;
+  color: var(--td-cream) !important;
+}
+.tala-products-page > header a,
+.tala-products-page > header button {
+  color: var(--td-cream);
+}
+.tala-products-page > header a:hover {
+  color: var(--td-lime) !important;
+}
+.tala-products-page > header [class*="bg-[#D9C6A5]"] {
+  background: var(--td-lime) !important;
+  color: var(--td-ink) !important;
+}
+
+/* Editorial hero */
+.tala-products-page > section:first-of-type {
+  background: var(--td-ink) !important;
+  border-color: rgba(240, 231, 217, .16) !important;
+  color: var(--td-cream) !important;
+  position: relative;
+}
+.tala-products-page > section:first-of-type::before {
+  content: "";
+  position: absolute;
+  width: min(52vw, 620px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(216, 237, 131, .12);
+  border-radius: 50%;
+  right: -18%;
+  top: -58%;
+  pointer-events: none;
+}
+.tala-products-page > section:first-of-type h1 {
+  color: var(--td-cream) !important;
+  letter-spacing: -.045em;
+}
+.tala-products-page > section:first-of-type h1 span {
+  color: var(--td-lime) !important;
+}
+.tala-products-page > section:first-of-type p {
+  color: rgba(240, 231, 217, .72) !important;
+}
+.tala-products-page > section:first-of-type nav button {
+  color: rgba(240, 231, 217, .58) !important;
+  border-color: transparent !important;
+}
+.tala-products-page > section:first-of-type nav button:hover,
+.tala-products-page > section:first-of-type nav button[class*="text-[#292923]"] {
+  color: var(--td-lime) !important;
+  border-color: var(--td-lime) !important;
+}
+.tala-products-page > section:first-of-type nav button[class*="text-[#292720]"] {
+  color: var(--td-lime) !important;
+  border-color: var(--td-lime) !important;
+}
+
+/* Main product area */
+.tala-products-page > section:nth-of-type(2) {
+  background: var(--td-bg) !important;
+  color: var(--td-ink) !important;
+}
+.tala-products-page > section:nth-of-type(2) aside {
+  color: var(--td-ink);
+}
+
+/* Search, selects and filter controls */
+.tala-products-page input,
+.tala-products-page select {
+  background-color: rgba(240, 231, 217, .62) !important;
+  color: var(--td-ink) !important;
+  border-color: var(--td-border) !important;
+}
+.tala-products-page input::placeholder {
+  color: rgba(41, 41, 35, .52) !important;
+}
+.tala-products-page button {
+  transition:
+    color 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    transform 220ms ease;
+}
+.tala-products-page button[class*="bg-[#40372F]"],
+.tala-products-page button[class*="bg-[#292923]"] {
+  background: var(--td-ink) !important;
+  color: var(--td-cream) !important;
+}
+.tala-products-page button[class*="bg-[#D9C6A5]"],
+.tala-products-page button[class*="bg-[#B99A78]"] {
+  background: var(--td-lime) !important;
+  color: var(--td-ink) !important;
+}
+.tala-products-page button:hover {
+  border-color: var(--td-ink) !important;
+}
+
+/* Product cards */
+.tala-products-page .group.min-w-0 > div:first-child {
+  background: var(--td-surface-soft) !important;
+  overflow: hidden;
+}
+.tala-products-page .group.min-w-0 > div:last-child {
+  color: var(--td-ink) !important;
+}
+.tala-products-page .group.min-w-0 h3 {
+  color: var(--td-ink) !important;
+}
+.tala-products-page .group.min-w-0 img {
+  transition: transform 850ms cubic-bezier(.22, 1, .36, 1);
+}
+.tala-products-page .group.min-w-0:hover img {
+  transform: scale(1.035);
+}
+.tala-products-page .group.min-w-0 [class*="bg-[#F8F5F0]"] {
+  background: var(--td-cream) !important;
+  color: var(--td-ink) !important;
+}
+.tala-products-page .group.min-w-0 [class*="bg-[#40372F]"] {
+  background: var(--td-ink) !important;
+  color: var(--td-cream) !important;
+}
+
+/* Convert the previous light palette to the new warm palette */
+.tala-products-page [class*="bg-[#F7F4EF]"],
+.tala-products-page [class*="bg-[#F9F7F3]"],
+.tala-products-page [class*="bg-[#F3EEE7]"],
+.tala-products-page [class*="bg-[#F8F5F0]"],
+.tala-products-page [class*="bg-[#F4F0E9]"],
+.tala-products-page [class*="bg-[#F1EBE2]"],
+.tala-products-page [class*="bg-[#F0EAE2]"],
+.tala-products-page [class*="bg-[#FAF8F4]"],
+.tala-products-page [class*="bg-[#FBF9F5]"] {
+  background-color: var(--td-surface) !important;
+}
+.tala-products-page [class*="text-[#302A24]"],
+.tala-products-page [class*="text-[#40372F]"],
+.tala-products-page [class*="text-[#51463C]"] {
+  color: var(--td-ink) !important;
+}
+.tala-products-page [class*="text-[#81766A]"],
+.tala-products-page [class*="text-[#8B7D70]"],
+.tala-products-page [class*="text-[#9A8C7D]"],
+.tala-products-page [class*="text-[#9B8065]"] {
+  color: var(--td-muted) !important;
+}
+.tala-products-page [class*="border-[#E6DED4]"],
+.tala-products-page [class*="border-[#DCD3C8]"],
+.tala-products-page [class*="border-[#E2D9CF]"],
+.tala-products-page [class*="border-[#E5DACE]"] {
+  border-color: var(--td-border) !important;
+}
+
+/* Lime is used sparingly for active states */
+.tala-products-page [class*="text-[#D9C6A5]"],
+.tala-products-page [class*="text-[#B99A78]"],
+.tala-products-page [class*="text-[#C9B8A4]"] {
+  color: #657044 !important;
+}
+
+/* Footer */
+.tala-products-page > footer {
+  background: var(--td-ink) !important;
+  color: var(--td-cream) !important;
+  border-color: rgba(240, 231, 217, .16) !important;
+}
+.tala-products-page > footer p,
+.tala-products-page > footer a {
+  color: rgba(240, 231, 217, .76) !important;
+}
+.tala-products-page > footer a:hover {
+  color: var(--td-lime) !important;
+}
+.tala-products-page > footer h3 {
+  color: var(--td-lime) !important;
+}
+
+/* Drawers and quick view */
+.tala-products-page [role="dialog"],
+.tala-products-page [class*="fixed"][class*="z-"] {
+  scrollbar-color: #8D806E transparent;
+}
+.tala-products-page [class*="bg-white"],
+.tala-products-page [class*="bg-[#F8F5F0]"] {
+  background-color: var(--td-cream);
+}
+
+/* Responsive polish */
+@media (min-width: 768px) {
+  .tala-products-page > section:first-of-type > div {
+    padding-top: clamp(76px, 9vw, 126px);
+    padding-bottom: clamp(68px, 8vw, 112px);
+  }
+}
+@media (max-width: 640px) {
+  .tala-products-page > section:first-of-type > div {
+    padding-top: 68px !important;
+    padding-bottom: 58px !important;
+  }
+  .tala-products-page > section:first-of-type h1 {
+    font-size: clamp(40px, 12vw, 56px) !important;
+    line-height: .98 !important;
+  }
+  .tala-products-page > section:nth-of-type(2) {
+    padding-top: 30px !important;
+    padding-bottom: 52px !important;
+  }
+  .tala-products-page .group.min-w-0 > div:first-child {
+    aspect-ratio: 3 / 4;
+  }
+}
