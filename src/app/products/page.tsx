@@ -49,16 +49,18 @@ import {
 
 import { getTalaProducts } from "@/lib/tala-products";
 
+// TALA Products — New Discover Experience
+import "./products-discover.css";
+
 /* =========================================================
    TALA — PRODUCTS PAGE
-   Version: 1.0
-   Storefront product discovery experience
+   Version: 2.0
+   Luxury product discovery experience
 ========================================================= */
 
 /* ---------------------------------------------------------
    TYPES
 --------------------------------------------------------- */
-
 type ProductCategory = "All" | "Sets" | "Jackets";
 
 type SortOption =
@@ -3128,7 +3130,7 @@ const categoryCounts = useMemo(() => {
   // ----------------------------------------
 
   return (
-    <main className="min-h-screen bg-[#F7F4EF] text-[#302A24]">
+    <main className="tala-products-page min-h-screen bg-[#B8AA98] text-[#292720]">
 
       {/* HEADER */}
 
